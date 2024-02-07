@@ -1,0 +1,178 @@
+\documentclass[aspectratio=32]{beamer}
+
+
+% Load packages
+\usepackage{datetime}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{listings}
+\usepackage{ifthen}
+\usepackage{caption}
+\usepackage{etoolbox}
+\usepackage{hyperref}
+\usepackage{ragged2e}
+\usepackage{adjustbox}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage[backend=biber, style=numeric]{biblatex}
+
+% Metadata
+\title{C2SIM --- Architecture}
+\date{\mydate\today}
+\author{Noah Syrkis}
+
+% BibTeX setup
+\addbibresource{/Users/syrkis/code/press/library.bib}
+
+% Listings and date setup
+\newdateformat{mydate}{\monthname[\THEMONTH] \THEDAY, \THEYEAR}
+% tight list
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+% Font setup
+\usefonttheme{serif}
+\renewcommand{\baselinestretch}{1.5}
+
+% Text color setup
+\setbeamercolor{normal text}{fg=black,bg=white}
+\setbeamercolor{frametitle}{fg=black,bg=white}
+\setbeamercolor{title}{fg=black,bg=white}
+\setbeamercolor{bibliography entry author}{fg=black}
+\setbeamercolor{bibliography entry title}{fg=black}
+\setbeamercolor{bibliography entry location}{fg=black}
+\setbeamercolor{bibliography entry note}{fg=black}
+\setbeamercolor{bibliography entry journal}{fg=black}
+\setbeamercolor{bibliography item}{fg=black}
+\setbeamercolor{tableofcontents}{fg=black}
+\setbeamercolor{section in toc}{fg=black}
+\setbeamercolor{subsection in toc}{fg=black}
+\setbeamercolor{itemize item}{fg=black}
+\setbeamercolor{item}{fg=black}
+\setbeamercolor{caption name}{fg=black}
+\setbeamercolor{caption}{fg=black}
+
+% Miscellaneous settings
+\setbeamertemplate{frametitle continuation}[from second]
+% section in toc number should be without dot after number
+\setbeamertemplate{section in toc}{\inserttocsectionnumber{} \inserttocsection}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{caption}[numbered]
+\setbeamertemplate{headline}{}
+
+% Footer setup
+\setbeamertemplate{footline}
+{
+  \leavevmode
+  \hbox{
+    \ifnum\thepage>1
+      \begin{beamercolorbox}[wd=\paperwidth,ht=2.5ex,dp=1ex]{page number}
+        \hfill\insertpagenumber{} of \insertdocumentendpage\hspace{0.5cm}
+        % \hfill\insertframenumber/\inserttotalframenumber\hspace{0.5cm}
+      \end{beamercolorbox}
+    \fi
+  }
+    \vspace*{0.5cm}
+}
+
+% Modify the frametitle template
+\setbeamertemplate{frametitle}
+{
+  \vskip0.4cm
+  \leavevmode
+  \hbox{%
+    \begin{beamercolorbox}[wd=\paperwidth,ht=0ex,dp=0ex]{frametitle}
+      \hskip0.7cm\usebeamerfont{frametitle}%
+        {\insertsectionnumber~\insertframetitle} % Otherwise, display the frame title with section number
+    \end{beamercolorbox}
+  }
+}
+
+% Custom title page
+\defbeamertemplate*{title page}{customized}
+{
+  \begin{minipage}[c][\textheight][c]{0.55\textwidth}
+    \begin{center}
+      \usebeamerfont{title}\inserttitle\par
+      \vspace{1cm}
+      \small\usebeamerfont{author}\insertauthor\par
+      \small\usebeamerfont{date}\insertdate\par
+    \end{center}
+  \end{minipage}%
+  \hfill
+  \begin{minipage}[c][0.7\textheight][c]{0.35\textwidth}
+    \tableofcontents[hideallsubsections]
+  \end{minipage}
+}
+
+\newlength{\maxwidth}
+\setlength{\maxwidth}{.70\textwidth} % Example: 80% of the text width
+\newlength{\maxheight}
+\setlength{\maxheight}{.70\textheight} % Example: 70% of the text height
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+
+\begin{document}
+
+  % Front page
+  \begin{frame}[allowframebreaks]
+    \titlepage
+  \end{frame}
+
+  \section{\textbar{} Purpose}\label{purpose}
+
+  \begin{frame}[allowframebreaks]{\textbar{} Purpose}
+  \begin{itemize}
+  \tightlist
+  \item
+    A starcraft playing LLM commander.
+  \item
+    Behavior tree based.
+  \item
+    Human in the loop.
+  \end{itemize}
+  \end{frame}
+
+  \section{\textbar{} Current state}\label{current-state}
+
+  \begin{frame}[allowframebreaks]{\textbar{} Current state}
+  \begin{itemize}
+  \tightlist
+  \item
+    Trying to get SMAX \autocite{rutherford2023} to work.
+  \item
+    Trying to get the behavior tree (BT) to work.
+
+    \begin{itemize}
+    \tightlist
+    \item
+      LLM should output (or select) BT.
+    \item
+      BT should be used for unit control.
+    \end{itemize}
+  \end{itemize}
+  \end{frame}
+
+  \section{\textbar{} SMAX}\label{smax}
+
+  \begin{frame}[allowframebreaks]{\textbar{} SMAX}
+  \begin{itemize}
+  \tightlist
+  \item
+    Simplified Starcraft II environment.
+  \item
+    Focus on unitcontrol (no buildings, resources, etc).
+  \item
+    Focus should be to get the BT to work.
+  \end{itemize}
+  \end{frame}
+
+  % bibliography
+  
+\begin{frame}[allowframebreaks]
+  \Large{References}
+  \small\linespread{1.2}\printbibliography
+\end{frame}
+
+\end{document}
