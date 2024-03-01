@@ -1,26 +1,67 @@
 ---
-title: C2SIM — Architecture
+title: Tactical Autonomous Language-Operated Network
 author: Noah Syrkis
+affiliation: IT University of Copenhagen
 type: slides
 ---
 
-# Purpose
+# Overview
 
-- A starcraft playing LLM commander.
-- Behavior tree based.
-- Human in the loop.
-
-# Current state
-
-- Trying to get SMAX [@rutherford2023] to work.
-- Trying to get the behavior tree (BT) to work.
-    - LLM should output (or select) BT.
-    - BT should be used for unit control.
+::: columns
+:::: column
+- As much in JAX as possible.
+::::
+:::: column
+![](tmp.jpg)
+::::
+:::
 
 # SMAX
 
-- Simplified Starcraft II environment.
+- Trying to get SMAX [@rutherford2023] to work.
+- SMAX is something something something something
 - Focus on unitcontrol (no buildings, resources, etc).
-- Focus should be to get the BT to work.
 
-# Behavior Tree
+# Behavior trees
+
+::: columns
+
+:::: column
+
+- Currently trying to get BT to work.
+- LLM should make structured output.
+- This output must be BT, following a grammar.
+
+::::
+
+:::: column
+
+- Tools:
+    - Overview by @lin2023
+    - Grammar maker ^[https://grammar.intrinsiclabs.ai/].
+    - Pydantic ^[https://github.com/pydantic/pydantic].
+
+::::
+:::
+
+\framebreak
+
+- BT output should follow a grammar.
+- Military people like formal systems.
+- BT should be formalized and validated.
+- BT should be used for unit control and command issuing.
+
+- Current aproach is to represent behaviors trees as
+
+# Atomic functions
+
+- Manually written.
+- Should written with genetic programming?
+
+# Mistral
+
+    - LLM should output (or select) BT.
+    - BT should be used for unit control.
+
+# C
+
