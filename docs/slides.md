@@ -12,7 +12,7 @@ type: slides
 - As much in JAX as possible.
 ::::
 :::: column
-![](tmp.jpg)
+- test
 ::::
 :::
 
