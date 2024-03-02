@@ -2,4 +2,4 @@
 
 Gif test:
 
-![SMAX simulation](docs/worlds.gif)
+![SMAX simulation](docs/figs/worlds.gif)

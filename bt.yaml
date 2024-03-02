@@ -1,0 +1,30 @@
+root:
+  type: Selector
+  children:
+    - type: Sequence
+      name: Attack
+      children:
+        - type: Condition
+          name: EnemyVisible
+        - type: Action
+          name: MoveTowardsEnemy
+        - type: Action
+          name: AttackEnemy
+
+    - type: Sequence
+      name: Explore
+      children:
+        - type: Condition
+          name: NoEnemyVisible
+        - type: Action
+          name: MoveToUnexplored
+
+    - type: Sequence
+      name: Fallback
+      children:
+        - type: Condition
+          name: LowHealth
+        - type: Action
+          name: MoveToSafeLocation
+        - type: Action
+          name: RequestHealing

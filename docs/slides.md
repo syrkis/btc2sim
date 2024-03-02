@@ -7,16 +7,19 @@ type: slides
 
 # Overview
 
-::: columns
-:::: column
-- As much in JAX as possible.
-::::
-:::: column
-- test
-::::
-:::
+> - Focus on real-time strategy (RTS) game.
+> - Specifically SMAX, the JAX based StarCraft II copy.
+> - Units are controlled by behavior trees (BT).
+> - The BTs are constructed by our large langauge model (LLM).
+> - User interacts with system through the LLM...
+> - ... or directly while being advised by the LLM.
 
 # SMAX
+
+
+![Running parallel SMAX environments](figs/worlds.jpg)
+
+\framebreak
 
 - Trying to get SMAX [@rutherford2023] to work.
 - SMAX is something something something something
