@@ -1,3 +1,5 @@
 # c2sim
 
-![](docs/worlds.gif)
+Gif test:
+
+![SMAX simulation](docs/worlds.gif)
