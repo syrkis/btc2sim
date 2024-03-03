@@ -17,7 +17,7 @@ type: slides
 # SMAX
 
 
-![Running parallel SMAX environments](figs/worlds_black.jpg)
+![Running parallel SMAX environments](figs/worlds_white.jpg)
 
 \framebreak
 
