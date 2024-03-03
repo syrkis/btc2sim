@@ -1,5 +1,3 @@
 # c2sim
 
-Gif test:
-
-![SMAX simulation](docs/figs/worlds_black.mp4)
+https://github.com/syrkis/c2sim/raw/main/docs/figs/worlds_black.mp4
