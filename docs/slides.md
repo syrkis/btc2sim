@@ -1,5 +1,5 @@
 ---
-title: Tactical Autonomous Language-Operated Network
+title: C2SIM — MARCH
 author: Noah Syrkis
 affiliation: IT University of Copenhagen
 type: slides
@@ -7,64 +7,24 @@ type: slides
 
 # Overview
 
-> - Focus on real-time strategy (RTS) game.
-> - Specifically SMAX, the JAX based StarCraft II copy.
-> - Units are controlled by behavior trees (BT).
-> - The BTs are constructed by our large langauge model (LLM).
-> - User interacts with system through the LLM...
-> - ... or directly while being advised by the LLM.
-
-# SMAX
+- [ ] Week 1 — Complete costum SMAX [@rutherford2023] work.
+    - [x] Fast high framerate plotting.
+    - [x] Dis unit type, team, health, and reward.
+    - [ ] Render bullets and attack states.
+- [ ] Week 2 — Get action from BT.
+- [ ] Week 3 — Modify BT with LLM.
 
 
-![Running parallel SMAX environments](figs/worlds_white.jpg)
+# Visualization
 
-\framebreak
+- Successfully runnning 10K+ parallel environments.
+- Extensive work on visual playback of trajectory [@fig:smax].
 
-- Trying to get SMAX [@rutherford2023] to work.
-- SMAX is something something something something
-- Focus on unitcontrol (no buildings, resources, etc).
+---
 
-# Behavior trees
+![SMAX in parallel](figs/worlds_white.jpg){#fig:smax}
 
-::: columns
+# Next step
 
-:::: column
-
-- Currently trying to get BT to work.
-- LLM should make structured output.
-- This output must be BT, following a grammar.
-
-::::
-
-:::: column
-
-- Tools:
-    - Overview by @lin2023
-    - Grammar maker ^[https://grammar.intrinsiclabs.ai/].
-    - Pydantic ^[https://github.com/pydantic/pydantic].
-
-::::
-:::
-
-\framebreak
-
-- BT output should follow a grammar.
-- Military people like formal systems.
-- BT should be formalized and validated.
-- BT should be used for unit control and command issuing.
-
-- Current aproach is to represent behaviors trees as
-
-# Atomic functions
-
-- Manually written.
-- Should written with genetic programming?
-
-# Mistral
-
-    - LLM should output (or select) BT.
-    - BT should be used for unit control.
-
-# C
-
+- Visualise bullets and attacked states.
+- Take action from BT.
