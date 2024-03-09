@@ -19,6 +19,20 @@ bg = "black" if darkdetect.isDark() else "white"
 ink = "white" if bg == "black" else "black"
 markers = {0: "o", 1: "s", 2: "D", 3: "^", 4: "<", 5: ">", 6: "+"}
 
+tick_params = {
+    "colors": ink,
+    "direction": "in",
+    "length": 6,
+    "width": 1,
+    "which": "both",
+    "top": True,
+    "bottom": True,
+    "left": True,
+    "right": True,
+    "labelleft": False,
+    "labelbottom": False,
+}
+
 
 # functions
 def plot_fn(env, state_seq, reward_seq, expand=False):
@@ -29,17 +43,12 @@ def plot_fn(env, state_seq, reward_seq, expand=False):
     unit_types = np.unique(np.array(state_seq[0][1].unit_types))
     fills = np.where(np.array(state_seq[0][1].unit_teams) == 1, ink, "None")
     for i, (_, state, _) in tqdm(enumerate(state_seq), total=len(state_seq)):
-        fig, axes = plt.subplots(2, 3, figsize=(18, 12), facecolor=bg, dpi=100)
+        fig, axes = plt.subplots(2, 3, figsize=(14.4, 9.6), facecolor=bg, dpi=100)
         bullets = bullet_seq[i // 8] if expand and i < (len(bullet_seq) * 8) else None
-        for j, ax in zip(range(state.unit_positions.shape[0]), axes.flatten()):
-            ax_fn(ax, state, returns, bullets, i, j)  # setup axis theme
-            for unit_type in unit_types:
-                idx = state.unit_types[j, :] == unit_type  # unit_type idxs
-                x = state.unit_positions[j, idx, 0]  # x coord
-                y = state.unit_positions[j, idx, 1]  # y coord
-                c = fills[j, idx]  # color
-                s = state.unit_health[j, idx] ** 1.5 * 0.1  # size
-                ax.scatter(x, y, s=s, c=c, edgecolor=ink, marker=markers[unit_type])
+        args = (returns, state, bullets, i, unit_types, fills)
+        seq = [(ax, j, *args) for j, ax in enumerate(axes.flatten())]
+        for ax, j, *args in seq:
+            axis_fn(ax, j, *args)
         frames.append(frame_fn(n_steps, fig, i // 8 if expand else i))
     fname = f"docs/figs/worlds_{bg}{'_laggy' if not expand else ''}.mp4"
     imageio.mimsave(fname, frames, fps=24 if expand else 3)
@@ -72,27 +81,23 @@ def frame_fn(n_steps, fig, idx):
     return frame
 
 
-tick_params = {
-    "colors": ink,
-    "direction": "in",
-    "length": 6,
-    "width": 1,
-    "which": "both",
-    "top": True,
-    "bottom": True,
-    "left": True,
-    "right": True,
-    "labelleft": False,
-    "labelbottom": False,
-}
+def axis_fn(ax, j, returns, state, bullets, i, unit_types, fills):
+    aux_ax_fn(ax, bullets, returns, i, j)
+    for unit_type in unit_types:
+        idx = state.unit_types[j, :] == unit_type
+        x = state.unit_positions[j, idx, 0]
+        y = state.unit_positions[j, idx, 1]
+        c = fills[j, idx]
+        s = state.unit_health[j, idx] ** 1.5 * 0.1
+        ax.scatter(x, y, s=s, c=c, edgecolor=ink, marker=markers[unit_type])
 
 
-def ax_fn(ax, state, returns, bullets, i, j):
+def aux_ax_fn(ax, bullets, returns, i, j):
     if bullets is not None:
         idx = bullets[:, 0] == j
         alpha = i % 8 / 8
         pos = (1 - alpha) * bullets[idx, 3:5] + alpha * bullets[idx, 5:]
-        ax.scatter(pos[:, 0], pos[:, 1], s=10, c=ink, marker="o")
+        ax.scatter(pos[:, 0], pos[:, 1], s=10, c=ink, marker=",")
     ally_return = returns["ally"][i, j]
     enemy_return = returns["enemy"][i, j]
     ax.set_xlabel("{:.3f} | {:.3f}".format(ally_return, enemy_return), color=ink)

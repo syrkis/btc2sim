@@ -33,7 +33,7 @@ def target_fn(acts, in_range, team):  # computing the one hot valid targets
 
 
 def attack_fn(env, state_seq, attacks=[]):  # one hot attack list
-    for _, state, acts in state_seq:
+    for _, state, acts in tqdm(state_seq):
         dists = vmap(partial(dist_fn, env))(state.unit_positions)
         ranges = env.unit_type_attack_ranges[state.unit_types]
         in_range = vmap(partial(range_fn, env))(dists, ranges)
@@ -51,9 +51,10 @@ def bullet_fn(env, states, bullet_seq=[]):
         bullets = bullets.at[:, 2 if team == "ally" else 1].add(env.num_allies)
         return bullets
 
-    for i, ((_, state, _), (_, n_state, _)) in enumerate(zip(states[:-1], states[1:])):
+    state_zip = zip(states[:-1], states[1:])
+    for i, ((_, state, _), (_, n_state, _)) in enumerate(state_zip):
         one_hot = attack_seq[i]
-        bullets = jnp.concatenate(list(map(aux_fn, ["ally", "enemy"])), axis=0)
+        bullets = jnp.concatenate([aux_fn("ally"), aux_fn("enemy")], axis=0)
         bullets_source = state.unit_positions[bullets[:, 0], bullets[:, 1], ...]
         bullets_target = n_state.unit_positions[bullets[:, 0], bullets[:, 2], ...]
         bullets = jnp.concatenate([bullets, bullets_source, bullets_target], axis=1)
