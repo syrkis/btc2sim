@@ -16,6 +16,15 @@ type: slides
 
 ![SMAX in parallel](figs/worlds_white.jpg){#fig:smax}
 
+## SMAX (cont.)
+
+    key = random.PRNGKey(0).split(num_envs)
+    env = make('SMAX', num_allies=n, num_enemies=m)
+    obs, state = vmap(env.reset)(key)
+    for _ in range(num_steps):
+        act = vmap(act_fn)(rng, env, obs, state)
+        obs, state, (_) = vmap(env.step)(act, state)
+
 # Next step
 
 - Visualise bullets and attacked states.

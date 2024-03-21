@@ -8,6 +8,11 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from PIL import Image
+import yaml
+
+
+with open(f"data/{f_name}.yaml", "r") as f:
+    tree = yaml.load(f, Loader=yaml.FullLoader)
 
 
 # this function was used to split simulation trajectories up into seperate worlds (deparellelising)

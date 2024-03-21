@@ -1,0 +1,10 @@
+type: sequence
+children:
+  - type: fallback
+    children:
+      - type: leaf
+        fn: "enemy_found"
+      - type: leaf
+        fn: "find_enemy"
+  - type: leaf
+    fn: "attack_enemy"
