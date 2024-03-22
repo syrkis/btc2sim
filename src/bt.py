@@ -5,49 +5,42 @@
 # imports
 import jax
 import jax.numpy as jnp
+from jax import jit, vmap
 import chex
 from jaxmarl import make
 
 from typing import Any, Callable, List, Tuple, Dict
 import yaml
 import os
+from functools import partial
 
-import atomics
-from utils import Status
-
-
-# types
-NodeFunc = Callable[[Any], Status]
+from .utils import Status, NodeFunc
+import src.atomics as atomics
 
 
 # functions
 def tree(children: List[NodeFunc], kind: str) -> NodeFunc:
-    def tick(rng, env, obs, agent) -> Status:
+    def tick(rng, obs: jnp.array, agent, env) -> Status:
         for child in children:
-            status, action = child(rng, env, obs, agent)
-
+            status, action = child(rng, obs, agent, env)
             if kind == "fallback" and status == Status.SUCCESS:
                 return status, action
-            if kind == "sequence" and status != Status.SUCCESS:
+            if kind == "sequence" and status == Status.FAILURE:
                 return status, action
-
-        if kind == "fallback":
-            return Status.RUNNING, action
-        if kind == "sequence":
-            return Status.FAILURE, action
+        return (Status.FAILURE if kind == "fallback" else Status.SUCCESS), action
 
     return tick
 
 
 def leaf(fn: Callable) -> NodeFunc:
-    def tick(rng, env, obs, agent) -> Status:
-        out = fn(rng, env, obs, agent)
-        return out if isinstance(out, tuple) else (out, None)
+    def tick(rng, obs: jnp.array, agent, env) -> Status:
+        response = fn(rng, obs, agent, env)  # returns (status, and possibly action)
+        return response if isinstance(response, tuple) else (response, None)
 
     return tick
 
 
-def make_bt(fname) -> NodeFunc:
+def make_bt(env, fname) -> NodeFunc:
     with open(fname, "r") as f:
         bt_dict = yaml.safe_load(f)
 
@@ -59,19 +52,14 @@ def make_bt(fname) -> NodeFunc:
             fn = eval(f"globals()['atomics'].{node['fn']}")
             return leaf(fn)
 
-    return make_node(bt_dict)
+    return partial(make_node(bt_dict), env=env)  # partial to pass env to all nodes
 
 
 def main():
     fname = os.path.dirname(os.path.dirname(__file__)) + "/data/bt.yaml"
-    bt = make_bt(fname)
     rng = jax.random.PRNGKey(0)
     env = make("SMAX", num_allies=10, num_enemies=10)
+    bt = make_bt(env, fname)
     obs, state = env.reset(rng)
-    for i in range(100):
-        actions = {agent: bt(rng, env, obs[agent], agent) for agent in obs}
-        obs, state = env.step(rng, state, actions)
-
-
-if __name__ == "__main__":
-    main()
+    acts = {a: bt(rng, obs[a], a) for a in env.agents}
+    print(acts)

@@ -19,6 +19,7 @@ bg = "black" if darkdetect.isDark() else "white"
 ink = "white" if bg == "black" else "black"
 markers = {0: "o", 1: "s", 2: "D", 3: "^", 4: "<", 5: ">", 6: "+"}
 
+# params
 tick_params = {
     "colors": ink,
     "direction": "in",

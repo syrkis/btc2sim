@@ -11,6 +11,8 @@ import chex
 import numpy as np
 from PIL import Image
 import yaml
+import argparse
+from typing import Any, Callable, List, Tuple, Dict
 
 
 # dataclasses
@@ -19,3 +21,15 @@ class Status:  # for behavior tree
     SUCCESS: int = 0
     FAILURE: int = 1
     RUNNING: int = 2
+
+
+# types
+NodeFunc = Callable[[Any], Status]
+
+
+# functions
+def parse_args():
+    parser = argparse.ArgumentParser(description="c2sim")
+    # specify which script in src to run
+    parser.add_argument("--script", type=str, default="main", help="script to run")
+    return parser.parse_args()
