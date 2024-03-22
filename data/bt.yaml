@@ -2,9 +2,9 @@ type: sequence
 children:
   - type: fallback
     children:
-      - type: leaf
+      - type: condition
         fn: "enemy_found"
-      - type: leaf
+      - type: action
         fn: "find_enemy"
-  - type: leaf
+  - type: action
     fn: "attack_enemy"
