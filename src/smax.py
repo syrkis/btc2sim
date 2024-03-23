@@ -11,41 +11,12 @@ from jaxmarl import make
 from jaxmarl.environments.smax import map_name_to_scenario
 import yaml
 
-# constants
-with open("config.yaml", "r") as f:
-    conf = yaml.safe_load(f)
-    n_envs = conf["n_envs"]
-    n_steps = conf["n_steps"]
-    n_agents = conf["n_agents"]
-    n_actions = conf["n_actions"]
+from .bt import make_bt
 
 
-# functions
-def step_fn(bt, rng, old_state_v, obs_v, env):  # take a step in the env
-    rng, act_rng, step_rng = random.split(rng, 3)
-    act_keys = random.split(act_rng, env.num_agents * n_envs).reshape(-1, n_envs, 2)
-    step_keys = random.split(step_rng, n_envs)
-    acts = {a: bt(act_keys[i], obs_v[a], a) for i, a in enumerate(env.agents)}  # para
-    obs_v, state_v, reward_v, _, _ = vmap(env.step)(step_keys, old_state_v, acts)
-    return obs_v, (bt, rng, state_v), (step_keys, old_state_v, acts), reward_v
 
 
-def traj_fn(bt, rng, env, state_seq=[], reward_seq=[]):  # take n_steps in m env
-    rng, reset_rng = random.split(random.PRNGKey(0))  # split rng for reset and step
-    reset_keys = random.split(reset_rng, n_envs)  # split reset rng for n_envs
-
-    step = partial(step_fn, env=env)  # partial step function
-    obs_v, state_v = vmap(env.reset)(reset_keys)  # initiate envs
-    traj_state = (bt, rng, state_v)  # initial state for step_fn
-
-    for _ in tqdm(range(n_steps)):  # take n steps in env and append to lists
-        obs_v, traj_state, state_v, reward_v = step(*traj_state, obs_v)  # take step
-        state_seq, reward_seq = state_seq + [state_v], reward_seq + [reward_v]
-        return
-
-    return state_seq, reward_seq
-
-
+# bullet functions
 def dist_fn(env, pos):  # computing the distances between all ally and enemy agents
     delta = pos[None, :, :] - pos[:, None, :]
     dist = jnp.sqrt((delta**2).sum(axis=2))
@@ -99,7 +70,8 @@ def bullet_fn(env, states, bullet_seq=[]):
 def main():
     env = make("SMAX", num_allies=2, num_enemies=5)
     rng = random.PRNGKey(0)
-    bt = make_bt(env, "data/bt.yaml")
-    state_seq, reward_seq = traj_fn(bt, rng, env)
-    bullet_seq = bullet_fn(env, state_seq)
-    return state_seq, reward_seq, bullet_seq
+    bt = make_bt(env, "bt_bank.yaml")
+    obs, state = env.reset(rng)
+    bt(obs, rng, state)
+    print(bt)
+    # state_seq, reward_seq = traj_fn(bt, rng, env)

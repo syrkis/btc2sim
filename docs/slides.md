@@ -1,19 +1,23 @@
 ---
-title: C2SIM — UPDATE
+title: C2SIM
 author: Noah Syrkis
 affiliation: IT University of Copenhagen
 type: slides
 ---
 
-# Behaviour trees
+# Overview
 
-- Behaviour trees (BT) are a way to model the behaviour of agents.
-- They are used in games and robotics.
+The project^[https://github.com/syrkis/c2sim/] uses JAX^[https://github.com/google/jax/] throughout, with JaxMARL's^[https://blog.foersterlab.com/jaxmarl/] SMAX as the main environment. The agents are modelled using behaviour trees (BT) stored in a sqlite3 database (we call it BTBank). The ollama^[https://ollama.com/] library is used for the language modelling to map game states to human language and BTs, and vice versa.
 
-## Atomics
+## Overview (cont.)
 
-- Atomics are the leaves of the tree.
-- They are the actions that the agent can take.
+- [x] SMAX visual playback (`src/{plot,smax}.py`).
+- [x] BT function constructor (`src/{bt,atomics}.py`).
+- [ ] BT based trajectory (`src/smax.py`).
+- [ ] Implement the BTBank (`src/bank.py`).
+- [ ] Language out (`src/llm.py`).
+- [ ] Language in (`src/llm.py`).
+- [ ] Smart way to generate atomics (gentic programming)?
 
 # SMAX
 
@@ -35,7 +39,26 @@ type: slides
         act = vmap(act_fn)(rng, env, obs, state)
         obs, state, (_) = vmap(env.step)(act, state)
 
-# Next step
+# Behaviour trees
 
-- Visualise bullets and attacked states.
-- Take action from BT.
+- Behaviour trees (BT) are a way to model the behaviour of agents.
+- They are used in games and robotics.
+
+## Atomics
+
+- Atomics are the leaves of the tree.
+- They are the actions that the agent can take.
+
+## BTBank
+
+- BTBank is a library for creating and running BTs.
+- It is written in Python.
+- sqlite3 is used to store the trees.
+
+# Language model
+
+- The language model is a transformer model.
+- I/O architecture.
+- The output is a sequence of tokens.
+
+# Todo list (MVP)

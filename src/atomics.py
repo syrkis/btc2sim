@@ -22,7 +22,7 @@ def see_fn(obs, agent, env):
 def enemy_found(_, obs, agent, env):  # see's for a given AGENT
     _, allies_obs, enemies_obs = see_fn(obs, agent, env)
     targets = enemies_obs if agent.startswith("ally") else allies_obs
-    return Status.SUCCESS if jnp.absolute(targets.sum()) > 0 else Status.FAILURE
+    return jnp.where(jnp.absolute(targets.sum()) > 0, Status.SUCCESS, Status.FAILURE)
 
 
 def find_enemy(rng, *_):  # find random enemy
