@@ -19,22 +19,25 @@ import src.atomics as atomics
 
 # constants
 ATOMIC_FNS = {fn: getattr(atomics, fn) for fn in dir(atomics) if not fn.startswith("_")}
+SUCCESS, FAILURE, RUNNING = Status.SUCCESS, Status.FAILURE, Status.RUNNING
 
 
 # functions (kind is static)
 def tree(children: List[NodeFunc], kind: str) -> NodeFunc:
     def tick(rng, obs: jnp.array, agent, env) -> Status:
+        r_stat = SUCCESS if kind == "fallback" else FAILURE
+        action = jnp.array(0)
+
         for child in children:
-            status, action = child(rng, obs, agent, env)
-            if kind == "sequence":
-                return jnp.where(
-                    status == Status.FAILURE, Status.FAILURE, Status.SUCCESS
-                ), action
-            if kind == "fallback":
-                return jnp.where(
-                    status == Status.SUCCESS, Status.SUCCESS, Status.FAILURE
-                ), action
-        return jnp.where(kind == "fallback", Status.FAILURE, Status.SUCCESS), action
+            stat, new_action = child(rng, obs, agent, env)
+
+            seq_cond = jnp.logical_and(kind == "sequence", stat == FAILURE)
+            fall_cond = jnp.logical_and(kind == "fallback", stat == SUCCESS)
+
+            r_stat = jnp.where(jnp.logical_or(seq_cond, fall_cond), stat, r_stat)
+            action = jnp.where(r_stat != stat, new_action, action)
+
+        return r_stat, action
 
     return tick
 
@@ -42,7 +45,7 @@ def tree(children: List[NodeFunc], kind: str) -> NodeFunc:
 def leaf(fn: Callable) -> NodeFunc:
     def tick(rng, obs: jnp.array, agent, env) -> Status:
         response = fn(rng, obs, agent, env)  # returns (status, and possibly action)
-        return response if isinstance(response, tuple) else (response, None)
+        return response if isinstance(response, tuple) else (response, 0)
 
     return tick
 

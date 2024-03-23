@@ -13,7 +13,10 @@ The project^[https://github.com/syrkis/c2sim/] uses JAX^[https://github.com/goog
 
 - [x] SMAX visual playback (`src/{plot,smax}.py`).
 - [x] BT function constructor (`src/{bt,atomics}.py`).
-- [ ] BT based trajectory (`src/smax.py`).
+- [ ] BT based trajectory (`src/smax.py`). (almost done)
+    - Issues with returns happening at different tree depths.
+    - solution: go through entire tree every time. (keep trees small)
+        - this is a MUST for JAX array vmap (could be viewed as involuntary regularization).
 - [ ] Implement the BTBank (`src/bank.py`).
 - [ ] Language out (`src/llm.py`).
 - [ ] Language in (`src/llm.py`).
