@@ -5,6 +5,16 @@ affiliation: IT University of Copenhagen
 type: slides
 ---
 
+# Behaviour trees
+
+- Behaviour trees (BT) are a way to model the behaviour of agents.
+- They are used in games and robotics.
+
+## Atomics
+
+- Atomics are the leaves of the tree.
+- They are the actions that the agent can take.
+
 # SMAX
 
 - Extensive work on visual playback of trajectory [@fig:smax].
