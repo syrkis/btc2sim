@@ -71,4 +71,5 @@ def main():
     bt = make_bt(env, fname)
     obs, state = env.reset(rng)
     acts = {a: bt(rng, obs[a], a) for a in env.agents}
-    print(acts["ally_0"])
+    for k, v in acts.items():
+        print(f"{k}: {v}")

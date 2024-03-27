@@ -38,12 +38,14 @@ def attack_enemy(rng, obs, agent, env):  # attack random enemy in range
     other_obs, mask = see_fn(obs, agent, env)
     mask = jnp.where(agent.startswith("ally"), ~mask, mask[::-1])
     in_sight = jnp.absolute(other_obs[mask]).any(axis=1)
-    probs = jnp.zeros(in_sight.size).at[in_sight].set(1)  # probability of attacking
+    # probs = jnp.zeros(in_sight.size).at[in_sight].set(1)  # probability of attacking
+    idxs = jnp.where(in_sight, size=in_sight.size)[0]
+    probs = jnp.put(jnp.zeros(in_sight.size), idxs, 1, inplace=False)
     probs = jnp.where(probs.sum() > 0, probs / probs.sum(), probs)
     probs = jnp.concatenate((probs, (1 - probs.sum()).reshape(1)))
     actions = jnp.arange(probs.size).at[-1].set(-1)
     act = random.choice(rng, actions, p=probs)
-    return SUCCESS, act.item()
+    return SUCCESS, act
 
 
 def main():

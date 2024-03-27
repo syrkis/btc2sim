@@ -26,8 +26,9 @@ def step_fn(btv, rng, old_state_v, obs_v, env):  # take a step in the env
     rng, act_rng, step_rng = random.split(rng, 3)
     act_keys = random.split(act_rng, env.num_agents * n_envs).reshape(-1, n_envs, 2)
     step_keys = random.split(step_rng, n_envs)
-    acts = {a: btv(act_keys[i], obs_v[a], a) for i, a in enumerate(env.agents)}  # para
-    print(acts)
+    acts = {a: btv(act_keys[i], obs_v[a], a)[1] for i, a in enumerate(env.agents)}
+    for k, v in acts.items():
+        print(f"{k}: {v}")
     exit()
     obs_v, state_v, reward_v, _, _ = vmap(env.step)(step_keys, old_state_v, acts)
     return obs_v, (btv, rng, state_v), (step_keys, old_state_v, acts), reward_v
@@ -53,7 +54,7 @@ def main():
     else:  # run this main
         env = make("SMAX", num_allies=2, num_enemies=5)
         rng = random.PRNGKey(0)
-        btv = vmap(make_bt(env, "bt_bank.yaml"), in_axes=(0, 0, None))
+        btv = vmap(make_bt(env, "bt_bank.yaml"), in_axes=(0, 0, None), out_axes=(0, 0))
         seq = traj_fn(btv, rng, env, [], [])
 
 
