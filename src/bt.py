@@ -25,19 +25,17 @@ SUCCESS, FAILURE, RUNNING = Status.SUCCESS, Status.FAILURE, Status.RUNNING
 # functions (kind is static)
 def tree(children: List[NodeFunc], kind: str) -> NodeFunc:
     def tick(rng, obs: jnp.array, agent, env) -> Status:
-        r_stat = SUCCESS if kind == "fallback" else FAILURE
-        action = jnp.array(0)
-
-        for child in children:
-            stat, new_action = child(rng, obs, agent, env)
-
-            seq_cond = jnp.logical_and(kind == "sequence", stat == FAILURE)
-            fall_cond = jnp.logical_and(kind == "fallback", stat == SUCCESS)
-
-            r_stat = jnp.where(jnp.logical_or(seq_cond, fall_cond), stat, r_stat)
-            action = jnp.where(r_stat != stat, new_action, action)
-
-        return r_stat, action
+        ret_state, ret_action = RUNNING, -1
+        for child in children:  # loop through all children
+            state, action = child(rng, obs, agent, env)  # if action >= 0 keep
+            sequence_failure = jnp.logical_and(kind == "sequence", state != SUCCESS)
+            fallback_success = jnp.logical_and(kind == "fallback", state != FAILURE)
+            node_cond = jnp.logical_or(sequence_failure, fallback_success)
+            return_cond = jnp.logical_and(node_cond, ret_action == -1)
+            # update action and rat state if return condition is met (no action yet)
+            ret_state = jnp.where(return_cond, state, ret_state)
+            action = jnp.where(return_cond, action, ret_action)
+        return ret_state, action
 
     return tick
 
@@ -45,7 +43,7 @@ def tree(children: List[NodeFunc], kind: str) -> NodeFunc:
 def leaf(fn: Callable) -> NodeFunc:
     def tick(rng, obs: jnp.array, agent, env) -> Status:
         response = fn(rng, obs, agent, env)  # returns (status, and possibly action)
-        return response if isinstance(response, tuple) else (response, 0)
+        return response if isinstance(response, tuple) else (response, -1)
 
     return tick
 
@@ -67,10 +65,10 @@ def make_bt(env, fname: str) -> NodeFunc:
 
 
 def main():
-    fname = os.path.dirname(os.path.dirname(__file__)) + "bt_bank.yaml"
+    fname = os.path.dirname(os.path.dirname(__file__)) + "/bt_bank.yaml"
     rng = jax.random.PRNGKey(0)
     env = make("SMAX", num_allies=10, num_enemies=10)
     bt = make_bt(env, fname)
     obs, state = env.reset(rng)
     acts = {a: bt(rng, obs[a], a) for a in env.agents}
-    print(acts)
+    print(acts["ally_0"])

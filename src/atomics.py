@@ -5,40 +5,49 @@
 # imports
 import jax
 import jax.numpy as jnp
+from jax import random, lax
 from jaxmarl import make
 
 from .utils import Status
 
+# constants
+SUCCESS, FAILURE, RUNNING = Status.SUCCESS, Status.FAILURE, Status.RUNNING
+
 
 # functions
 def see_fn(obs, agent, env):
-    self_obs = obs[-len(env.own_features) :]  # self obs is 10 long, other's is 11
     other_obs = obs[: -len(env.own_features)].reshape(env.num_agents - 1, -1)
-    split_idx = env.num_allies - (1 if agent.startswith("ally") else 0)
-    return self_obs, other_obs[:split_idx], other_obs[split_idx:]
+    split_idx = env.num_allies - (jnp.where(agent.startswith("ally"), 1, 0))
+    mask = jnp.arange(env.num_agents - 1) < split_idx
+    return other_obs, mask
 
 
 # atomics
 def enemy_found(_, obs, agent, env):  # see's for a given AGENT
-    _, allies_obs, enemies_obs = see_fn(obs, agent, env)
-    targets = enemies_obs if agent.startswith("ally") else allies_obs
-    return jnp.where(jnp.absolute(targets.sum()) > 0, Status.SUCCESS, Status.FAILURE)
+    other_obs, mask = see_fn(obs, agent, env)
+    mask = jnp.where(agent.startswith("ally"), ~mask, mask)
+    return jnp.where(jnp.absolute(other_obs[mask].sum()) > 0, SUCCESS, FAILURE)
 
 
-def find_enemy(rng, *_):  # find random enemy
-    return Status.RUNNING, jax.random.randint(rng, (1,), 0, 5)[0]
+def find_enemy(rng, _, __, ___):  # walk around randomly to find enemy
+    # just chose a random direction to move in for now
+    return RUNNING, random.randint(rng, (1,), 0, 5)[0]
 
 
 def attack_enemy(rng, obs, agent, env):  # attack random enemy in range
-    _, allies_obs, enemies_obs = see_fn(obs, agent, env)
-    targets = enemies_obs if agent.startswith("ally") else allies_obs
-    in_range = jnp.absolute(targets).sum(axis=1) > 0  # if any enemy is in range
-    action = jax.random.choice(rng, in_range.nonzero()[0]) + 5
-    return Status.SUCCESS, action
+    other_obs, mask = see_fn(obs, agent, env)
+    mask = jnp.where(agent.startswith("ally"), ~mask, mask[::-1])
+    in_sight = jnp.absolute(other_obs[mask]).any(axis=1)
+    probs = jnp.zeros(in_sight.size).at[in_sight].set(1)  # probability of attacking
+    probs = jnp.where(probs.sum() > 0, probs / probs.sum(), probs)
+    probs = jnp.concatenate((probs, (1 - probs.sum()).reshape(1)))
+    actions = jnp.arange(probs.size).at[-1].set(-1)
+    act = random.choice(rng, actions, p=probs)
+    return SUCCESS, act.item()
 
 
 def main():
     env = make("SMAX", num_allies=2, num_enemies=5)
     rng = jax.random.PRNGKey(0)
     obs, state = env.reset(rng)
-    print(enemy_found(rng, obs["ally_0"], "ally_0", env))
+    out = attack_enemy(rng, obs["enemy_0"], "enemy_0", env)
