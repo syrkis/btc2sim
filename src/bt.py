@@ -14,7 +14,7 @@ import yaml
 from functools import partial
 from typing import Any, Callable, List, Tuple, Dict
 
-from .utils import Status, NodeFunc
+from .utils import Status, NodeFunc as NF
 import src.atomics as atomics
 
 # constants
@@ -22,25 +22,27 @@ ATOMIC_FNS = {fn: getattr(atomics, fn) for fn in dir(atomics) if not fn.startswi
 SUCCESS, FAILURE, RUNNING = Status.SUCCESS, Status.FAILURE, Status.RUNNING
 
 
-# functions (kind is static)
-def tree(children: List[NodeFunc], kind: str) -> NodeFunc:
+# functions
+def tree(children: List[NF], kind: str) -> NF:  # sequence / fallback (selector) node
     def tick(rng, obs: jnp.array, agent, env) -> Status:
-        ret_state, ret_action = RUNNING, -1
+        state, action = SUCCESS if kind.startswith("seq") else FAILURE, -1
         for child in children:  # loop through all children
-            state, action = child(rng, obs, agent, env)  # if action >= 0 keep
-            sequence_failure = jnp.logical_and(kind == "sequence", state != SUCCESS)
-            fallback_success = jnp.logical_and(kind == "fallback", state != FAILURE)
-            node_cond = jnp.logical_or(sequence_failure, fallback_success)
-            return_cond = jnp.logical_and(node_cond, ret_action == -1)
-            # update action and rat state if return condition is met (no action yet)
-            ret_state = jnp.where(return_cond, state, ret_state)
-            action = jnp.where(return_cond, action, ret_action)
-        return ret_state, action
+            child_state, child_action = child(rng, obs, agent, env)
+
+            # node conditions
+            seq_cond = jnp.logical_and(kind.startswith("s"), child_state != SUCCESS)
+            fall_cond = jnp.logical_and(kind.startswith("f"), child_state != FAILURE)
+            cond = jnp.logical_and(jnp.logical_or(seq_cond, fall_cond), action == -1)
+
+            # update return values
+            state = jnp.where(cond, child_state, state)
+            action = jnp.where(cond, child_action, action)
+        return state, action
 
     return tick
 
 
-def leaf(fn: Callable) -> NodeFunc:
+def leaf(fn: Callable) -> NF:  # action / condition
     def tick(rng, obs: jnp.array, agent, env) -> Status:
         response = fn(rng, obs, agent, env)  # returns (status, and possibly action)
         return response if isinstance(response, tuple) else (response, -1)
@@ -48,11 +50,11 @@ def leaf(fn: Callable) -> NodeFunc:
     return tick
 
 
-def make_bt(env, fname: str) -> NodeFunc:
+def make_bt(env, fname: str) -> NF:
     with open(fname, "r") as f:
         bt_dict = yaml.safe_load(f)[0]
 
-    def make_node(node: dict) -> NodeFunc:
+    def make_node(node: dict) -> NF:
         if node["type"] in ["sequence", "fallback"]:
             children = [make_node(child) for child in node["children"]]
             return tree(children, node["type"])
@@ -66,10 +68,11 @@ def make_bt(env, fname: str) -> NodeFunc:
 
 def main():
     fname = os.path.dirname(os.path.dirname(__file__)) + "/bt_bank.yaml"
-    rng = jax.random.PRNGKey(0)
+    rng = jax.random.PRNGKey(1)
     env = make("SMAX", num_allies=10, num_enemies=10)
     bt = make_bt(env, fname)
     obs, state = env.reset(rng)
-    acts = {a: bt(rng, obs[a], a) for a in env.agents}
+    rngs = jax.random.split(rng, env.num_agents)
+    acts = {a: bt(rngs[idx], obs[a], a)[1] for idx, a in enumerate(env.agents)}
     for k, v in acts.items():
         print(f"{k}: {v}")

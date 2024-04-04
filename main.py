@@ -27,9 +27,6 @@ def step_fn(btv, rng, old_state_v, obs_v, env):  # take a step in the env
     act_keys = random.split(act_rng, env.num_agents * n_envs).reshape(-1, n_envs, 2)
     step_keys = random.split(step_rng, n_envs)
     acts = {a: btv(act_keys[i], obs_v[a], a)[1] for i, a in enumerate(env.agents)}
-    for k, v in acts.items():
-        print(f"{k}: {v}")
-    exit()
     obs_v, state_v, reward_v, _, _ = vmap(env.step)(step_keys, old_state_v, acts)
     return obs_v, (btv, rng, state_v), (step_keys, old_state_v, acts), reward_v
 
@@ -37,21 +34,24 @@ def step_fn(btv, rng, old_state_v, obs_v, env):  # take a step in the env
 def traj_fn(btv, rng, env, state_seq, reward_seq):  # take n_steps in m env
     rng, reset_rng = random.split(random.PRNGKey(0))  # split rng for reset and step
     reset_keys = random.split(reset_rng, n_envs)  # split reset rng for n_envs
-    step = partial(step_fn, env=env)  # partial step function
     obs_v, state_v = vmap(env.reset)(reset_keys)  # initiate envs
     traj_state = (btv, rng, state_v)  # initial state for step_fn
+
     for _ in tqdm(range(n_steps)):  # take n steps in env and append to lists
-        obs_v, traj_state, state_v, reward_v = step(*traj_state, obs_v)  # take step
-        state_seq, reward_seq = state_seq + [state_v], reward_seq + [reward_v]
+        obs_v, traj_state, state_v, reward_v = step_fn(*traj_state, obs_v, env)
+        state_seq += [state_v]  # append state to state_seq
+        reward_seq += [reward_v]  # append reward to reward_seq
     return state_seq, reward_seq
 
 
 # main
 def main():
     args = parse_args()
+
     if args.script in scripts:
         scripts[args.script]()
-    else:  # run this main
+
+    if args.script == "main":
         env = make("SMAX", num_allies=2, num_enemies=5)
         rng = random.PRNGKey(0)
         btv = vmap(make_bt(env, "bt_bank.yaml"), in_axes=(0, 0, None), out_axes=(0, 0))

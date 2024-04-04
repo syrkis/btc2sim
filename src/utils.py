@@ -18,9 +18,9 @@ from typing import Any, Callable, List, Tuple, Dict
 # dataclasses
 @chex.dataclass
 class Status:  # for behavior tree
-    SUCCESS: int = 0
-    FAILURE: int = 1
-    RUNNING: int = 2
+    SUCCESS: int = 1
+    FAILURE: int = 0
+    RUNNING: int = -1  # we might not need running, since we always have a return action
 
 
 # types
