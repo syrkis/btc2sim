@@ -17,18 +17,20 @@ SUCCESS, FAILURE, RUNNING = Status.SUCCESS, Status.FAILURE, Status.RUNNING
 
 
 # functions
+@partial(jax.jit, static_argnums=(1, 2))
 def see_fn(obs, agent, env):
+    is_ally = agent.startswith("ally")
     other_obs = obs[: -len(env.own_features)].reshape(env.num_agents - 1, -1)
-    split_idx = env.num_allies - (jnp.where(agent.startswith("ally"), 1, 0))
+    split_idx = env.num_allies - (jnp.where(is_ally, 1, 0))
     mask = jnp.arange(env.num_agents - 1) < split_idx
-    bool_ = jnp.where(agent.startswith("ally"), 0, 1)
-    return other_obs, ~mask
+    mask = jnp.where(is_ally, mask, ~mask)
+    return other_obs, mask
 
 
 # atomics
 def enemy_found(_, obs, agent, env):  # see's for a given AGENT
     other_obs, mask = see_fn(obs, agent, env)
-    cond = other_obs[mask].any()
+    cond = other_obs.any(axis=1)[mask].sum() > 0
     return jnp.where(cond, SUCCESS, FAILURE)
 
 
@@ -37,6 +39,7 @@ def find_enemy(rng, _, __, ___):  # walk around randomly to find enemy
     return RUNNING, random.randint(rng, (1,), 0, 5)[0]
 
 
+# @partial(jax.jit, static_argnums=(2, 3))
 def attack_enemy(rng, obs, agent, env):  # attack random enemy in range
     other_obs, mask = see_fn(obs, agent, env)
     mask = jnp.where(agent.startswith("ally"), ~mask, mask[::-1])
