@@ -44,7 +44,7 @@ def plot_fn(env, state_seq, reward_seq, expand=False):
     unit_types = np.unique(np.array(state_seq[0][1].unit_types))
     fills = np.where(np.array(state_seq[0][1].unit_teams) == 1, ink, "None")
     for i, (_, state, _) in tqdm(enumerate(state_seq), total=len(state_seq)):
-        fig, axes = plt.subplots(2, 3, figsize=(14.4, 9.6), facecolor=bg, dpi=100)
+        fig, axes = plt.subplots(2, 3, figsize=(18.08, 12), facecolor=bg, dpi=50)
         bullets = bullet_seq[i // 8] if expand and i < (len(bullet_seq) * 8) else None
         args = (returns, state, bullets, i, unit_types, fills)
         seq = [(ax, j, *args) for j, ax in enumerate(axes.flatten())]
@@ -74,8 +74,10 @@ def frame_fn(n_steps, fig, idx):
     sublot_params = {"hspace": 0.3, "wspace": 0.3, "left": 0.05, "right": 0.95}
     plt.subplots_adjust(**sublot_params)
     fig.canvas.draw()
-    frame = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
-    frame = frame.reshape(fig.canvas.get_width_height()[::-1] + (4,))[:, :, :3]
+    fig.tight_layout()
+    width, height = fig.get_size_inches() * fig.get_dpi()
+    shape = (int(height), int(width), 4)
+    frame = np.frombuffer(fig.canvas.buffer_rgba(), np.uint8).reshape(shape)[..., :3]
     if idx == n_steps - 1:
         plt.savefig(f"docs/figs/worlds_{bg}.jpg", dpi=200)
     plt.close()  # close fig

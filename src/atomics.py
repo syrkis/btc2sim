@@ -48,6 +48,7 @@ def attack_enemy(rng, obs, agent, env):  # attack random enemy in range
     probs = jnp.concatenate((probs, (1 - probs.sum()).reshape(1)))
     actions = jnp.arange(probs.size).at[-1].set(-1)
     action = random.choice(rng, actions, p=probs)
+    action = jnp.where(action == -1, -1, action + 5)
     return SUCCESS, action
 
 

@@ -9,7 +9,7 @@ from jax import numpy as jnp
 from tqdm import tqdm
 from functools import partial
 from jaxmarl import make
-from src import parse_args, scripts, make_bt
+from src import parse_args, scripts, make_bt, plot_fn
 
 
 # constants
@@ -39,8 +39,8 @@ def traj_fn(btv, rng, env, state_seq, reward_seq):  # take n_steps in m env
 
     for _ in tqdm(range(n_steps)):  # take n steps in env and append to lists
         obs_v, traj_state, state_v, reward_v = step_fn(*traj_state, obs_v, env)
-        state_seq += [state_v]  # append state to state_seq
-        reward_seq += [reward_v]  # append reward to reward_seq
+        state_seq.append(state_v)
+        reward_seq.append(reward_v)
     return state_seq, reward_seq
 
 
@@ -56,6 +56,7 @@ def main():
         rng = random.PRNGKey(0)
         btv = vmap(make_bt(env, "bt_bank.yaml"), in_axes=(0, 0, None), out_axes=(0, 0))
         seq = traj_fn(btv, rng, env, [], [])
+        plot_fn(env, seq[0], seq[1], expand=True)
 
 
 if __name__ == "__main__":
