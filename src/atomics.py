@@ -22,8 +22,7 @@ def see_fn(obs, agent, env):
     split_idx = env.num_allies - (jnp.where(agent.startswith("ally"), 1, 0))
     mask = jnp.arange(env.num_agents - 1) < split_idx
     bool_ = jnp.where(agent.startswith("ally"), 0, 1)
-    mask = mask
-    return other_obs, mask
+    return other_obs, ~mask
 
 
 # atomics
@@ -48,7 +47,7 @@ def attack_enemy(rng, obs, agent, env):  # attack random enemy in range
     probs = jnp.concatenate((probs, (1 - probs.sum()).reshape(1)))
     actions = jnp.arange(probs.size).at[-1].set(-1)
     action = random.choice(rng, actions, p=probs)
-    action = jnp.where(action == -1, -1, action + 5)
+    action = jnp.where(action == -1, -1, action + env.num_movement_actions)
     return SUCCESS, action
 
 

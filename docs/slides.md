@@ -13,12 +13,12 @@ The project^[https://github.com/syrkis/c2sim/] uses JAX^[https://github.com/goog
 
 - [x] SMAX visual playback (`src/{plot,smax}.py`).
 - [x] BT function constructor (`src/{bt,atomics}.py`).
-- [ ] BT based trajectory (`src/smax.py`). (almost done)
+- [x] BT based trajectory (`src/smax.py`). (almost done)
     - Must traverse all leafs always (for array programming)^[Has no effect on performance, as we are always as slow as slowest action].
+- [ ] JIT compile the BT traversal. (almost done)
 - [ ] Implement the BTBank (`src/bank.py`).
 - [ ] Language out (`src/llm.py`).
 - [ ] Language in (`src/llm.py`).
-- [ ] Smart way to generate atomics (gentic programming)?
 
 # SMAX
 
