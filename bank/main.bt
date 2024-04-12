@@ -1,0 +1,6 @@
+name: main
+type: Sequence
+children:
+    - name: a
+      type: Integer
+      value: 1

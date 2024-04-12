@@ -54,6 +54,11 @@ def attack_enemy(rng, obs, agent, env):  # attack random enemy in range
     return SUCCESS, action
 
 
+# negation decorator atomic
+def not_fn(fn_out):
+    return SUCCESS if fn_out == FAILURE else FAILURE
+
+
 def main():
     env = make("SMAX", num_allies=2, num_enemies=5)
     rng, key = jax.random.split(jax.random.PRNGKey(0))

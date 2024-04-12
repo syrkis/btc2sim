@@ -23,7 +23,7 @@ SUCCESS, FAILURE, RUNNING = Status.SUCCESS, Status.FAILURE, Status.RUNNING
 
 
 # functions
-def tree(children: List[NF], kind: str) -> NF:  # sequence / fallback (selector) node
+def tree_fn(children: List[NF], kind: str) -> NF:  # sequence / fallback (selector) node
     def tick(rng, obs: jnp.array, agent, env) -> Status:
         state, action = SUCCESS if kind.startswith("seq") else FAILURE, -1
         for child in children:  # loop through all children
@@ -42,9 +42,10 @@ def tree(children: List[NF], kind: str) -> NF:  # sequence / fallback (selector)
     return tick
 
 
-def leaf(fn: Callable) -> NF:  # action / condition
+def atomic_fn(fn: Callable, dec_fn: Callable = None) -> NF:
     def tick(rng, obs: jnp.array, agent, env) -> Status:
-        response = fn(rng, obs, agent, env)  # returns (status, and possibly action)
+        args = (rng, obs, agent, env)
+        response = dec_fn(fn(*args)) if dec_fn else fn(*args)
         return response if isinstance(response, tuple) else (response, -1)
 
     return tick
@@ -57,10 +58,13 @@ def make_bt(env, fname: str) -> NF:
     def make_node(node: dict) -> NF:
         if node["type"] in ["sequence", "fallback"]:
             children = [make_node(child) for child in node["children"]]
-            return tree(children, node["type"])
+            return tree_fn(children, node["type"])
         if node["type"] in ["condition", "action"]:
             fn = ATOMIC_FNS.get(node["fn"], lambda _: (Status.FAILURE, None))
-            return leaf(fn)
+            return atomic_fn(fn)
+        if node["type"] == "decorator":
+            dec_fn = ATOMIC_FNS.get(node["fn"], lambda _: (Status.FAILURE, None))
+            return atomic_fn(dec_fn, ATOMIC_FNS[node["dec"]])
         raise ValueError(f"Invalid node type: {node['type']}")
 
     return partial(make_node(bt_dict), env=env)  # partial to pass env to all nodes
