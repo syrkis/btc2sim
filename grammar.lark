@@ -1,21 +1,21 @@
-?start: tree
+?start: node
 
 %import common.WS
 %ignore WS
 
-tree: "tree" "(" node ")"
-
-node: sequence
+node:
+    | sequence
     | fallback
-    | atomic
+    | action
+    | condition
     | decorator
 
-sequence: "sequence" "(" nodes ")"
-
-fallback: "fallback" "(" nodes ")"
-
-atomic: "atomic" "(" /[a-zA-Z0-9]+/ ")"
-
-decorator: "decorator" "(" /[a-zA-Z0-9]+/ "," node ")"
-
 nodes: node ("," node)*
+string: /[a-zA-Z0-9_]+/
+
+sequence: "sequence" "(" nodes ")"                   // sequence of nodes
+fallback: "fallback" "(" nodes ")"                   // fallback of nodes
+decorator: "decorator" "(" string "," node ")"       // decorator with a node
+action: "action" "(" string ")"                      // action
+condition: "condition" "(" string ")"                // condition
+

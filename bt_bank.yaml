@@ -2,8 +2,11 @@
   children:
     - type: fallback
       children:
-        - type: condition
-          fn: "enemy_found"
+        - type: decorator
+          dec_fn: "inverter"
+          child:
+            - type: condition
+              fn: "enemy_found"
         - type: action
           fn: "find_enemy"
     - type: action

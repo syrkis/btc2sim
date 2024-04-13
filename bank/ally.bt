@@ -1,0 +1,7 @@
+sequence (
+  fallback (
+    decorator ( negate, condition ( in_range )),
+    action ( move )
+  ),
+  action ( attack )
+)
