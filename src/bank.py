@@ -25,7 +25,7 @@ def parse_fn(fname):
 
 def dict_fn(tree):
     if tree.data.title() == "String":
-        return tree.children[0]
+        return tree.children[0].lower()
     elif tree.data.title() == "Node":
         return dict_fn(tree.children[0])
     elif tree.data.title() == "Nodes":
@@ -39,10 +39,10 @@ def dict_fn(tree):
 
 
 def main():
-    tree = parse_fn("bank/ally.bt")
+    tree = parse_fn("bank/enemy.bt")
     dict_tree = dict_fn(tree)
     json_tree = json.dumps(dict_tree, indent=2)
-    print(json_tree)
+    print(dict_tree)
 
 
 if __name__ == "__main__":

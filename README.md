@@ -27,3 +27,8 @@ This will open a Jupyter notebook in your browser. Open `notebook.ipynb` and run
 ```bash
 python main.py
 ```
+
+
+## Behavior Trees
+
+We are using a costum domain specific langauge (DSL) for behavior trees, the grammar of which is located in `grammar.lark`. The framework is implemented in `bt.py`, `bank.py`, and `atomics.py`.
