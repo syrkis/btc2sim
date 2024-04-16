@@ -18,4 +18,3 @@ fallback: "fallback" "(" nodes ")"                   // fallback of nodes
 decorator: "decorator" "(" string "," node ")"       // decorator with a node
 action: "action" "(" string ")"                      // action
 condition: "condition" "(" string ")"                // condition
-

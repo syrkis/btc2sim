@@ -10,60 +10,73 @@ from jaxmarl import make
 
 from functools import partial
 
-from .utils import Status
+from .utils import Status, dir_to_idx, idx_to_dir
 
 # constants
 SUCCESS, FAILURE, RUNNING = Status.SUCCESS, Status.FAILURE, Status.RUNNING
 
 
-# functions
-@partial(jax.jit, static_argnums=(1, 2))
-def see_fn(obs, agent, env):
-    is_ally = agent.startswith("ally")
-    other_obs = obs[: -len(env.own_features)].reshape(env.num_agents - 1, -1)
-    split_idx = env.num_allies - (jnp.where(is_ally, 1, 0))
-    mask = jnp.arange(env.num_agents - 1) < split_idx
-    mask = jnp.where(is_ally, mask, ~mask)
-    return other_obs, mask
+"""
+TODO: the ids of allies and enemies are super arbitrary.
+Maybe we should have the agent index agents by distance?
+"""
 
 
-# atomics
-def enemy_found(_, obs, agent, env):  # see's for a given AGENT
-    other_obs, mask = see_fn(obs, agent, env)
-    cond = other_obs.any(axis=1)[mask].sum() > 0
-    return jnp.where(cond, SUCCESS, FAILURE)
+# actions
+def action_fn(action):  # move in a random direction
+    return lambda *_: (SUCCESS, action)
 
 
-def find_enemy(rng, _, __, ___):  # walk around randomly to find enemy
-    # just chose a random direction to move in for now
-    return RUNNING, random.randint(rng, (1,), 0, 5)[0]
+# helpers
+@partial(jax.vmap, in_axes=(0, None))
+def parse_unit_obs(obs, env):
+    hp, pos_x, pos_y, last_action, weapon_cd = obs[:5]
+    return hp, (pos_x, pos_y), last_action, weapon_cd
 
 
-# @partial(jax.jit, static_argnums=(2, 3))
-def attack_enemy(rng, obs, agent, env):  # attack random enemy in range
-    other_obs, mask = see_fn(obs, agent, env)
-    mask = jnp.where(agent.startswith("ally"), ~mask, mask[::-1])
-    in_sight = other_obs[mask].any(axis=1)
-    idxs = jnp.where(in_sight, size=mask.size)[0]
-    one_hot = jnp.put(jnp.zeros(in_sight.size), idxs, 1, inplace=False)
-    probs = jnp.where(one_hot.sum() > 0, one_hot / one_hot.sum(), one_hot)
-    probs = jnp.concatenate((probs, (1 - probs.sum()).reshape(1)))
-    actions = jnp.arange(probs.size).at[-1].set(-1)
-    action = random.choice(rng, actions, p=probs)
-    action = jnp.where(action == -1, -1, action + env.num_movement_actions)
-    return SUCCESS, action
+# conditions
+def sight_fn(direction, other_agent):  # are there any enemies to direction?
+    def aux(obs, self_agent, env):
+        # self and other obs
+        self_obs = obs[-len(env.own_features) :]
+        other_obs = obs[: -len(env.own_features)].reshape(env.num_agents - 1, -1)
+        rel_pos = other_obs[:, 1:3] - self_obs[1:3]
+        column = jnp.where(dir_to_idx[direction] < 2, rel_pos[:, 1], rel_pos[:, 0])
+        sight = jnp.where(dir_to_idx[direction] % 2 == 0, column > 0, column < 0)
+        # TODO: logical and that is has health > 0
+        return jnp.where(sight[other_agent], SUCCESS, FAILURE)
+
+    return aux
 
 
-# negation decorator atomic
-def not_fn(fn_out):
-    return SUCCESS if fn_out == FAILURE else FAILURE
+""" def reminisce_fn(action):  # only last actions of others are in obs
+    return lambda obs, *_: obs[-1] == action """
+
+
+def am_armed(obs, self_agent, env):  # or is my weapon in cooldown?
+    return jnp.where(obs[-1] > 0, SUCCESS, FAILURE)
+
+
+def am_exiled(obs, self_agent, env):  # or is the enemy too far away?
+    self_pos = obs[-len(env.own_features) : -1] - 16  # 16 is map size (get from env)
+    return jnp.where(jnp.linalg.norm(self_pos) < 10, SUCCESS, FAILURE)
+
+
+def am_dying(obs, agent, env):  # is my health below a certain threshold?
+    thresh = 0.25 * env.unit_type_health[env.unit_type[agent]]
+    return jnp.where(obs[-len(env.own_features)] < thresh, SUCCESS, FAILURE)
+
+
+# decorators
+def negate(state, _):
+    if state == RUNNING:
+        return RUNNING
+    return SUCCESS if state == FAILURE else FAILURE
 
 
 def main():
-    env = make("SMAX", num_allies=2, num_enemies=5)
-    rng, key = jax.random.split(jax.random.PRNGKey(0))
-    obs, state = env.reset(key)
-    # out = attack_enemy(rng, obs["ally_0"], "ally_0", env)
-    # out = find_enemy(rng, obs["ally_0"], "ally_0", env)
-    out = enemy_found(rng, obs["ally_0"], "ally_0", env)
-    print(out)
+    rng = jax.random.PRNGKey(1)
+    env = make("SMAX", num_allies=1, num_enemies=10)
+    obs, state = env.reset(rng)
+    sight = sight_fn("north", 1)
+    print(sight(obs["ally_0"], "ally_0", env))

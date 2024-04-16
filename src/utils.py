@@ -26,6 +26,10 @@ class Status:  # for behavior tree
 # types
 NodeFunc = Callable[[Any], Status]
 
+# dicts
+dir_to_idx = {"north": 1, "south": 2, "east": 3, "west": 4, "stop": 0}
+idx_to_dir = {1: "north", 2: "south", 3: "east", 4: "west", 0: "stop"}
+
 
 # functions
 def parse_args():

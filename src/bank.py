@@ -31,11 +31,11 @@ def dict_fn(tree):
     elif tree.data.title() == "Nodes":
         return [dict_fn(child) for child in tree.children]
     elif tree.data.title() in ["Action", "Condition"]:
-        return {tree.data.title().lower(): dict_fn(tree.children[0])}
+        return (tree.data.title().lower(), dict_fn(tree.children[0]))
     else:  # Sequence or Fallback or Decorator
         key = tree.data.title().lower()
         value = [dict_fn(child) for child in tree.children]
-        return {key: value if len(value) > 1 else value[0]}
+        return (key, value if len(value) > 1 else value[0])
 
 
 def main():
