@@ -39,7 +39,7 @@ def dict_fn(tree):
 
 
 def main():
-    tree = parse_fn("bank/enemy.bt")
+    tree = parse_fn("bank/default.bt")
     dict_tree = dict_fn(tree)
     json_tree = json.dumps(dict_tree, indent=2)
     print(dict_tree)

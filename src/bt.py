@@ -25,11 +25,11 @@ PARENT_DIR = os.path.dirname(os.path.dirname(__file__))
 
 # functions
 def tree_fn(children: List[NF], kind: str) -> NF:  # sequence / fallback (selector) node
+    # TODO: pass action in tick
     def tick(obs: jnp.array, agent, env) -> Status:
-        state, action = SUCCESS if kind.startswith("seq") else FAILURE, -1
+        state, action = SUCCESS if kind.startswith("sequence") else FAILURE, -1
         for child in children:  # loop through all children
             child_state, child_action = child(obs, agent, env)
-
             # node conditions
             seq_cond = jnp.logical_and(kind.startswith("s"), child_state != SUCCESS)
             fall_cond = jnp.logical_and(kind.startswith("f"), child_state != FAILURE)
@@ -58,7 +58,7 @@ def make_bt(env, tree) -> NF:
             children = [make_node(child) for child in node[1]]
             return tree_fn(children, node[0])
         if node[0] in ["condition", "action"]:
-            fn = ATOMIC_FNS[node[1]]
+            fn = ATOMIC_FNS[node[1][1]]
             return atomic_fn(fn)
         if node[0] == "decorator":
             dec_fn = ATOMIC_FNS[node[1][0]]
@@ -70,12 +70,12 @@ def make_bt(env, tree) -> NF:
 
 
 def main():
-    tree = dict_fn(parse_fn(PARENT_DIR + "/bank/default.bt"))
+    string = "sequence ( fallback ( condition ( enemy_found ) :: action ( find_enemy )) :: action ( attack_enemy ))"
+    tree = dict_fn(grammar_fn().parse(string))
     rng = jax.random.PRNGKey(1)
     env = make("SMAX", num_allies=10, num_enemies=10)
     bt = make_bt(env, tree)
     obs, state = env.reset(rng)
-    rngs = jax.random.split(rng, env.num_agents)
-    acts = {a: bt(rngs[idx], obs[a], a)[1] for idx, a in enumerate(env.agents)}
+    acts = {a: bt(obs[a], a)[1] for idx, a in enumerate(env.agents)}
     for k, v in acts.items():
         print(f"{k}: {v}")

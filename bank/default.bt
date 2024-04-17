@@ -1,7 +1,0 @@
-sequence (
-    fallback (
-        decorator ( negate, condition ( enemy_found )),
-        action ( find_enemy )
-    ),
-    action ( attack_enemy )
-)

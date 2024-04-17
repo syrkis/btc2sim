@@ -4,17 +4,21 @@
 %ignore WS
 
 node:
-    | sequence
-    | fallback
-    | action
-    | condition
-    | decorator
+    | sequence   // and
+    | fallback   // or
+    | action     // action
+    | condition  // condition
+    | decorator  // decorator
 
-nodes: node ("," node)*
+
 string: /[a-zA-Z0-9_]+/
+nodes: node ("::" node)*
+args: string ("::" string)*
+atomic: string | string "(" args ")"
+
 
 sequence: "sequence" "(" nodes ")"                   // sequence of nodes
 fallback: "fallback" "(" nodes ")"                   // fallback of nodes
-decorator: "decorator" "(" string "," node ")"       // decorator with a node
-action: "action" "(" string ")"                      // action
-condition: "condition" "(" string ")"                // condition
+decorator: "decorator" "(" string "::" node ")"       // decorator with a node
+action: "action" "(" atomic ")"              // action
+condition: "condition" "(" atomic ")"        // condition

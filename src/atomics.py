@@ -1,5 +1,5 @@
 # atomics.py
-#   atomic c2sim bt functions
+#   c2sim bt molecules (complex functions)
 # by: Noah Syrkis
 
 # imports
@@ -7,52 +7,14 @@ import jax
 import jax.numpy as jnp
 from jax import random, lax
 from jaxmarl import make
-
-from functools import partial
-
 from .utils import Status, dir_to_idx, idx_to_dir
+
 
 # constants
 SUCCESS, FAILURE, RUNNING = Status.SUCCESS, Status.FAILURE, Status.RUNNING
 
 
-"""
-TODO: the ids of allies and enemies are super arbitrary.
-Maybe we should have the agent index agents by distance?
-"""
-
-
-# actions
-def action_fn(action):  # move in a random direction
-    return lambda *_: (SUCCESS, action)
-
-
-# helpers
-@partial(jax.vmap, in_axes=(0, None))
-def parse_unit_obs(obs, env):
-    hp, pos_x, pos_y, last_action, weapon_cd = obs[:5]
-    return hp, (pos_x, pos_y), last_action, weapon_cd
-
-
-# conditions
-def sight_fn(direction, other_agent):  # are there any enemies to direction?
-    def aux(obs, self_agent, env):
-        # self and other obs
-        self_obs = obs[-len(env.own_features) :]
-        other_obs = obs[: -len(env.own_features)].reshape(env.num_agents - 1, -1)
-        rel_pos = other_obs[:, 1:3] - self_obs[1:3]
-        column = jnp.where(dir_to_idx[direction] < 2, rel_pos[:, 1], rel_pos[:, 0])
-        sight = jnp.where(dir_to_idx[direction] % 2 == 0, column > 0, column < 0)
-        # TODO: logical and that is has health > 0
-        return jnp.where(sight[other_agent], SUCCESS, FAILURE)
-
-    return aux
-
-
-""" def reminisce_fn(action):  # only last actions of others are in obs
-    return lambda obs, *_: obs[-1] == action """
-
-
+# constants
 def am_armed(obs, self_agent, env):  # or is my weapon in cooldown?
     return jnp.where(obs[-1] > 0, SUCCESS, FAILURE)
 
@@ -67,16 +29,40 @@ def am_dying(obs, agent, env):  # is my health below a certain threshold?
     return jnp.where(obs[-len(env.own_features)] < thresh, SUCCESS, FAILURE)
 
 
-# decorators
-def negate(state, _):
-    if state == RUNNING:
-        return RUNNING
-    return SUCCESS if state == FAILURE else FAILURE
+def enemy_found(obs, agent, env):
+    _, _, other_team = see_teams(obs, agent, env)
+    return jnp.where(jnp.sum(other_team[:, 0]) == 0, FAILURE, SUCCESS)
+
+
+def find_enemy(obs, agent, env):
+    self_obs = obs[-len(env.own_features) : -1]
+    self_pos = self_obs[1:3] - 0.5
+    dimension = jnp.abs(self_pos.argmax())
+    direction = jnp.sign(self_pos[dimension])
+    return (RUNNING, (2 * dimension + (jnp.sign(direction) + 1) // 2).astype(jnp.int32))
+
+
+def attack_enemy(obs, agent, env):
+    self_obs, my_team, other_team = see_teams(obs, agent, env)
+    potential_targets = other_team[:, 0] > 0
+    target = jnp.concatenate([jnp.where(potential_targets)[0] + 5, jnp.array([-1])])[0]
+    return (RUNNING, target)
+
+
+def see_teams(obs, agent, env):
+    self_obs = obs[-len(env.own_features) :]
+    other_obs = obs[: -len(env.own_features)].reshape(env.num_agents - 1, -1)
+    idx = jnp.where(agent.startswith("ally"), env.num_allies - 1, env.num_enemies - 1)
+    my_team = other_obs[:idx]
+    other_team = other_obs[idx:]
+    return self_obs, my_team, other_team
 
 
 def main():
     rng = jax.random.PRNGKey(1)
-    env = make("SMAX", num_allies=1, num_enemies=10)
+    env = make("SMAX", num_allies=10, num_enemies=10)
     obs, state = env.reset(rng)
-    sight = sight_fn("north", 1)
-    print(sight(obs["ally_0"], "ally_0", env))
+    args = (obs["ally_0"], "ally_0", env)
+    # print(attack_enemy(*args))
+    print(find_enemy(*args))
+    print(enemy_found(*args))
