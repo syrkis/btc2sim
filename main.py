@@ -9,10 +9,11 @@ from jax import numpy as jnp
 from tqdm import tqdm
 from functools import partial
 from jaxmarl import make
-from src import parse_args, scripts, make_bt, plot_fn
+from src import parse_args, scripts, make_bt, plot_fn, grammar_fn, parse_fn, dict_fn
 
 
 # constants
+
 with open("config.yaml", "r") as f:
     conf = yaml.safe_load(f)
     n_envs = conf["n_envs"]
@@ -23,10 +24,9 @@ with open("config.yaml", "r") as f:
 
 # trajectory functions
 def step_fn(btv, rng, old_state_v, obs_v, env):  # take a step in the env
-    rng, act_rng, step_rng = random.split(rng, 3)
-    act_keys = random.split(act_rng, env.num_agents * n_envs).reshape(-1, n_envs, 2)
+    rng, step_rng = random.split(rng)
     step_keys = random.split(step_rng, n_envs)
-    acts = {a: btv(act_keys[i], obs_v[a], a)[1] for i, a in enumerate(env.agents)}
+    acts = {a: btv(obs_v[a], a)[1] for i, a in enumerate(env.agents)}
     obs_v, state_v, reward_v, _, _ = vmap(env.step)(step_keys, old_state_v, acts)
     return obs_v, (btv, rng, state_v), (step_keys, old_state_v, acts), reward_v
 
@@ -52,9 +52,11 @@ def main():
         scripts[args.script]()
 
     if args.script == "main":
+        bt_str = "S ( F ( C ( enemy_found ) :: A ( find_enemy )) :: A ( attack_enemy ))"
+        tree = dict_fn(grammar_fn().parse(bt_str))
         env = make("SMAX", num_allies=2, num_enemies=5)
+        btv = vmap(make_bt(env, tree), in_axes=(0, None), out_axes=(0, 0))
         rng = random.PRNGKey(0)
-        btv = vmap(make_bt(env, "bt_bank.yaml"), in_axes=(0, 0, None), out_axes=(0, 0))
         seq = traj_fn(btv, rng, env, [], [])
         plot_fn(env, seq[0], seq[1], expand=True)
 

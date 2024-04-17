@@ -23,11 +23,15 @@ Maybe we should have the agent index agents by distance?
 
 
 # atomic functions
-def action_fn(action):  # move in a random direction
-    return lambda *_: (SUCCESS, action)
+def attack(agent):  # move in a random direction
+    return lambda *_: (SUCCESS, agent)
 
 
-def sight_fn(direction, other_agent):  # is unit x in direction y?
+def move(direction):
+    return lambda *_: (SUCCESS, direction)
+
+
+def locate(other_agent, direction):  # is unit x in direction y?
     def aux(obs, self_agent, env):
         # self and other obs
         self_obs = obs[-len(env.own_features) :]
@@ -72,7 +76,8 @@ def find_enemy(obs, agent, env):
 def attack_enemy(obs, agent, env):
     self_obs, my_team, other_team = see_teams(obs, agent, env)
     potential_targets = other_team[:, 0] > 0
-    target = jnp.concatenate([jnp.where(potential_targets)[0] + 5, jnp.array([-1])])[0]
+    # TODO: fix the way this is done so it is vmap compatible
+    target = jnp.concatenate([jnp.where(potential_targets)[0], jnp.array([-6])])[0] + 5
     return (RUNNING, target)
 
 

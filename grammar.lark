@@ -10,12 +10,10 @@ node:
     | condition  // condition
     | decorator  // decorator
 
-
 string: /[a-zA-Z0-9_]+/
-nodes: node ("::" node)*
-args: string ("::" string)*
+args: string (" " string)*
 atomic: string | string "(" args ")"
-
+nodes: node ("::" node)*
 
 sequence: "S" "(" nodes ")"                   // sequence of nodes
 fallback: "F" "(" nodes ")"                   // fallback of nodes
