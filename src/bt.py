@@ -70,7 +70,7 @@ def make_bt(env, tree) -> NF:
 
 
 def main():
-    string = "sequence ( fallback ( condition ( enemy_found ) :: action ( find_enemy )) :: action ( attack_enemy ))"
+    string = "S ( F ( C ( enemy_found ) :: A ( find_enemy )) :: A ( attack_enemy ))"
     tree = dict_fn(grammar_fn().parse(string))
     rng = jax.random.PRNGKey(1)
     env = make("SMAX", num_allies=10, num_enemies=10)

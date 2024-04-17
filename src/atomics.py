@@ -9,12 +9,39 @@ from jax import random, lax
 from jaxmarl import make
 from .utils import Status, dir_to_idx, idx_to_dir
 
+from functools import partial
+
 
 # constants
 SUCCESS, FAILURE, RUNNING = Status.SUCCESS, Status.FAILURE, Status.RUNNING
 
 
-# constants
+"""
+TODO: the ids of allies and enemies are super arbitrary.
+Maybe we should have the agent index agents by distance?
+"""
+
+
+# atomic functions
+def action_fn(action):  # move in a random direction
+    return lambda *_: (SUCCESS, action)
+
+
+def sight_fn(direction, other_agent):  # is unit x in direction y?
+    def aux(obs, self_agent, env):
+        # self and other obs
+        self_obs = obs[-len(env.own_features) :]
+        other_obs = obs[: -len(env.own_features)].reshape(env.num_agents - 1, -1)
+        rel_pos = other_obs[:, 1:3] - self_obs[1:3]
+        column = jnp.where(dir_to_idx[direction] < 2, rel_pos[:, 1], rel_pos[:, 0])
+        sight = jnp.where(dir_to_idx[direction] % 2 == 0, column > 0, column < 0)
+        # TODO: logical and that is has health > 0
+        return jnp.where(sight[other_agent], SUCCESS, FAILURE)
+
+    return aux
+
+
+# atomics
 def am_armed(obs, self_agent, env):  # or is my weapon in cooldown?
     return jnp.where(obs[-1] > 0, SUCCESS, FAILURE)
 

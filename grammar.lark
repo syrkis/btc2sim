@@ -17,8 +17,8 @@ args: string ("::" string)*
 atomic: string | string "(" args ")"
 
 
-sequence: "sequence" "(" nodes ")"                   // sequence of nodes
-fallback: "fallback" "(" nodes ")"                   // fallback of nodes
-decorator: "decorator" "(" string "::" node ")"       // decorator with a node
-action: "action" "(" atomic ")"              // action
-condition: "condition" "(" atomic ")"        // condition
+sequence: "S" "(" nodes ")"                   // sequence of nodes
+fallback: "F" "(" nodes ")"                   // fallback of nodes
+decorator: "D" "(" string "::" node ")"       // decorator with a node
+action: "A" "(" atomic ")"                    // action
+condition: "C" "(" atomic ")"                 // condition
