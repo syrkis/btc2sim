@@ -7,7 +7,7 @@ type: slides
 
 # Overview
 
-The project^[https://github.com/syrkis/c2sim/] uses JAX^[https://github.com/google/jax/] throughout, with JaxMARL's^[https://blog.foersterlab.com/jaxmarl/] [@rutherford2023] SMAX as the main environment. The agents are modelled using behaviour trees (BT) stored in a sqlite3 database (we call it BTBank). The ollama^[https://ollama.com/] library is used for the language modelling to map game states to human language and BTs, and vice versa.
+The project^[https://github.com/syrkis/c2sim/] uses JAX^[https://github.com/google/jax/] throughout, with JaxMARL's^[https://blog.foersterlab.com/jaxmarl/] [@rutherford2023] StarCraft II-like SMAX as the environment. The agents are modelled using behaviour trees (BT). BTs are defined using a domain specific language (DSL) developped for the purpose. The ollama^[https://ollama.com/] library is used for the language modelling to map game states to human language and BTs, and vice versa.
 
 ## Overview (cont.)
 
@@ -15,9 +15,11 @@ The project^[https://github.com/syrkis/c2sim/] uses JAX^[https://github.com/goog
 - [x] BT function constructor (`src/{bt,atomics}.py`).
 - [x] BT based trajectory (`src/smax.py`). (yet to JIT compile)
     - Must traverse all leafs always (for array programming)^[Has no effect on performance, as we are always as slow as slowest action].
+- [x] Domain specific language (`grammar.lark`).
 - [ ] Implement the BTBank (`src/bank.py`).
 - [ ] Language out (`src/llm.py`).
 - [ ] Language in (`src/llm.py`).
+
 
 # SMAX
 
@@ -38,6 +40,35 @@ The project^[https://github.com/syrkis/c2sim/] uses JAX^[https://github.com/goog
 - Full traversal happens every tick, using logical operations.
 - No JIT compilation yet.
 
+## DSL grammar
+
+\small
+```
+tree      : sequence | fallback | decorator | atomic
+atomic    : action | condition
+nodes     : tree ( :: tree )*
+sequence  : S ( nodes )
+fallback  : F ( nodes )
+decorator : D ( nodes )
+action    : A ( STRING+ )
+condition : C ( STRING+ )
+```
+
+## DSL example
+
+\small
+```
+F (
+  S (
+    C ( see enemy_0 ) :: A ( attack enemy_0 )
+  ) ::
+  F (
+    C ( see_enemy ) :: A ( find_enemy )
+  ) ::
+  A ( attack_enemy )
+)
+```
+    
 ## Atomics
 
 - Atomics are the leaves (actions/conditions) of the tree.

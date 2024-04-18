@@ -7,10 +7,10 @@ import jax
 import jax.numpy as jnp
 from jax import random, lax
 from jaxmarl import make
-from .utils import Status, dir_to_idx, idx_to_dir
-
+import numpy as np
 from functools import partial
 
+from .utils import Status, dir_to_idx, idx_to_dir
 
 # constants
 SUCCESS, FAILURE, RUNNING = Status.SUCCESS, Status.FAILURE, Status.RUNNING
@@ -75,9 +75,10 @@ def find_enemy(obs, agent, env):
 
 def attack_enemy(obs, agent, env):
     self_obs, my_team, other_team = see_teams(obs, agent, env)
-    potential_targets = other_team[:, 0] > 0
-    # TODO: fix the way this is done so it is vmap compatible
-    target = jnp.concatenate([jnp.where(potential_targets)[0], jnp.array([-6])])[0] + 5
+    potential_targets = (other_team[:, 0] > 0).astype(jnp.int32)
+    potential_targets = jnp.concatenate([potential_targets, jnp.array([1])])
+    target = jnp.argmax(potential_targets)
+    target = jnp.where(target == other_team.shape[0], -1, target)
     return (RUNNING, target)
 
 

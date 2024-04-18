@@ -10,7 +10,7 @@ node:
     | condition  // condition
     | decorator  // decorator
 
-string: /[a-zA-Z0-9_]+/
+string: /[a-z_]+/
 args: string (" " string)*
 atomic: string | string "(" args ")"
 nodes: node ("::" node)*
