@@ -11,8 +11,7 @@ node:
     | decorator  // decorator
 
 string: /[a-z_]+/
-args: string (" " string)*
-atomic: string | string "(" args ")"
+atomic: string+
 nodes: node ("::" node)*
 
 sequence: "S" "(" nodes ")"                   // sequence of nodes

@@ -70,7 +70,9 @@ def find_enemy(obs, agent, env):
     self_pos = self_obs[1:3] - 0.5
     dimension = jnp.abs(self_pos.argmax())
     direction = jnp.sign(self_pos[dimension])
-    return (RUNNING, (2 * dimension + (jnp.sign(direction) + 1) // 2).astype(jnp.int32))
+    # go in the direction on the dimension
+    action = (2 * dimension + (direction + 1)).astype(jnp.int32)
+    return (RUNNING, action)
 
 
 def attack_enemy(obs, agent, env):
