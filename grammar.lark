@@ -16,6 +16,6 @@ nodes: node ("::" node)*
 
 sequence: "S" "(" nodes ")"                   // sequence of nodes
 fallback: "F" "(" nodes ")"                   // fallback of nodes
-decorator: "D" "(" string "::" node ")"       // decorator with a node
+decorator: "D" "(" atomic "::" node ")"       // decorator with a node
 action: "A" "(" atomic ")"                    // action
 condition: "C" "(" atomic ")"                 // condition
