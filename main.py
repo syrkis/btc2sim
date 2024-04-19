@@ -58,7 +58,7 @@ def main():
         btv = vmap(make_bt(env, tree), in_axes=(0, None), out_axes=(0, 0))
         rng = random.PRNGKey(0)
         seq = traj_fn(btv, rng, env, [], [])
-        plot_fn(env, seq[0], seq[1], expand=False)
+        plot_fn(env, seq[0], seq[1], expand=True)
 
 
 if __name__ == "__main__":

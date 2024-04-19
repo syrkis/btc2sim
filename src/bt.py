@@ -19,26 +19,21 @@ from .bank import grammar_fn, parse_fn, dict_fn
 
 # constants
 ATOMIC_FNS = {fn: getattr(atomics, fn) for fn in dir(atomics) if not fn.startswith("_")}
-SUCCESS, FAILURE, RUNNING = Status.SUCCESS, Status.FAILURE, Status.RUNNING
+S, F, R = Status.SUCCESS, Status.FAILURE, Status.RUNNING
 PARENT_DIR = os.path.dirname(os.path.dirname(__file__))
 
 
 # functions
-def tree_fn(children: List[NF], kind: str) -> NF:  # sequence / fallback (selector) node
-    # TODO: pass action in tick
+def tree_fn(children: List[NF], seq: bool) -> NF:  # sequence / fallback (selector)
     def tick(obs: jnp.array, agent, env) -> Status:
-        state, action = SUCCESS if kind.startswith("sequence") else FAILURE, STAND
+        stt, act, skip = S if seq else F, STAND, False
         for child in children:  # loop through all children
-            child_state, child_action = child(obs, agent, env)
-            # node conditions
-            seq_cond = jnp.logical_and(kind.startswith("s"), child_state != SUCCESS)
-            fall_cond = jnp.logical_and(kind.startswith("f"), child_state != FAILURE)
-            cond = jnp.logical_and(jnp.logical_or(seq_cond, fall_cond), action == STAND)
-
-            # update return values
-            state = jnp.where(cond, child_state, state)
-            action = jnp.where(cond, child_action, action)
-        return state, action
+            n_stt, n_act = child(obs, agent, env)
+            node = jnp.logical_and(jnp.where(seq, n_stt != S, n_stt != F), act == STAND)
+            cond = jnp.logical_and(node, jnp.logical_not(skip))
+            skip = jnp.logical_or(skip, node)
+            stt, act = jnp.where(cond, n_stt, stt), jnp.where(cond, n_act, act)
+        return stt, act
 
     return tick
 
@@ -46,8 +41,10 @@ def tree_fn(children: List[NF], kind: str) -> NF:  # sequence / fallback (select
 def atomic_fn(fn: Callable, dec_fn: Callable = None) -> NF:
     def tick(obs: jnp.array, agent, env) -> Status:
         args = (obs, agent, env)
-        response = dec_fn(*fn(*args)) if dec_fn is not None else fn(*args)
-        return response if isinstance(response, tuple) else (response, STAND)
+        fn_res = fn(*args)
+        res = dec_fn(*fn_res) if dec_fn is not None else fn_res
+        out = res if isinstance(res, tuple) else (res, STAND)
+        return out
 
     return tick
 
@@ -56,7 +53,7 @@ def make_bt(env, tree) -> NF:
     def make_node(node: dict) -> NF:
         if node[0] in ["sequence", "fallback"]:
             children = [make_node(child) for child in node[1]]
-            return tree_fn(children, node[0])
+            return tree_fn(children, node[0] == "sequence")
         if node[0] in ["condition", "action"]:
             fn = ATOMIC_FNS[node[1][1]]
             return atomic_fn(fn)

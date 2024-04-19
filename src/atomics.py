@@ -24,11 +24,11 @@ Maybe we should have the agent index agents by distance?
 
 # atomic functions
 def attack(agent):  # move in a random direction
-    return lambda *_: (SUCCESS, agent)
+    return lambda *_: (RUNNING, agent)
 
 
 def move(direction):
-    return lambda *_: (SUCCESS, dir_to_idx[direction])
+    return lambda *_: (RUNNING, dir_to_idx[direction])
 
 
 def locate(other_agent, direction):  # is unit x in direction y?
@@ -62,7 +62,9 @@ def am_dying(obs, agent, env):  # is my health below a certain threshold?
 
 def enemy_found(obs, agent, env):
     _, _, other_team = see_teams(obs, agent, env)
-    return jnp.where(jnp.sum(other_team[:, 0]) == 0, FAILURE, SUCCESS)
+    other_health = other_team[:, 0]
+    status = jnp.where(jnp.any(other_health > 0), SUCCESS, FAILURE)
+    return status
 
 
 def find_enemy(obs, agent, env):
