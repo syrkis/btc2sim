@@ -23,12 +23,16 @@ class Status:  # for behavior tree
     RUNNING: int = -1  # we might not need running, since we always have a return action
 
 
+# default action
+STAND = 4  # do nothing
+
+
 # types
 NodeFunc = Callable[[Any], Status]
 
 # dicts
-dir_to_idx = {"north": 1, "south": 2, "east": 3, "west": 4, "stop": 0}
-idx_to_dir = {1: "north", 2: "south", 3: "east", 4: "west", 0: "stop"}
+dir_to_idx = {"north": 0, "east": 1, "south": 2, "west": 3}
+idx_to_dir = {0: "north", 1: "east", 2: "south", 3: "west"}
 
 
 # functions

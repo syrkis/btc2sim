@@ -10,7 +10,7 @@ from jaxmarl import make
 import numpy as np
 from functools import partial
 
-from .utils import Status, dir_to_idx, idx_to_dir
+from .utils import Status, dir_to_idx, idx_to_dir, STAND
 
 # constants
 SUCCESS, FAILURE, RUNNING = Status.SUCCESS, Status.FAILURE, Status.RUNNING
@@ -28,7 +28,7 @@ def attack(agent):  # move in a random direction
 
 
 def move(direction):
-    return lambda *_: (SUCCESS, direction)
+    return lambda *_: (SUCCESS, dir_to_idx[direction])
 
 
 def locate(other_agent, direction):  # is unit x in direction y?
@@ -66,12 +66,12 @@ def enemy_found(obs, agent, env):
 
 
 def find_enemy(obs, agent, env):
-    self_obs = obs[-len(env.own_features) : -1]
-    self_pos = self_obs[1:3] - 0.5
-    dimension = jnp.abs(self_pos.argmax())
-    direction = jnp.sign(self_pos[dimension])
-    # go in the direction on the dimension
-    action = (2 * dimension + (direction + 1)).astype(jnp.int32)
+    dim_dir_matrix = jnp.array([[2, 1], [0, 3]])
+    self_obs = obs[-len(env.own_features) :]
+    self_pos = self_obs[1:3] - 0.75
+    dimension = jnp.where(jnp.abs(self_pos[0]) > jnp.abs(self_pos[1]), 0, 1)
+    direction = jnp.where(self_pos[dimension] > 0, 0, 1)
+    action = dim_dir_matrix[dimension, direction]
     return (RUNNING, action)
 
 
@@ -80,7 +80,7 @@ def attack_enemy(obs, agent, env):
     potential_targets = (other_team[:, 0] > 0).astype(jnp.int32)
     potential_targets = jnp.concatenate([potential_targets, jnp.array([1])])
     target = jnp.argmax(potential_targets)
-    target = jnp.where(target == other_team.shape[0], -1, target)
+    target = jnp.where(target == other_team.shape[0], STAND, target + 5)
     return (RUNNING, target)
 
 

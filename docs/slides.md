@@ -14,9 +14,9 @@ The project^[https://github.com/syrkis/c2sim/] uses JAX^[https://github.com/goog
 - [x] SMAX visual playback (`src/{plot,smax}.py`).
 - [x] BT function constructor (`src/{bt,atomics}.py`).
 - [x] BT based trajectory (`src/smax.py`). (yet to JIT compile)
-    - Must traverse all leafs always (for array programming)^[Has no effect on performance, as we are always as slow as slowest action].
 - [x] Domain specific language (`grammar.lark`).
 - [ ] Implement the BTBank (`src/bank.py`).
+- [ ] Augment SMAX environment.
 - [ ] Language out (`src/llm.py`).
 - [ ] Language in (`src/llm.py`).
 

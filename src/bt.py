@@ -13,7 +13,7 @@ import os
 from functools import partial
 from typing import Any, Callable, List, Tuple, Dict
 
-from src.utils import Status, NodeFunc as NF
+from src.utils import Status, NodeFunc as NF, STAND
 import src.atomics as atomics
 from .bank import grammar_fn, parse_fn, dict_fn
 
@@ -27,13 +27,13 @@ PARENT_DIR = os.path.dirname(os.path.dirname(__file__))
 def tree_fn(children: List[NF], kind: str) -> NF:  # sequence / fallback (selector) node
     # TODO: pass action in tick
     def tick(obs: jnp.array, agent, env) -> Status:
-        state, action = SUCCESS if kind.startswith("sequence") else FAILURE, -1
+        state, action = SUCCESS if kind.startswith("sequence") else FAILURE, STAND
         for child in children:  # loop through all children
             child_state, child_action = child(obs, agent, env)
             # node conditions
             seq_cond = jnp.logical_and(kind.startswith("s"), child_state != SUCCESS)
             fall_cond = jnp.logical_and(kind.startswith("f"), child_state != FAILURE)
-            cond = jnp.logical_and(jnp.logical_or(seq_cond, fall_cond), action == -1)
+            cond = jnp.logical_and(jnp.logical_or(seq_cond, fall_cond), action == STAND)
 
             # update return values
             state = jnp.where(cond, child_state, state)
@@ -47,7 +47,7 @@ def atomic_fn(fn: Callable, dec_fn: Callable = None) -> NF:
     def tick(obs: jnp.array, agent, env) -> Status:
         args = (obs, agent, env)
         response = dec_fn(*fn(*args)) if dec_fn is not None else fn(*args)
-        return response if isinstance(response, tuple) else (response, -1)
+        return response if isinstance(response, tuple) else (response, STAND)
 
     return tick
 

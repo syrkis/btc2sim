@@ -4,7 +4,7 @@
 
 # imports
 import yaml
-from jax import random, vmap
+from jax import random, vmap, jit
 from jax import numpy as jnp
 from tqdm import tqdm
 from functools import partial
@@ -58,7 +58,7 @@ def main():
         btv = vmap(make_bt(env, tree), in_axes=(0, None), out_axes=(0, 0))
         rng = random.PRNGKey(0)
         seq = traj_fn(btv, rng, env, [], [])
-        plot_fn(env, seq[0], seq[1], expand=True)
+        plot_fn(env, seq[0], seq[1], expand=False)
 
 
 if __name__ == "__main__":
