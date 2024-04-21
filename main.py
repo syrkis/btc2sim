@@ -52,7 +52,7 @@ def main():
         scripts[args.script]()
 
     if args.script == "main":
-        bt_str = "S ( F ( C ( enemy_found ) :: A ( find_enemy )) :: A ( attack_enemy ))"
+        bt_str = "S ( A ( move north ) :: F ( C ( enemy_found ) :: A ( find_enemy )) :: A ( attack_enemy ))"
         tree = dict_fn(grammar_fn().parse(bt_str))
         env = make("SMAX", num_allies=2, num_enemies=5)
         btv = vmap(make_bt(env, tree), in_axes=(0, 0, None), out_axes=(0, 0))

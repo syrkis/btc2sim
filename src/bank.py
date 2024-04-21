@@ -18,9 +18,8 @@ def grammar_fn():
         return Lark(f.read(), start="node")
 
 
-def parse_fn(fname):
-    with open(fname, "r") as f:
-        return grammar_fn().parse(f.read())
+def parse_fn(string):
+    return grammar_fn().parse(string)
 
 
 def dict_fn(tree):
@@ -39,7 +38,8 @@ def dict_fn(tree):
 
 
 def main():
-    tree = parse_fn("bank/default.bt")
+    bt_str = "S ( F ( C ( enemy_found ) :: A ( find_enemy )) :: A ( move north ) :: A ( attack_enemy ))"
+    tree = parse_fn(bt_str)
     dict_tree = dict_fn(tree)
     json_tree = json.dumps(dict_tree, indent=2)
     print(dict_tree)

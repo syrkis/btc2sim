@@ -72,10 +72,8 @@ def enemy_found(state, obs, agent, env):
     in_range = jnp.where(dists < sight_range, True, False)
     _, _, other_team = see_teams(obs, agent, env)
     other_health = other_team[:, 0]
-    in_range_health = jnp.where(
-        jnp.logical_and(in_range, other_health > 0), True, False
-    )
-    status = jnp.where(jnp.any(in_range_health > 0), SUCCESS, FAILURE)
+    targets = jnp.where(jnp.logical_and(in_range, other_health > 0), True, False)
+    status = jnp.where(jnp.any(targets > 0), SUCCESS, FAILURE)
     return status
 
 
@@ -95,7 +93,6 @@ def attack_enemy(state, obs, agent, env):
     potential_targets = jnp.concatenate([potential_targets, jnp.array([1])])
     target = jnp.argmax(potential_targets)
     target = jnp.where(target == other_team.shape[0], STAND, target + 5)
-    print(target)
     return (RUNNING, target)
 
 
@@ -103,8 +100,9 @@ def see_teams(obs, agent, env):
     self_obs = obs[-len(env.own_features) :]
     other_obs = obs[: -len(env.own_features)].reshape(env.num_agents - 1, -1)
     idx = jnp.where(agent.startswith("ally"), env.num_allies - 1, env.num_enemies - 1)
-    my_team = other_obs[:idx]
-    other_team = other_obs[idx:]
+    order = jnp.where(agent.startswith("ally"), 1, -1)
+    my_team = other_obs[:idx][::order]
+    other_team = other_obs[idx:][::order]
     return self_obs, my_team, other_team
 
 

@@ -12,9 +12,10 @@ from .bank import grammar_fn, parse_fn, dict_fn
 import src.bt as bt
 import src.atomics as atomics
 import src.smax as smax
+import src.bank as bank
 
 # scripts
-scripts = {"bt": bt.main, "atomics": atomics.main, "smax": smax.main}
+scripts = {"bt": bt.main, "atomics": atomics.main, "smax": smax.main, "bank": bank.main}
 
 # exports
 __all__ = [
