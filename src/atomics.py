@@ -46,28 +46,40 @@ def locate(other_agent, direction):  # is unit x in direction y?
 
 
 # atomics
-def am_armed(obs, self_agent, env):  # or is my weapon in cooldown?
+def am_armed(state, obs, self_agent, env):  # or is my weapon in cooldown?
     return jnp.where(obs[-1] > 0, SUCCESS, FAILURE)
 
 
-def am_exiled(obs, self_agent, env):  # or is the enemy too far away?
+def am_exiled(state, obs, self_agent, env):  # or is the enemy too far away?
     self_pos = obs[-len(env.own_features) : -1] - 16  # 16 is map size (get from env)
     return jnp.where(jnp.linalg.norm(self_pos) < 10, SUCCESS, FAILURE)
 
 
-def am_dying(obs, agent, env):  # is my health below a certain threshold?
+def am_dying(state, obs, agent, env):  # is my health below a certain threshold?
     thresh = 0.25 * env.unit_type_health[env.unit_type[agent]]
     return jnp.where(obs[-len(env.own_features)] < thresh, SUCCESS, FAILURE)
 
 
-def enemy_found(obs, agent, env):
+def enemy_found(state, obs, agent, env):
+    self_obs, my_team, other_team = see_teams(obs, agent, env)
+    self_pos = self_obs[1:3]
+    other_pos = other_team[:, 1:3]
+    agent_id = env.agent_ids[agent]
+    unit_type = state.unit_types[agent_id]
+    sight_range = env.unit_type_sight_ranges[unit_type] / 32.0
+    # dist to others
+    dists = jnp.linalg.norm(other_pos - self_pos, axis=1)
+    in_range = jnp.where(dists < sight_range, True, False)
     _, _, other_team = see_teams(obs, agent, env)
     other_health = other_team[:, 0]
-    status = jnp.where(jnp.any(other_health > 0), SUCCESS, FAILURE)
+    in_range_health = jnp.where(
+        jnp.logical_and(in_range, other_health > 0), True, False
+    )
+    status = jnp.where(jnp.any(in_range_health > 0), SUCCESS, FAILURE)
     return status
 
 
-def find_enemy(obs, agent, env):
+def find_enemy(state, obs, agent, env):
     dim_dir_matrix = jnp.array([[2, 1], [0, 3]])
     self_obs = obs[-len(env.own_features) :]
     self_pos = self_obs[1:3] - 0.75
@@ -77,12 +89,13 @@ def find_enemy(obs, agent, env):
     return (RUNNING, action)
 
 
-def attack_enemy(obs, agent, env):
+def attack_enemy(state, obs, agent, env):
     self_obs, my_team, other_team = see_teams(obs, agent, env)
     potential_targets = (other_team[:, 0] > 0).astype(jnp.int32)
     potential_targets = jnp.concatenate([potential_targets, jnp.array([1])])
     target = jnp.argmax(potential_targets)
     target = jnp.where(target == other_team.shape[0], STAND, target + 5)
+    print(target)
     return (RUNNING, target)
 
 

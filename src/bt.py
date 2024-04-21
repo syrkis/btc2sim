@@ -25,13 +25,13 @@ PARENT_DIR = os.path.dirname(os.path.dirname(__file__))
 
 # functions
 def tree_fn(children: List[NF], seq: bool) -> NF:  # sequence / fallback (selector)
-    def tick(obs: jnp.array, agent, env) -> Status:
-        stt, act, skip = S if seq else F, STAND, False
+    def tick(state, obs: jnp.array, agent, env) -> Status:
+        stt, act, active = S if seq else F, STAND, True
         for child in children:  # loop through all children
-            n_stt, n_act = child(obs, agent, env)
+            n_stt, n_act = child(state, obs, agent, env)
             node = jnp.logical_and(jnp.where(seq, n_stt != S, n_stt != F), act == STAND)
-            cond = jnp.logical_and(node, jnp.logical_not(skip))
-            skip = jnp.logical_or(skip, node)
+            cond = jnp.logical_and(node, active)
+            active = jnp.where(cond, False, active)
             stt, act = jnp.where(cond, n_stt, stt), jnp.where(cond, n_act, act)
         return stt, act
 
@@ -39,8 +39,8 @@ def tree_fn(children: List[NF], seq: bool) -> NF:  # sequence / fallback (select
 
 
 def atomic_fn(fn: Callable, dec_fn: Callable = None) -> NF:
-    def tick(obs: jnp.array, agent, env) -> Status:
-        args = (obs, agent, env)
+    def tick(state, obs: jnp.array, agent, env) -> Status:
+        args = (state, obs, agent, env)
         fn_res = fn(*args)
         res = dec_fn(*fn_res) if dec_fn is not None else fn_res
         out = res if isinstance(res, tuple) else (res, STAND)
@@ -73,6 +73,6 @@ def main():
     env = make("SMAX", num_allies=10, num_enemies=10)
     bt = make_bt(env, tree)
     obs, state = env.reset(rng)
-    acts = {a: bt(obs[a], a)[1] for idx, a in enumerate(env.agents)}
+    acts = {a: bt(state, obs[a], a)[1] for idx, a in enumerate(env.agents)}
     for k, v in acts.items():
         print(f"{k}: {v}")

@@ -26,7 +26,7 @@ with open("config.yaml", "r") as f:
 def step_fn(btv, rng, old_state_v, obs_v, env):  # take a step in the env
     rng, step_rng = random.split(rng)
     step_keys = random.split(step_rng, n_envs)
-    acts = {a: btv(obs_v[a], a)[1] for i, a in enumerate(env.agents)}
+    acts = {a: btv(old_state_v, obs_v[a], a)[1] for i, a in enumerate(env.agents)}
     obs_v, state_v, reward_v, _, _ = vmap(env.step)(step_keys, old_state_v, acts)
     return obs_v, (btv, rng, state_v), (step_keys, old_state_v, acts), reward_v
 
@@ -55,7 +55,7 @@ def main():
         bt_str = "S ( F ( C ( enemy_found ) :: A ( find_enemy )) :: A ( attack_enemy ))"
         tree = dict_fn(grammar_fn().parse(bt_str))
         env = make("SMAX", num_allies=2, num_enemies=5)
-        btv = vmap(make_bt(env, tree), in_axes=(0, None), out_axes=(0, 0))
+        btv = vmap(make_bt(env, tree), in_axes=(0, 0, None), out_axes=(0, 0))
         rng = random.PRNGKey(0)
         seq = traj_fn(btv, rng, env, [], [])
         plot_fn(env, seq[0], seq[1], expand=True)
