@@ -24,7 +24,7 @@ Maybe we should have the agent index agents by distance?
 
 # atomic functions
 def attack(agent):  # move in a random direction
-    return lambda *_: (RUNNING, int(agent))
+    return lambda *_: (RUNNING, int(agent) + 5)
 
 
 def move(direction):
