@@ -27,8 +27,8 @@ def step_fn(btv, rng, old_state_v, obs_v, env):  # take a step in the env
     rng, step_rng = random.split(rng)
     step_keys = random.split(step_rng, n_envs)
     acts = {a: btv(old_state_v, obs_v[a], a)[1] for i, a in enumerate(env.agents)}
-    obs_v, state_v, reward_v, _, _ = vmap(env.step)(step_keys, old_state_v, acts)
-    return obs_v, (btv, rng, state_v), (step_keys, old_state_v, acts), reward_v
+    obs_v, state_v, reward_v, done, info = vmap(env.step)(step_keys, old_state_v, acts)
+    return obs_v, (btv, rng, state_v), (step_keys, old_state_v, acts, done), reward_v
 
 
 def traj_fn(btv, rng, env, state_seq, reward_seq):  # take n_steps in m env
@@ -36,7 +36,6 @@ def traj_fn(btv, rng, env, state_seq, reward_seq):  # take n_steps in m env
     reset_keys = random.split(reset_rng, n_envs)  # split reset rng for n_envs
     obs_v, state_v = vmap(env.reset)(reset_keys)  # initiate envs
     traj_state = (btv, rng, state_v)  # initial state for step_fn
-
     for _ in tqdm(range(n_steps)):  # take n steps in env and append to lists
         obs_v, traj_state, state_v, reward_v = step_fn(*traj_state, obs_v, env)
         state_seq.append(state_v)
@@ -44,7 +43,12 @@ def traj_fn(btv, rng, env, state_seq, reward_seq):  # take n_steps in m env
     return state_seq, reward_seq
 
 
-# main
+def metric_fn(env, state_seq, reward_seq):  # calculate metrics
+    final_ally_health = state_seq[-1][1].unit_health[:, :n_allies].sum(axis=1)
+    final_enemy_health = state_seq[-1][1].unit_health[:, n_allies:].sum(axis=1)
+    return final_ally_health[:, None], final_enemy_health[:, None]
+
+
 def main():
     args = parse_args()
 
@@ -52,13 +56,15 @@ def main():
         scripts[args.script]()
 
     if args.script == "main":
-        bt_str = "S ( A ( move north ) :: F ( C ( enemy_found ) :: A ( find_enemy )) :: A ( attack_enemy ))"
+        bt_str = "S ( F ( C ( enemy_found ) |> A ( find_enemy )) |> A ( attack_enemy ))"
         tree = dict_fn(grammar_fn().parse(bt_str))
-        env = make("SMAX", num_allies=2, num_enemies=5)
+        env = make("SMAX", num_allies=n_allies, num_enemies=n_enemies)
         btv = vmap(make_bt(env, tree), in_axes=(0, 0, None), out_axes=(0, 0))
         rng = random.PRNGKey(0)
-        seq = traj_fn(btv, rng, env, [], [])
-        plot_fn(env, seq[0], seq[1], expand=True)
+        seq = traj_fn(btv, rng, env, [], [])  # seq[0][0][2] is the first action dict
+        met = metric_fn(env, *seq)
+        print(met[0].shape, met[1].shape)
+        # plot_fn(env, seq[0], seq[1], expand=True)
 
 
 if __name__ == "__main__":

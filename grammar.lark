@@ -12,7 +12,7 @@ node:
 
 string: /[a-z0-9_]+/
 atomic: string+
-nodes: node ("::" node)*
+nodes: node ("::" node | "|>" node)*
 
 sequence: "S" "(" nodes ")"                   // sequence of nodes
 fallback: "F" "(" nodes ")"                   // fallback of nodes
