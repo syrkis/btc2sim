@@ -43,7 +43,7 @@ def plot_fn(env, state_seq, reward_seq, expand=False):
     frames, returns = [], return_fn(reward_seq)
     unit_types = np.unique(np.array(state_seq[0][1].unit_types))
     fills = np.where(np.array(state_seq[0][1].unit_teams) == 1, ink, "None")
-    for i, (_, state, _) in tqdm(enumerate(state_seq), total=len(state_seq)):
+    for i, (_, state, _, _) in tqdm(enumerate(state_seq), total=len(state_seq)):
         fig, axes = plt.subplots(2, 3, figsize=(18.08, 12), facecolor=bg, dpi=50)
         bullets = bullet_seq[i // 8] if expand and i < (len(bullet_seq) * 8) else None
         args = (returns, state, bullets, i, unit_types, fills)
