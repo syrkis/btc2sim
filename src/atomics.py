@@ -32,7 +32,7 @@ def move(direction):
 
 
 def locate(other_agent, direction):  # is unit x in direction y?
-    def aux(obs, self_agent, env):
+    def aux(state, obs, self_agent, env):
         # self and other obs
         self_obs = obs[-len(env.own_features) :]
         other_obs = obs[: -len(env.own_features)].reshape(env.num_agents - 1, -1)
@@ -40,7 +40,7 @@ def locate(other_agent, direction):  # is unit x in direction y?
         column = jnp.where(dir_to_idx[direction] < 2, rel_pos[:, 1], rel_pos[:, 0])
         sight = jnp.where(dir_to_idx[direction] % 2 == 0, column > 0, column < 0)
         # TODO: logical and that is has health > 0
-        return jnp.where(sight[other_agent], SUCCESS, FAILURE)
+        return jnp.where(sight[int(other_agent)], SUCCESS, FAILURE)
 
     return aux
 
