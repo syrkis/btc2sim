@@ -36,7 +36,7 @@ tick_params = {
 
 
 # functions
-def plot_fn(env, state_seq, reward_seq, expand=False):
+def plot_fn(env, state_seq, reward_seq, expand=False, path=None):
     n_steps = len(state_seq)
     bullet_seq = bullet_fn(env, state_seq) if expand else None
     state_seq = state_seq if not expand else vmap(env.expand_state_seq)(state_seq)
@@ -50,8 +50,8 @@ def plot_fn(env, state_seq, reward_seq, expand=False):
         seq = [(ax, j, *args) for j, ax in enumerate(axes.flatten())]
         for ax, j, *args in seq:
             axis_fn(ax, j, *args)
-        frames.append(frame_fn(n_steps, fig, i // 8 if expand else i))
-    fname = f"docs/figs/worlds_{bg}{'_laggy' if not expand else ''}.mp4"
+        frames.append(frame_fn(n_steps, fig, i // 8 if expand else i, path))
+    fname = ("docs/figs" if path is None else path) + f"/worlds_{bg}{'_laggy' if not expand else ''}.mp4" 
     imageio.mimsave(fname, frames, fps=24 if expand else 3)
 
 
@@ -68,7 +68,7 @@ def reward_fn(reward):
     return ally_rewards.sum(axis=0), enemy_rewards.sum(axis=0)
 
 
-def frame_fn(n_steps, fig, idx):
+def frame_fn(n_steps, fig, idx, path=None):
     title = f"step : {str(idx).zfill(len(str(n_steps - 1)))} | model : random"
     fig.text(0.01, 0.5, title, va="center", rotation="vertical", fontsize=20, color=ink)
     sublot_params = {"hspace": 0.3, "wspace": 0.3, "left": 0.05, "right": 0.95}
@@ -79,7 +79,7 @@ def frame_fn(n_steps, fig, idx):
     shape = (int(height), int(width), 4)
     frame = np.frombuffer(fig.canvas.buffer_rgba(), np.uint8).reshape(shape)[..., :3]
     if idx == n_steps - 1:
-        plt.savefig(f"docs/figs/worlds_{bg}.jpg", dpi=200)
+        plt.savefig(("docs/figs" if path is None else path) + f"/worlds_{bg}.jpg", dpi=200)
     plt.close()  # close fig
     return frame
 
