@@ -56,7 +56,8 @@ def am_exiled(state, obs, self_agent, env):  # or is the enemy too far away?
 
 
 def am_dying(state, obs, agent, env):  # is my health below a certain threshold?
-    thresh = 0.25 * env.unit_type_health[env.unit_type[agent]]
+    agent_id = env.agent_ids[agent]
+    thresh = 0.25 * env.unit_type_health[state.unit_types[agent_id]]
     return jnp.where(obs[-len(env.own_features)] < thresh, SUCCESS, FAILURE)
 
 
