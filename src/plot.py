@@ -37,22 +37,28 @@ tick_params = {
 
 
 # functions
-def plot_fn(env, state_seq, reward_seq, expand=False):
+def plot_fn(env, state_seq, reward_seq, expand=False, path=None):
     n_steps = len(state_seq)
     bullet_seq = bullet_fn(env, state_seq) if expand else None
     state_seq = state_seq if not expand else vmap(env.expand_state_seq)(state_seq)
     frames, returns = [], return_fn(reward_seq)
     unit_types = np.unique(np.array(state_seq[0][1].unit_types))
+    unit_sight_range = [env.unit_type_sight_ranges[unit_type] for unit_type in unit_types]
+    unit_attack_range = [env.unit_type_attack_ranges[unit_type] for unit_type in unit_types]
     fills = np.where(np.array(state_seq[0][1].unit_teams) == 1, ink, "None")
     for i, (_, state, _) in tqdm(enumerate(state_seq), total=len(state_seq)):
         fig, axes = plt.subplots(2, 3, figsize=(18.08, 12), facecolor=bg, dpi=50)
         bullets = bullet_seq[i // 8] if expand and i < (len(bullet_seq) * 8) else None
+<<<<<<< HEAD
         args = (returns, state, bullets, i, unit_types, fills, env)
+=======
+        args = (returns, state, bullets, i, unit_types, unit_sight_range, unit_attack_range, fills)
+>>>>>>> 57830a75e304a9238cd81880fda2cb081d3d98fc
         seq = [(ax, j, *args) for j, ax in enumerate(axes.flatten())]
         for ax, j, *args in seq:
             axis_fn(ax, j, *args)
-        frames.append(frame_fn(n_steps, fig, i // 8 if expand else i))
-    fname = f"docs/figs/worlds_{bg}{'_laggy' if not expand else ''}.mp4"
+        frames.append(frame_fn(n_steps, fig, i // 8 if expand else i, path))
+    fname = ("docs/figs" if path is None else path) + f"/worlds_{bg}{'_laggy' if not expand else ''}.mp4" 
     imageio.mimsave(fname, frames, fps=24 if expand else 3)
 
 
@@ -69,7 +75,7 @@ def reward_fn(reward):
     return ally_rewards.sum(axis=0), enemy_rewards.sum(axis=0)
 
 
-def frame_fn(n_steps, fig, idx):
+def frame_fn(n_steps, fig, idx, path=None):
     title = f"step : {str(idx).zfill(len(str(n_steps - 1)))} | model : random"
     fig.text(0.01, 0.5, title, va="center", rotation="vertical", fontsize=20, color=ink)
     sublot_params = {"hspace": 0.3, "wspace": 0.3, "left": 0.05, "right": 0.95}
@@ -80,24 +86,36 @@ def frame_fn(n_steps, fig, idx):
     shape = (int(height), int(width), 4)
     frame = np.frombuffer(fig.canvas.buffer_rgba(), np.uint8).reshape(shape)[..., :3]
     if idx == n_steps - 1:
-        plt.savefig(f"docs/figs/worlds_{bg}.jpg", dpi=200)
+        plt.savefig(("docs/figs" if path is None else path) + f"/worlds_{bg}.jpg", dpi=200)
     plt.close()  # close fig
     return frame
 
 
+<<<<<<< HEAD
 def axis_fn(ax, j, returns, state, bullets, i, unit_types, fills, env):
+=======
+def axis_fn(ax, j, returns, state, bullets, i, unit_types, unit_sight_range, unit_attack_range, fills):
+>>>>>>> 57830a75e304a9238cd81880fda2cb081d3d98fc
     aux_ax_fn(ax, bullets, returns, i, j)
-    for unit_type in unit_types:
+    for unit_idx, unit_type in enumerate(unit_types):
         idx = state.unit_types[j, :] == unit_type
         x = state.unit_positions[j, idx, 0]
         y = state.unit_positions[j, idx, 1]
         c = fills[j, idx]
         s = state.unit_health[j, idx] ** 1.5 * 0.1
         ax.scatter(x, y, s=s, c=c, edgecolor=ink, marker=markers[unit_type])
+<<<<<<< HEAD
         sight_range = env.unit_type_sight_ranges[unit_type]
         attack_range = env.unit_type_attack_ranges[unit_type]
         s = (2 * attack_range) ** 2 / (50 / 4) ** 2
         ax.scatter(x, y, s=s, c="None", edgecolor=ink, linestyle="--", marker="o")
+=======
+        for i in range(len(x)):
+            circle = plt.Circle((x[i], y[i]), unit_sight_range[unit_idx], color='black', ls=(0, (1, 10)), fill=False)
+            ax.add_patch(circle)
+            circle = plt.Circle((x[i], y[i]), unit_attack_range[unit_idx], color='grey', fill=True, alpha=0.05)
+            ax.add_patch(circle)
+>>>>>>> 57830a75e304a9238cd81880fda2cb081d3d98fc
 
 
 def aux_ax_fn(ax, bullets, returns, i, j):
@@ -122,3 +140,7 @@ def aux_ax_fn(ax, bullets, returns, i, j):
     ax.set_aspect("equal")
     ax.set_xlim(-2, 34)
     ax.set_ylim(-2, 34)
+
+
+
+
