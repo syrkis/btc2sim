@@ -3,19 +3,23 @@
 %import common.WS
 %ignore WS
 
+nodes: node ("::" node | "|>" node)*
 node:
     | sequence   // and
     | fallback   // or
     | action     // action
     | condition  // condition
-    | decorator  // decorator
 
-string: /[a-z0-9_]+/
-atomic: string+
-nodes: node ("::" node | "|>" node)*
+sequence  : "S" "(" nodes ")"              // sequence of nodes
+fallback  : "F" "(" nodes ")"              // fallback of nodes
+action    : "A" "(" atomic ")"             // action
+condition : "C" "(" atomic ")"             // condition
 
-sequence: "S" "(" nodes ")"                   // sequence of nodes
-fallback: "F" "(" nodes ")"                   // fallback of nodes
-decorator: "D" "(" atomic "::" node ")"       // decorator with a node
-action: "A" "(" atomic ")"                    // action
-condition: "C" "(" atomic ")"                 // condition
+atomic    : move | attack | locate | region | "am_dying"
+move      : "move" direction
+attack    : "attack" target | "attack" "any"
+locate    : "locate" direction target | "locate" "any"
+region    : "region" (direction | "center")+
+
+direction : /north|east|south|west/
+target    : /[0-9]+/

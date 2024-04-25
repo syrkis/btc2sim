@@ -14,6 +14,7 @@ from .utils import Status, dir_to_idx, idx_to_dir, STAND
 
 # constants
 SUCCESS, FAILURE, RUNNING = Status.SUCCESS, Status.FAILURE, Status.RUNNING
+ATOMICS = ["attack", "move", "region", "locate", "shootable"]
 
 
 """
@@ -31,6 +32,20 @@ def move(direction):
     return lambda *_: (RUNNING, dir_to_idx[direction])
 
 
+def region(x, y):
+    dir2int = {"north": 0, "south": 2, "west": 0, "east": 2, "center": 1}
+
+    def aux(obs, env):
+        self_obs = obs[-len(env.own_features) :]
+        self_pos = self_obs[1:3]
+        # confirm pos ranges from -1 to 1 (might be from 0 to 1)
+        row = jnp.where(self_pos[0] > 1 / 3, 1, jnp.where(self_pos[0] < -1 / 3, -1, 0))
+        col = jnp.where(self_pos[1] > 1 / 3, 1, jnp.where(self_pos[1] < -1 / 3, -1, 0))
+        return jnp.where(row == dir2int[x] and col == dir2int[y], SUCCESS, FAILURE)
+
+    return aux
+
+
 def locate(other_agent, direction):  # is unit x in direction y?
     def aux(obs, self_agent, env):
         # self and other obs
@@ -41,6 +56,18 @@ def locate(other_agent, direction):  # is unit x in direction y?
         sight = jnp.where(dir_to_idx[direction] % 2 == 0, column > 0, column < 0)
         # TODO: logical and that is has health > 0
         return jnp.where(sight[other_agent], SUCCESS, FAILURE)
+
+    return aux
+
+
+def shootable(other_gent):  # is unit x in direction y?
+    def aux(obs, self_agent, env):
+        # self and other obs
+        self_obs = obs[-len(env.own_features) :]
+        other_obs = obs[: -len(env.own_features)].reshape(env.num_agents - 1, -1)
+        rel_pos = other_obs[:, 1:3] - self_obs[1:3]
+        dist = jnp.linalg.norm(rel_pos, axis=1)
+        return jnp.where(dist[other_agent] < 0.5, SUCCESS, FAILURE)
 
     return aux
 
@@ -56,7 +83,7 @@ def am_exiled(state, obs, self_agent, env):  # or is the enemy too far away?
 
 
 def am_dying(state, obs, agent, env):  # is my health below a certain threshold?
-    thresh = 0.25 * env.unit_type_health[env.unit_type[agent]]
+    thresh = 0.25 * env.unit_type_health[state.unit_types[env.agent_ids[agent]]]
     return jnp.where(obs[-len(env.own_features)] < thresh, SUCCESS, FAILURE)
 
 
@@ -108,9 +135,7 @@ def see_teams(obs, agent, env):
 
 def main():
     rng = jax.random.PRNGKey(1)
-    env = make("SMAX", num_allies=10, num_enemies=10)
+    env = make("SMAX", num_allies=10, num_enemies=10, walls_cause_death=False)
     obs, state = env.reset(rng)
-    args = (obs["ally_0"], "ally_0", env)
-    # print(attack_enemy(*args))
-    print(find_enemy(*args))
-    print(enemy_found(*args))
+    top_north_fn = region("north", "center")
+    print(top_north_fn(obs["ally_0"], env))

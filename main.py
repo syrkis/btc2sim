@@ -28,7 +28,7 @@ def step_fn(btv, rng, old_state_v, obs_v, env):  # take a step in the env
     step_keys = random.split(step_rng, n_envs)
     acts = {a: btv(old_state_v, obs_v[a], a)[1] for i, a in enumerate(env.agents)}
     obs_v, state_v, reward_v, done, info = vmap(env.step)(step_keys, old_state_v, acts)
-    return obs_v, (btv, rng, state_v), (step_keys, old_state_v, acts, done), reward_v
+    return obs_v, (btv, rng, state_v), (step_keys, old_state_v, acts), reward_v
 
 
 def traj_fn(btv, rng, env, state_seq, reward_seq):  # take n_steps in m env
@@ -56,15 +56,14 @@ def main():
         scripts[args.script]()
 
     if args.script == "main":
-        bt_str = "S ( F ( C ( enemy_found ) |> A ( find_enemy )) |> A ( attack_enemy ))"
+        bt_str = "A ( move south )"
         tree = dict_fn(grammar_fn().parse(bt_str))
         env = make("SMAX", num_allies=n_allies, num_enemies=n_enemies)
         btv = vmap(make_bt(env, tree), in_axes=(0, 0, None), out_axes=(0, 0))
         rng = random.PRNGKey(0)
         seq = traj_fn(btv, rng, env, [], [])  # seq[0][0][2] is the first action dict
         met = metric_fn(env, *seq)
-        print(met[0].shape, met[1].shape)
-        # plot_fn(env, seq[0], seq[1], expand=True)
+        plot_fn(env, seq[0], seq[1], expand=True)
 
 
 if __name__ == "__main__":

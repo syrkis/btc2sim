@@ -56,11 +56,10 @@ def make_bt(env, tree) -> NF:
             return tree_fn(children, node[0] == "sequence")
         if node[0] in ["condition", "action"]:
             args = ()
-            if isinstance(node[1][1], str):
-                fn = ATOMIC_FNS[node[1][1]]
+            if isinstance(node, str):
+                fn = ATOMIC_FNS[node]
             else:
-                args = node[1][1][1:]
-                fn = ATOMIC_FNS[node[1][1][0]](*args)
+                fn = ATOMIC_FNS[node[1][0]](*node[1][1:])
             return atomic_fn(fn)
         if node[0] == "decorator":
             dec_fn = ATOMIC_FNS[node[1][0]]

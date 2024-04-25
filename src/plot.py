@@ -5,6 +5,7 @@
 # imports
 import imageio
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import darkdetect
 from matplotlib import rcParams
 import numpy as np
@@ -43,10 +44,10 @@ def plot_fn(env, state_seq, reward_seq, expand=False):
     frames, returns = [], return_fn(reward_seq)
     unit_types = np.unique(np.array(state_seq[0][1].unit_types))
     fills = np.where(np.array(state_seq[0][1].unit_teams) == 1, ink, "None")
-    for i, (_, state, _, _) in tqdm(enumerate(state_seq), total=len(state_seq)):
+    for i, (_, state, _) in tqdm(enumerate(state_seq), total=len(state_seq)):
         fig, axes = plt.subplots(2, 3, figsize=(18.08, 12), facecolor=bg, dpi=50)
         bullets = bullet_seq[i // 8] if expand and i < (len(bullet_seq) * 8) else None
-        args = (returns, state, bullets, i, unit_types, fills)
+        args = (returns, state, bullets, i, unit_types, fills, env)
         seq = [(ax, j, *args) for j, ax in enumerate(axes.flatten())]
         for ax, j, *args in seq:
             axis_fn(ax, j, *args)
@@ -84,7 +85,7 @@ def frame_fn(n_steps, fig, idx):
     return frame
 
 
-def axis_fn(ax, j, returns, state, bullets, i, unit_types, fills):
+def axis_fn(ax, j, returns, state, bullets, i, unit_types, fills, env):
     aux_ax_fn(ax, bullets, returns, i, j)
     for unit_type in unit_types:
         idx = state.unit_types[j, :] == unit_type
@@ -93,6 +94,10 @@ def axis_fn(ax, j, returns, state, bullets, i, unit_types, fills):
         c = fills[j, idx]
         s = state.unit_health[j, idx] ** 1.5 * 0.1
         ax.scatter(x, y, s=s, c=c, edgecolor=ink, marker=markers[unit_type])
+        sight_range = env.unit_type_sight_ranges[unit_type]
+        attack_range = env.unit_type_attack_ranges[unit_type]
+        s = (2 * attack_range) ** 2 / (50 / 4) ** 2
+        ax.scatter(x, y, s=s, c="None", edgecolor=ink, linestyle="--", marker="o")
 
 
 def aux_ax_fn(ax, bullets, returns, i, j):

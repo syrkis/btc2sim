@@ -7,6 +7,7 @@ from lark import Lark
 import yaml
 import json
 
+from .atomics import ATOMICS
 
 # constants
 ATOMICS = ["enemy_found", "find_enemy", "attack_enemy", "not_fn"]
@@ -23,12 +24,14 @@ def parse_fn(string):
 
 
 def dict_fn(tree):
-    if tree.data.title() == "String":
+    if tree.data.title() in ["String", "Direction"]:
         return tree.children[0].lower()
     elif tree.data.title() == "Node":
         return dict_fn(tree.children[0])
     elif tree.data.title() == "Nodes":
         return [dict_fn(child) for child in tree.children]
+    elif tree.data.title() in ["Atomic"]:
+        return dict_fn(tree.children[0])
     elif tree.data.title() in ["Action", "Condition"]:
         return (tree.data.title().lower(), dict_fn(tree.children[0]))
     else:  # Sequence or Fallback or Decorator
@@ -38,7 +41,7 @@ def dict_fn(tree):
 
 
 def main():
-    bt_str = "S ( F ( C ( enemy_found ) :: A ( find_enemy )) :: A ( move north ) :: A ( attack_enemy ))"
+    bt_str = "A ( move north )"
     tree = parse_fn(bt_str)
     dict_tree = dict_fn(tree)
     json_tree = json.dumps(dict_tree, indent=2)
