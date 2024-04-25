@@ -22,6 +22,8 @@ Maybe we should have the agent index agents by distance?
 """
 
 
+# # Actions
+
 # atomic functions
 def attack(agent):  # move in a random direction
     return lambda *_: (RUNNING, int(agent) + 5)
@@ -30,6 +32,123 @@ def attack(agent):  # move in a random direction
 def move(direction):
     return lambda *_: (RUNNING, dir_to_idx[direction])
 
+
+def move_to_center(state, obs, agent, env):  # move to the center
+    dim_dir_matrix = jnp.array([[2, 1], [0, 3]])
+    self_obs = obs[-len(env.own_features) :]
+    self_pos = self_obs[1:3] - 0.75
+    dimension = jnp.where(jnp.abs(self_pos[0]) > jnp.abs(self_pos[1]), 0, 1)
+    direction = jnp.where(self_pos[dimension] > 0, 0, 1)
+    action = dim_dir_matrix[dimension, direction]
+    return (RUNNING, action)
+
+
+def attack_enemy(state, obs, agent, env):
+    self_obs, my_team, other_team = see_teams(obs, agent, env)
+    potential_targets = (other_team[:, 0] > 0).astype(jnp.int32)
+    order = jnp.where(agent.startswith("ally"), 1, -1)
+    potential_targets = potential_targets[::order]
+    potential_targets = jnp.concatenate([potential_targets, jnp.array([1])])
+    target = jnp.argmax(potential_targets)
+    target = jnp.where(target == other_team.shape[0], 1, target + 5)
+    status = jnp.where(target == other_team.shape[0], 0, -1)
+    return status, target
+
+
+# # Conditions
+
+# ## Tested
+
+# +
+def see_teams(obs, agent, env):
+    self_obs = obs[-len(env.own_features) :]
+    other_obs = obs[: -len(env.own_features)].reshape(env.num_agents - 1, -1)
+    idx = jnp.where(agent.startswith("ally"), env.num_allies - 1, env.num_enemies - 1)
+    order = jnp.where(agent.startswith("ally"), 1, -1)
+    my_team = other_obs[:idx][::order]
+    other_team = other_obs[idx:][::order]
+    return self_obs, my_team, other_team
+
+def enemy_in_sight(state, obs, agent, env):
+    _, _, other_team = see_teams(obs, agent, env)
+    other_pos = other_team[:, 1:3]
+    dists = jnp.linalg.norm(other_pos, axis=1)
+    in_sight = jnp.where(dists < 1., True, False)
+    other_health = other_team[:, 0]
+    targets = jnp.where(jnp.logical_and(in_sight, other_health > 0), True, False)
+    status = jnp.where(jnp.any(targets > 0), SUCCESS, FAILURE)
+    return status
+
+def enemy_in_range(state, obs, agent, env):
+    self_obs, my_team, other_team = see_teams(obs, agent, env)
+    self_pos = self_obs[1:3]
+    other_pos = other_team[:, 1:3]
+    agent_id = env.agent_ids[agent]
+    unit_type = state.unit_types[agent_id]
+    sight_range = env.unit_type_sight_ranges[unit_type] 
+    attack_range = env.unit_type_attack_ranges[unit_type] 
+    # dist to others
+    dists = jnp.linalg.norm(other_pos, axis=1)
+    in_range = jnp.where(dists < attack_range/sight_range, True, False)
+    _, _, other_team = see_teams(obs, agent, env)
+    other_health = other_team[:, 0]
+    targets = jnp.where(jnp.logical_and(in_range, other_health > 0), True, False)
+    status = jnp.where(jnp.any(targets > 0), SUCCESS, FAILURE)
+    return status
+
+
+# -
+
+def am_dying(state, obs, agent, env):  # is my health below a certain threshold?
+    thresh = 0.33 
+    return jnp.where(obs[-len(env.own_features)] < thresh, SUCCESS, FAILURE)
+
+
+# ## Untested / in progress
+
+# +
+def quarter(obs, env):
+    quarter_matrix = jnp.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]]) 
+                             # [["NW", "N", "NE"], ["W", "C", "E"], ["SW", "S", "SE"]])
+    self_obs = obs[-len(env.own_features) :]
+    self_pos = self_obs[1:3]
+    is_west = jnp.where(self_pos[0] < 1./3, True, False)
+    is_east = jnp.where(self_pos[0] > 2./3, True, False)
+    is_south = jnp.where(self_pos[1] < 1./3, True, False)
+    is_north = jnp.where(self_pos[1] > 2./3, True, False)
+    vertical = jnp.where(is_north, 0, jnp.where(is_south, 2, 1))
+    horizontal = jnp.where(is_west, 0, jnp.where(is_east, 2, 1))
+    return quarter_matrix[vertical, horizontal]
+
+def am_east(state, obs, self_agent, env):
+    return jnp.where(quarter(obs, env) == 5, SUCCESS, FAILURE)
+
+def am_west(state, obs, self_agent, env):
+    return jnp.where(quarter(obs, env) == 3, SUCCESS, FAILURE)
+
+def am_north(state, obs, self_agent, env):
+    return jnp.where(quarter(obs, env) == 1, SUCCESS, FAILURE)
+
+def am_south(state, obs, self_agent, env):
+    return jnp.where(quarter(obs, env) == 7, SUCCESS, FAILURE)
+
+def am_north_west(state, obs, self_agent, env):
+    return jnp.where(quarter(obs, env) == 0, SUCCESS, FAILURE)
+
+def am_south_west(state, obs, self_agent, env):
+    return jnp.where(quarter(obs, env) == 6, SUCCESS, FAILURE)
+
+def am_north_east(state, obs, self_agent, env):
+    return jnp.where(quarter(obs, env) == 2, SUCCESS, FAILURE)
+
+def am_south_east(state, obs, self_agent, env):
+    return jnp.where(quarter(obs, env) == 8, SUCCESS, FAILURE)
+
+def am_center(state, obs, self_agent, env):
+    return jnp.where(quarter(obs, env) == 4, SUCCESS, FAILURE)
+
+
+# -
 
 def locate(other_agent, direction):  # is unit x in direction y?
     def aux(state, obs, self_agent, env):
@@ -55,63 +174,26 @@ def am_exiled(state, obs, self_agent, env):  # or is the enemy too far away?
     return jnp.where(jnp.linalg.norm(self_pos) < 10, SUCCESS, FAILURE)
 
 
-def am_dying(state, obs, agent, env):  # is my health below a certain threshold?
-    agent_id = env.agent_ids[agent]
-    thresh = 0.25 * env.unit_type_health[state.unit_types[agent_id]]
-    return jnp.where(obs[-len(env.own_features)] < thresh, SUCCESS, FAILURE)
-
-
-def enemy_found(state, obs, agent, env):
-    self_obs, my_team, other_team = see_teams(obs, agent, env)
-    self_pos = self_obs[1:3]
-    other_pos = other_team[:, 1:3]
-    agent_id = env.agent_ids[agent]
-    unit_type = state.unit_types[agent_id]
-    sight_range = env.unit_type_sight_ranges[unit_type] / 32.0
-    # dist to others
-    dists = jnp.linalg.norm(other_pos - self_pos, axis=1)
-    in_range = jnp.where(dists < sight_range, True, False)
-    _, _, other_team = see_teams(obs, agent, env)
-    other_health = other_team[:, 0]
-    targets = jnp.where(jnp.logical_and(in_range, other_health > 0), True, False)
-    status = jnp.where(jnp.any(targets > 0), SUCCESS, FAILURE)
-    return status
-
-
-def find_enemy(state, obs, agent, env):
-    dim_dir_matrix = jnp.array([[2, 1], [0, 3]])
-    self_obs = obs[-len(env.own_features) :]
-    self_pos = self_obs[1:3] - 0.75
-    dimension = jnp.where(jnp.abs(self_pos[0]) > jnp.abs(self_pos[1]), 0, 1)
-    direction = jnp.where(self_pos[dimension] > 0, 0, 1)
-    action = dim_dir_matrix[dimension, direction]
-    return (RUNNING, action)
-
-
-def attack_enemy(state, obs, agent, env):
+def can_attack_enemy(state, obs, agent, env):
     self_obs, my_team, other_team = see_teams(obs, agent, env)
     potential_targets = (other_team[:, 0] > 0).astype(jnp.int32)
     potential_targets = jnp.concatenate([potential_targets, jnp.array([1])])
     target = jnp.argmax(potential_targets)
-    target = jnp.where(target == other_team.shape[0], STAND, target + 5)
-    return (RUNNING, target)
+    return jnp.where(target == other_team.shape[0], FAILURE, SUCCESS)
 
 
-def see_teams(obs, agent, env):
-    self_obs = obs[-len(env.own_features) :]
-    other_obs = obs[: -len(env.own_features)].reshape(env.num_agents - 1, -1)
-    idx = jnp.where(agent.startswith("ally"), env.num_allies - 1, env.num_enemies - 1)
-    order = jnp.where(agent.startswith("ally"), 1, -1)
-    my_team = other_obs[:idx][::order]
-    other_team = other_obs[idx:][::order]
-    return self_obs, my_team, other_team
-
+# # Main
 
 def main():
     rng = jax.random.PRNGKey(1)
-    env = make("SMAX", num_allies=10, num_enemies=10)
+    env = make("SMAX", num_allies=2, num_enemies=3)
     obs, state = env.reset(rng)
-    args = (obs["ally_0"], "ally_0", env)
+    args = (state, obs["ally_0"], "ally_0", env)
     # print(attack_enemy(*args))
-    print(find_enemy(*args))
     print(enemy_found(*args))
+
+
+if __name__ == "__main__":
+    main()
+
+
