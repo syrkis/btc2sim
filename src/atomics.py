@@ -24,6 +24,8 @@ Maybe we should have the agent index agents by distance?
 
 # # Actions
 
+# ## tested
+
 # atomic functions
 def attack(agent):  # move in a random direction
     return lambda *_: (RUNNING, int(agent) + 5)
@@ -50,10 +52,33 @@ def attack_enemy(state, obs, agent, env):
     potential_targets = potential_targets[::order]
     potential_targets = jnp.concatenate([potential_targets, jnp.array([1])])
     target = jnp.argmax(potential_targets)
-    target = jnp.where(target == other_team.shape[0], 1, target + 5)
-    status = jnp.where(target == other_team.shape[0], 0, -1)
-    return status, target
+    target = jnp.where(target == other_team.shape[0], 5, target + 5)  # do nothing if no target in sight 
+    return RUNNING, target
 
+
+# ## to test
+
+# +
+def go_to_target(target):
+    dim_dir_matrix = jnp.array([[1, 2], [0, 3]])
+    xy_axis = jnp.where(self_pos[0] > self_pos[1], 0, 1)
+    xminusy_axis = jnp.where(self_pos[0] > -self_pos[1], 0, 1)
+    return dim_dir_matrix[xy_axis, xminusy_axis]
+
+def move_to_enemy_in_sight():
+    self_obs, my_team, other_team = see_teams(obs, agent, env)
+    potential_targets = (other_team[:, 0] > 0).astype(jnp.int32)
+    order = jnp.where(agent.startswith("ally"), 1, -1)
+    potential_targets = potential_targets[::order]
+    potential_targets = jnp.concatenate([potential_targets, jnp.array([1])])
+    target_idx = jnp.argmax(potential_targets)
+    target = jnp.where(target_idx == other_team.shape[0], self_obs[1:3], other_team[target_idx][1:3]) 
+    action = go_to_target(target)
+    action = jnp.where(target_idx == other_team.shape[0], 5, action)  # do nothing if no target in sight 
+    return (RUNNING, action)
+
+
+# -
 
 # # Conditions
 
@@ -104,8 +129,6 @@ def am_dying(state, obs, agent, env):  # is my health below a certain threshold?
     return jnp.where(obs[-len(env.own_features)] < thresh, SUCCESS, FAILURE)
 
 
-# ## Untested / in progress
-
 # +
 def quarter(obs, env):
     quarter_matrix = jnp.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]]) 
@@ -150,6 +173,8 @@ def am_center(state, obs, self_agent, env):
 
 # -
 
+# ## Untested / in progress
+
 def locate(other_agent, direction):  # is unit x in direction y?
     def aux(state, obs, self_agent, env):
         # self and other obs
@@ -172,14 +197,6 @@ def am_armed(state, obs, self_agent, env):  # or is my weapon in cooldown?
 def am_exiled(state, obs, self_agent, env):  # or is the enemy too far away?
     self_pos = obs[-len(env.own_features) : -1] - 16  # 16 is map size (get from env)
     return jnp.where(jnp.linalg.norm(self_pos) < 10, SUCCESS, FAILURE)
-
-
-def can_attack_enemy(state, obs, agent, env):
-    self_obs, my_team, other_team = see_teams(obs, agent, env)
-    potential_targets = (other_team[:, 0] > 0).astype(jnp.int32)
-    potential_targets = jnp.concatenate([potential_targets, jnp.array([1])])
-    target = jnp.argmax(potential_targets)
-    return jnp.where(target == other_team.shape[0], FAILURE, SUCCESS)
 
 
 # # Main
