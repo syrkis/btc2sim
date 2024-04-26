@@ -15,11 +15,9 @@ fallback  : "F" "(" nodes ")"              // fallback of nodes
 action    : "A" "(" atomic ")"             // action
 condition : "C" "(" atomic ")"             // condition
 
-atomic    : move | attack | locate | region | "am_dying"
+atomic    : move | attack | in_region | in_sight | in_range | is_armed | is_dying
 move      : "move" direction
 attack    : "attack" target | "attack" "any"
-locate    : "locate" direction target | "locate" "any"
-region    : "region" (direction | "center")+
 
 direction : /north|east|south|west/
-target    : /[0-9]+/
+target    : /target_[0-9]+/
