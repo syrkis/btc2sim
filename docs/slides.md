@@ -7,38 +7,32 @@ type: slides
 
 # Overview
 
-The project^[https://github.com/syrkis/c2sim/] uses JAX^[https://github.com/google/jax/] throughout, with JaxMARL's^[https://blog.foersterlab.com/jaxmarl/] [@rutherford2023] StarCraft II-like SMAX as the environment. The agents are modelled using behaviour trees (BT). BTs are defined using a domain specific language (DSL) developped for the purpose. The ollama^[https://ollama.com/] library is used for the language modelling to map game states to human language and BTs, and vice versa.
-
-## Overview (cont.)
-
-- [x] SMAX visual playback (`src/{plot,smax}.py`).
-- [x] BT function constructor (`src/{bt,atomics}.py`).
-- [x] BT based trajectory (`src/smax.py`). (yet to JIT compile)
-- [x] Domain specific language (`grammar.lark`).
-- [ ] Implement the BTBank (`src/bank.py`).
-- [ ] Augment SMAX environment.
-- [ ] Language out (`src/llm.py`).
-- [ ] Language in (`src/llm.py`).
-
-
-# SMAX
-
+- SMAX
 - Extensive work on visual playback of trajectory [@fig:smax].
     - [x] Costum SMAX vizualization.
     - [x] Show unit type, team, health, attacks, and reward.
-    - [x] Successfully runnning 10K+ parallel environments.
+    - [x] Runnning 10K+ parallel environments.
 
----
+# Formal grammar
 
-![SMAX in parallel](figs/worlds_white.jpg){#fig:smax}
+- We've defined a formal grammar (language) for behavior trees.
+- The grammar is used to generate JAX-based trees.
+- The trees are used to control the AI.
 
-# Behaviour trees
+\tiny
 
-- BT is for now is located in a .yaml file.
-- Beginning move to sqlite3 database.
-- JAX based tick functions for node and leafs.
-- Full traversal happens every tick, using logical operations.
-- No JIT compilation yet.
+    S (C (see enemy_0) :: C (see enemy_1) :: C (see enemy_2))
+    F (C (see ally_0 ) :: C (see ally_1) :: C ( see ally_2 ))
+    F (S (1 :: 2 :: A (attack any)) :: F (A (move center) :: A (stand)))
+    
+
+# Atomics
+
+- Behavior Trees (BTs) are a way to model AI behavior.
+- Instead of linear control flow, BTs use a tree structure.
+- The leaves of the tree are atomic actions or conditions.
+- Atomics are hand written JAX functions.
+
 
 ## DSL grammar
 
