@@ -9,9 +9,6 @@ import json
 
 from .atomics import ATOMICS
 
-# constants
-ATOMICS = ["enemy_found", "find_enemy", "attack_enemy", "not_fn"]
-
 
 # functions
 def grammar_fn():
@@ -24,7 +21,7 @@ def parse_fn(string):
 
 
 def dict_fn(tree):
-    if tree.data.title() in ["String", "Direction"]:
+    if tree.data.title() in ["String", "Direction", "Foe", "Friend"]:
         return tree.children[0].lower()
     elif tree.data.title() == "Node":
         return dict_fn(tree.children[0])
@@ -41,9 +38,11 @@ def dict_fn(tree):
 
 
 def main():
-    bt_str = "A ( move north )"
+    bt_str = "S ( A ( move north ) |> A (attack foe_0))"
     tree = parse_fn(bt_str)
     dict_tree = dict_fn(tree)
+    print(dict_tree)
+    exit()
     json_tree = json.dumps(dict_tree, indent=2)
     print(dict_tree)
 

@@ -3,21 +3,37 @@
 %import common.WS
 %ignore WS
 
-nodes: node ("::" node | "|>" node)*
-node:
-    | sequence   // and
-    | fallback   // or
-    | action     // action
-    | condition  // condition
+nodes : node ("::" node | "|>" node)*
+node  :
+    | sequence
+    | fallback
+    | action
+    | condition
 
-sequence  : "S" "(" nodes ")"              // sequence of nodes
-fallback  : "F" "(" nodes ")"              // fallback of nodes
-action    : "A" "(" atomic ")"             // action
-condition : "C" "(" atomic ")"             // condition
+sequence  : "S" "(" nodes ")"
+fallback  : "F" "(" nodes ")"
+action    : "A" "(" atomic ")"
+condition : "C" "(" atomic ")"
 
-atomic    : move | attack | in_region | in_sight | in_range | is_armed | is_dying
+atomic :
+    | move
+    | attack
+    | stand
+    | in_sight
+    | in_reach
+    | in_region
+    | is_dying
+    | is_armed
+
 move      : "move" direction
-attack    : "attack" target | "attack" "any"
+attack    : "attack" foe
+stand     : "stand"
+in_sight  : "in_sight" (foe | friend)
+in_reach  : "in_reach" foe
+in_region : "in_region"
+is_dying  : "is_dying" (foe | friend)
+is_armed  : "is_armed" (foe | friend)
 
 direction : /north|east|south|west/
-target    : /target_[0-9]+/
+foe       : /foe_[0-9_]+/
+friend    : /friend_[0-9_]+/

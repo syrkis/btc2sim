@@ -14,7 +14,16 @@ from .utils import Status, dir_to_idx, idx_to_dir, STAND
 
 # constants
 SUCCESS, FAILURE, RUNNING = Status.SUCCESS, Status.FAILURE, Status.RUNNING
-ATOMICS = ["attack", "move", "region", "locate", "shootable"]
+ATOMICS = [
+    "attack",
+    "move",
+    "stand",
+    "in_region",
+    "in_sight",
+    "in_reach",
+    "is_armed",
+    "is_dying",
+]
 FF_DICT = {
     ("enemy", "friend"): ("enemy", lambda env: env.num_allies),
     ("enemy", "foe"): ("ally", lambda _: 0),

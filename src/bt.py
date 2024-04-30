@@ -71,11 +71,11 @@ def make_bt(env, tree) -> NF:
 
 
 def main():
-    string = "S ( F ( C ( enemy_found ) :: A ( find_enemy )) :: A ( attack_enemy ))"
-    tree = dict_fn(grammar_fn().parse(string))
+    bt_str = "S ( A ( move north ) |> A (attack foe_0))"
+    tree = dict_fn(grammar_fn().parse(bt_str))
     rng = jax.random.PRNGKey(1)
     env = make("SMAX", num_allies=10, num_enemies=10)
-    bt = make_bt(env, tree)
+    bt = jit(make_bt(env, tree), static_argnums=(2,))
     obs, state = env.reset(rng)
     acts = {a: bt(state, obs[a], a)[1] for idx, a in enumerate(env.agents)}
     for k, v in acts.items():
