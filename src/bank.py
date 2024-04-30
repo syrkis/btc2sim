@@ -34,11 +34,24 @@ def dict_fn(tree):
     else:  # Sequence or Fallback or Decorator
         key = tree.data.title().lower()
         value = [dict_fn(child) for child in tree.children]
-        return (key, value if len(value) > 1 else value[0])
+        return (key, value)
 
 
 def main():
-    bt_str = "S ( A ( move north ) |> A (attack foe_0))"
+    bt_str = """
+    S (
+        F (
+            C ( in_region east center ) |> 
+            A ( move north ) ) |>
+        A ( attack foe_0 ) |>
+        A ( stand ) |>
+        C ( in_sight foe_0 ) |>
+        C ( in_reach foe_1 ) |>
+        C ( in_region east center ) |>
+        C ( is_dying self ) |>
+        C ( is_armed friend_3 )
+    )
+    """
     tree = parse_fn(bt_str)
     dict_tree = dict_fn(tree)
     print(dict_tree)

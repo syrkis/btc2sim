@@ -56,18 +56,15 @@ def main():
         scripts[args.script]()
 
     if args.script == "main":
-        bt_str = " A ( move south ) "
+        bt_str = """
+        A ( move north )
+        """
         tree = dict_fn(grammar_fn().parse(bt_str))
-        env = make("SMAX", num_allies=n_allies, num_enemies=n_enemies)
-        btv = jit(
-            vmap(make_bt(env, tree), in_axes=(0, 0, None), out_axes=(0, 0)),
-            static_argnums=(2,),
-        )
+        env = make("SMAX")
+        btv = jit(vmap(make_bt(env, tree), in_axes=(0, 0, None)), static_argnums=(2,))
         rng = random.PRNGKey(0)
         seq = traj_fn(btv, rng, env, [], [])  # seq[0][0][2] is the first action dict
-        # met = metric_fn(env, *seq)
-        # print(met[0].shape, met[1].shape)
-        # plot_fn(env, seq[0], seq[1], expand=True)
+        plot_fn(env, seq[0], seq[1], expand=False)
 
 
 if __name__ == "__main__":

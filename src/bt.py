@@ -54,12 +54,9 @@ def make_bt(env, tree) -> NF:
         if node[0] in ["sequence", "fallback"]:
             children = [make_node(child) for child in node[1]]
             return tree_fn(children, node[0] == "sequence")
-        if node[0] in ["condition", "action"]:
-            args = ()
-            if isinstance(node, str):
-                fn = ATOMIC_FNS[node]
-            else:
-                fn = ATOMIC_FNS[node[1][0]](*node[1][1:])
+        if node[0][0] in ["condition", "action"]:
+            _, func, args = node[0][0], node[0][1][0], node[0][1][1]
+            fn = ATOMIC_FNS[func] if len(args) == 0 else ATOMIC_FNS[func](*args)
             return atomic_fn(fn)
         if node[0] == "decorator":
             dec_fn = ATOMIC_FNS[node[1][0]]
@@ -78,5 +75,4 @@ def main():
     bt = jit(make_bt(env, tree), static_argnums=(2,))
     obs, state = env.reset(rng)
     acts = {a: bt(state, obs[a], a)[1] for idx, a in enumerate(env.agents)}
-    for k, v in acts.items():
-        print(f"{k}: {v}")
+    print(acts)
