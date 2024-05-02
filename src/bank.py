@@ -34,7 +34,7 @@ def dict_fn(tree):
     else:  # Sequence or Fallback or Decorator
         key = tree.data.title().lower()
         value = [dict_fn(child) for child in tree.children]
-        return (key, value)
+        return key, value[0] if len(value) == 1 else value
 
 
 def main():

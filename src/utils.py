@@ -23,6 +23,14 @@ class Status:  # for behavior tree
     FAILURE: int = -1
 
 
+# default behavior tree
+DEFAULT_BT = """
+F (
+    C ( in_region west center ) |> A ( move east )
+)
+"""
+
+
 # default action
 STAND = 4  # do nothing
 

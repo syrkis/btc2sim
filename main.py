@@ -10,6 +10,7 @@ from tqdm import tqdm
 from functools import partial
 from jaxmarl import make
 from src import parse_args, scripts, make_bt, plot_fn, grammar_fn, parse_fn, dict_fn
+from src.utils import Status, STAND, DEFAULT_BT
 
 
 # constants
@@ -56,12 +57,9 @@ def main():
         scripts[args.script]()
 
     if args.script == "main":
-        bt_str = """
-        A ( move north )
-        """
-        tree = dict_fn(grammar_fn().parse(bt_str))
+        tree = dict_fn(grammar_fn().parse(DEFAULT_BT))
         env = make("SMAX")
-        btv = jit(vmap(make_bt(env, tree), in_axes=(0, 0, None)), static_argnums=(2,))
+        btv = vmap(make_bt(env, tree), in_axes=(0, 0, None))
         rng = random.PRNGKey(0)
         seq = traj_fn(btv, rng, env, [], [])  # seq[0][0][2] is the first action dict
         plot_fn(env, seq[0], seq[1], expand=False)

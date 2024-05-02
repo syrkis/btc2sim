@@ -13,7 +13,7 @@ import os
 from functools import partial
 from typing import Any, Callable, List, Tuple, Dict
 
-from src.utils import Status, NodeFunc as NF, STAND
+from src.utils import Status, NodeFunc as NF, STAND, DEFAULT_BT
 import src.atomics as atomics
 from .bank import grammar_fn, parse_fn, dict_fn
 
@@ -26,14 +26,16 @@ PARENT_DIR = os.path.dirname(os.path.dirname(__file__))
 # functions
 def tree_fn(children: List[NF], seq: bool) -> NF:  # sequence / fallback (selector)
     def tick(state, obs: jnp.array, agent, env) -> Status:
-        stt, act, active = S if seq else F, STAND, True
+        status, action, active = S if seq else F, STAND, True
         for child in children:  # loop through all children
-            n_stt, n_act = child(state, obs, agent, env)
-            node = jnp.logical_and(jnp.where(seq, n_stt != S, n_stt != F), act == STAND)
-            cond = jnp.logical_and(node, active)
+            new_status, new_action = child(state, obs, agent, env)
+            flag = jnp.where(seq, new_status != S, new_status != F)  # , action == STAND
+            # node = jnp.logical_and(*flag)
+            cond = jnp.logical_and(flag, active)
             active = jnp.where(cond, False, active)
-            stt, act = jnp.where(cond, n_stt, stt), jnp.where(cond, n_act, act)
-        return stt, act
+            status = jnp.where(cond, new_status, status)
+            action = jnp.where(cond, new_action, action)
+        return status, action
 
     return tick
 
@@ -54,25 +56,25 @@ def make_bt(env, tree) -> NF:
         if node[0] in ["sequence", "fallback"]:
             children = [make_node(child) for child in node[1]]
             return tree_fn(children, node[0] == "sequence")
-        if node[0][0] in ["condition", "action"]:
-            _, func, args = node[0][0], node[0][1][0], node[0][1][1]
+        if node[0] in ["condition", "action"]:
+            _, func, args = node[0], node[1][0], node[1][1]
+            args = [args] if isinstance(args, str) else args
             fn = ATOMIC_FNS[func] if len(args) == 0 else ATOMIC_FNS[func](*args)
             return atomic_fn(fn)
         if node[0] == "decorator":
             dec_fn = ATOMIC_FNS[node[1][0]]
             subtree = make_node(node[1][1])
             return atomic_fn(subtree, dec_fn)
-        raise ValueError(f"Invalid node type: {node[0]}")
+        raise ValueError(f"Invalid node type: {node}")
 
     return partial(make_node(tree), env=env)  # partial to pass env to all nodes
 
 
 def main():
-    bt_str = "S ( A ( move north ) |> A (attack foe_0))"
+    bt_str = DEFAULT_BT
     tree = dict_fn(grammar_fn().parse(bt_str))
+    env = make("SMAX", num_allies=2, num_enemies=2)
+    bt = make_bt(env, tree)
     rng = jax.random.PRNGKey(1)
-    env = make("SMAX", num_allies=10, num_enemies=10)
-    bt = jit(make_bt(env, tree), static_argnums=(2,))
     obs, state = env.reset(rng)
     acts = {a: bt(state, obs[a], a)[1] for idx, a in enumerate(env.agents)}
-    print(acts)
