@@ -50,7 +50,7 @@ def plot_fn(env, state_seq, reward_seq, expand=False, path=None):
         env.unit_type_attack_ranges[unit_type] for unit_type in unit_types
     ]
     fills = np.where(np.array(state_seq[0][1].unit_teams) == 1, ink, "None")
-    for i, (_, state, _) in tqdm(enumerate(state_seq), total=len(state_seq)):
+    for i, (_, state, actions) in tqdm(enumerate(state_seq), total=len(state_seq)):
         fig, axes = plt.subplots(2, 3, figsize=(18.08, 12), facecolor=bg, dpi=50)
         bullets = bullet_seq[i // 8] if expand and i < (len(bullet_seq) * 8) else None
         args = (
@@ -62,6 +62,7 @@ def plot_fn(env, state_seq, reward_seq, expand=False, path=None):
             unit_sight_range,
             unit_attack_range,
             fills,
+            actions,
         )
         seq = [(ax, j, *args) for j, ax in enumerate(axes.flatten())]
         for ax, j, *args in seq:
@@ -115,8 +116,9 @@ def axis_fn(
     unit_sight_range,
     unit_attack_range,
     fills,
+    actions,
 ):
-    aux_ax_fn(ax, bullets, returns, i, j)
+    aux_ax_fn(ax, bullets, returns, i, j, actions)
     for unit_idx, unit_type in enumerate(unit_types):
         idx = state.unit_types[j, :] == unit_type
         x = state.unit_positions[j, idx, 0]
@@ -128,7 +130,7 @@ def axis_fn(
             circle = plt.Circle(
                 (x[i], y[i]),
                 unit_sight_range[unit_idx],
-                color="black",
+                color=ink,
                 ls=(0, (1, 10)),
                 fill=False,
             )
@@ -136,23 +138,25 @@ def axis_fn(
             circle = plt.Circle(
                 (x[i], y[i]),
                 unit_attack_range[unit_idx],
-                color="grey",
+                color=ink,
                 fill=True,
                 alpha=0.05,
             )
             ax.add_patch(circle)
 
 
-def aux_ax_fn(ax, bullets, returns, i, j):
+def aux_ax_fn(ax, bullets, returns, i, j, actions):
     if bullets is not None:
         idx = bullets[:, 0] == j
         alpha = i % 8 / 8
         pos = (1 - alpha) * bullets[idx, 3:5] + alpha * bullets[idx, 5:]
         ax.scatter(pos[:, 0], pos[:, 1], s=10, c=ink, marker=",")
+    ally_actions = [str(actions[a][j].item()) for a in actions if a[0] == "a"]
+    enemy_actions = [str(actions[a][j].item()) for a in actions if a[0] == "e"]
     ally_return = returns["ally"][i, j]
     enemy_return = returns["enemy"][i, j]
     ax.set_xlabel("{:.3f} | {:.3f}".format(ally_return, enemy_return), color=ink)
-    ax.set_title(f"simulation {j+1}", color=ink)
+    ax.set_title(f"{' ' .join(ally_actions)} | {' '.join(enemy_actions)}\n", color=ink)
     ax.set_facecolor(bg)
     ticks = np.arange(2, 31, 4)  # Assuming your grid goes from 0 to 32
     ax.set_xticks(ticks)

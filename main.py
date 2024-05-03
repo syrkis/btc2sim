@@ -62,7 +62,7 @@ def main():
         btv = vmap(make_bt(env, tree), in_axes=(0, 0, None))
         rng = random.PRNGKey(0)
         seq = traj_fn(btv, rng, env, [], [])  # seq[0][0][2] is the first action dict
-        plot_fn(env, seq[0], seq[1], expand=False)
+        plot_fn(env, seq[0], seq[1], expand=True)
 
 
 if __name__ == "__main__":

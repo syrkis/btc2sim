@@ -74,7 +74,7 @@ def attack(target):  # DRAFT
         target_obs = others_obs[target_idx]
         dist = jnp.linalg.norm(target_obs[1:3] - self_obs[1:3])
         status = jnp.where(dist < (attack_range / sight_range), RUNNING, FAILURE)
-        action = jnp.where(status == RUNNING, target, STAND)
+        action = jnp.where(status != FAILURE, STAND, target + 5)
         return (status, action)
 
     return attack_fn

@@ -31,7 +31,7 @@ def tree_fn(children: List[NF], seq: bool) -> NF:  # sequence / fallback (select
             new_status, new_action = child(state, obs, agent, env)
             flag = jnp.where(seq, new_status != S, new_status != F)  # , action == STAND
             # node = jnp.logical_and(*flag)
-            cond = jnp.logical_and(flag, active)
+            cond = jnp.logical_and(flag, jnp.logical_and(active, action == STAND))
             active = jnp.where(cond, False, active)
             status = jnp.where(cond, new_status, status)
             action = jnp.where(cond, new_action, action)
