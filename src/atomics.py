@@ -84,7 +84,7 @@ def move(direction):
     return lambda *_: (RUNNING, dir_to_idx[direction])
 
 
-def stand():
+def stand(*_):
     return (RUNNING, STAND)
 
 
@@ -92,7 +92,6 @@ def stand():
 def in_region(x, y):  # only applies to self
     dir2int = {"north": 1, "south": -1, "west": -1, "east": 1, "center": 0}
 
-    @partial(jax.jit, static_argnums=(2, 3))
     def in_region_fn(state, obs, agent, env):
         self_pos = obs[-len(env.own_features) :][1:3]
         # confirm pos ranges from -1 to 1 (might be from 0 to 1)
@@ -107,7 +106,6 @@ def in_region(x, y):  # only applies to self
 def in_sight(target, d):  # is unit x in direction y?
     n = int(target.split("_")[-1]) if "_" in target else -1
 
-    @partial(jax.jit, static_argnums=(2, 3))
     def in_sight_fn(state, obs, agent, env):
         team, offset_fn = FF_DICT[(agent.split("_")[0], target.split("_")[0])]
         offset = offset_fn(env)
@@ -122,7 +120,6 @@ def in_sight(target, d):  # is unit x in direction y?
 def in_reach(other_agent):  # in shooting range
     n = int(other_agent.split("_")[-1]) if "_" in other_agent else -1
 
-    @partial(jax.jit, static_argnums=(2, 3))
     def in_reach_fn(state, obs, self_agent, env):
         team, offset_fn = FF_DICT[(self_agent.split("_")[0], other_agent.split("_")[0])]
         self_obs, others_obs, _ = process_obs(obs, self_agent, env)

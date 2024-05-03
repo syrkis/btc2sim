@@ -155,7 +155,7 @@ def aux_ax_fn(ax, bullets, returns, i, j, actions):
     enemy_actions = [str(actions[a][j].item()) for a in actions if a[0] == "e"]
     ally_return = returns["ally"][i, j]
     enemy_return = returns["enemy"][i, j]
-    ax.set_xlabel("{:.3f} | {:.3f}".format(ally_return, enemy_return), color=ink)
+    ax.set_xlabel("\n{:.3f} | {:.3f}".format(ally_return, enemy_return), color=ink)
     ax.set_title(f"{' ' .join(ally_actions)} | {' '.join(enemy_actions)}\n", color=ink)
     ax.set_facecolor(bg)
     ticks = np.arange(2, 31, 4)  # Assuming your grid goes from 0 to 32

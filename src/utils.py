@@ -30,7 +30,12 @@ S (
         C ( in_region west center ) |>
         A ( move west )
     ) |>
-    A ( attack foe_0 )
+    S ( 
+        C ( in_reach foe_0 ) |>
+        A ( attack foe_0 )
+    )
+    |>
+    A ( stand )
 )
 """
 
