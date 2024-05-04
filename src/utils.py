@@ -27,15 +27,10 @@ class Status:  # for behavior tree
 DEFAULT_BT = """
 S (
     F (
-        C ( in_region west center ) |>
-        A ( move west )
+        C ( in_reach foe ) |>
+        A ( move center )
     ) |>
-    S ( 
-        C ( in_reach foe_0 ) |>
-        A ( attack foe_0 )
-    )
-    |>
-    A ( stand )
+    A ( attack foe )
 )
 """
 

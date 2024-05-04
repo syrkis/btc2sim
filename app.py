@@ -10,6 +10,7 @@ import lark
 import darkdetect
 
 from src.utils import DEFAULT_BT
+from src.bank import grammar_fn, parse_fn, dict_fn
 
 # constants
 grammar = "grammar.lark"
@@ -20,17 +21,8 @@ def conf_fn():
         page_title="Command and Control Simulator",
         page_icon="C2",
         layout="wide",
-        initial_sidebar_state="expanded",
+        # initial_sidebar_state="expanded",
     )
-
-
-def sidebar_fn():
-    st.sidebar.title("Command and Control Simulator")
-    st.sidebar.write("To the right you see the formal grammar for the trord language.")
-    st.sidebar.write("To the left you can enter the behavior trees for each team.")
-    st.sidebar.write("Below you can play the simulation.")
-    st.sidebar.write(f"you are playing against this BT")
-    st.sidebar.write(DEFAULT_BT)
 
 
 def draw_bt(bt):
@@ -70,12 +62,12 @@ def header_fn():
 def cols_fn():
     st.write("Enter the behavior trees for each team.")
     cols = st.columns(2)
+    bt_str = DEFAULT_BT.strip()
     allies_color = lambda: "White" if darkdetect.isDark() else "Black"
     enemies_color = lambda: "Black" if darkdetect.isDark() else "White"
-    tree = cols[0].text_input(f"{allies_color()} team", DEFAULT_BT)
-    st.text(tree)
-    # parse tree
-    tree = lark.Lark(grammar).parse(tree)
+    tree = cols[0].text_area(f"{allies_color()} team", bt_str)
+    tree = parse_fn(tree)
+    cols[0].text(tree)
 
 
 def play_fn():
@@ -84,7 +76,6 @@ def play_fn():
 
 def main():
     conf_fn()
-    sidebar_fn()
     header_fn()
     cols_fn()
     env = make("SMAX")

@@ -58,12 +58,8 @@ def agent_info_fn(state, _, agent, env):
     return sight_range, attack_range
 
 
-def in_range_fn(obs, agent, env, target):
-    pass
-
-
 # actions
-def attack(target):  # DRAFT
+def attack(target):  # TODO: attack closest if no target
     target = int(target.split("_")[-1])
 
     def attack_fn(state, obs, agent, env):
@@ -81,6 +77,25 @@ def attack(target):  # DRAFT
 
 
 def move(direction):
+    if direction == "center":
+        mat_to_dir = jnp.array(
+            [
+                [1, 3],
+                [0, 2],
+            ]
+        )
+
+        def center_fn(state, obs, agent, env):
+            agent_id = env.agent_ids[agent]
+            self_pos = obs[-len(env.own_features) :][1:3] * 32 - 16
+            dimension = jnp.argmax(jnp.abs(self_pos))
+            direction = jnp.where(self_pos[dimension] > 0, 1, 0)
+            action = mat_to_dir[dimension, direction]
+            # move on dimension with higest absolute value
+            return (RUNNING, action)
+
+        return center_fn
+
     return lambda *_: (RUNNING, dir_to_idx[direction])
 
 
@@ -89,7 +104,8 @@ def stand(*_):
 
 
 # location conditions
-def in_region(x, y):  # only applies to self
+def in_region(x, y=None):  # only applies to self
+    y = x if y is None else y  # in_region center instead of in_region center center
     dir2int = {"north": 1, "south": -1, "west": -1, "east": 1, "center": 0}
 
     def in_region_fn(state, obs, agent, env):
@@ -118,17 +134,24 @@ def in_sight(target, d):  # is unit x in direction y?
 
 
 def in_reach(other_agent):  # in shooting range
-    n = int(other_agent.split("_")[-1]) if "_" in other_agent else -1
+    if "_" in other_agent:
+        n = int(other_agent.split("_")[-1]) if "_" in other_agent else -1
 
-    def in_reach_fn(state, obs, self_agent, env):
-        team, offset_fn = FF_DICT[(self_agent.split("_")[0], other_agent.split("_")[0])]
-        self_obs, others_obs, _ = process_obs(obs, self_agent, env)
-        other_obs = others_obs[n + offset_fn(env)]
-        alive = other_obs[0] > 0
-        dist = jnp.linalg.norm(other_obs[1:3])
-        sight_range, attack_range = agent_info_fn(state, obs, self_agent, env)
-        flag = jnp.logical_and(attack_range / sight_range > dist, alive)
-        return jnp.where(flag, SUCCESS, FAILURE)
+        def in_reach_fn(state, obs, self_agent, env):
+            team, offset_fn = FF_DICT[
+                (self_agent.split("_")[0], other_agent.split("_")[0])
+            ]
+            self_obs, others_obs, _ = process_obs(obs, self_agent, env)
+            other_obs = others_obs[n + offset_fn(env)]
+            alive = other_obs[0] > 0
+            dist = jnp.linalg.norm(other_obs[1:3])
+            sight_range, attack_range = agent_info_fn(state, obs, self_agent, env)
+            flag = jnp.logical_and(attack_range / sight_range > dist, alive)
+            return jnp.where(flag, SUCCESS, FAILURE)
+    else:
+
+        def in_reach_fn(state, obs, self_agent, env):  # if any is in reach
+            pass
 
     return in_reach_fn
 

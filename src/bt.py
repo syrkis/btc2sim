@@ -24,17 +24,13 @@ PARENT_DIR = os.path.dirname(os.path.dirname(__file__))
 
 
 # functions
-def tree_fn(children: List[NF], seq: bool) -> NF:  # sequence / fallback (selector)
+def tree_fn(children: List[NF], node_kind: bool) -> NF:  # sequence / fallback
     def tick(state, obs: jnp.array, agent, env) -> Status:
-        status, action, active = S if seq else F, STAND, True
+        status, action, on = (S if node_kind else F, STAND, True)  # on=need act?
         for child in children:  # loop through all children
-            new_status, new_action = child(state, obs, agent, env)
-            flag = jnp.where(seq, new_status != S, new_status != F)  # , action == STAND
-            # node = jnp.logical_and(*flag)
-            cond = jnp.logical_and(flag, jnp.logical_and(active, action == STAND))
-            active = jnp.where(cond, False, active)
-            status = jnp.where(cond, new_status, status)
-            action = jnp.where(cond, new_action, action)
+            ns, na = child(state, obs, agent, env)  # new state and action
+            flag = jnp.logical_and(jnp.where(node_kind, ns != S, ns != F), on)
+            on, status, action = jnp.where(flag, (0, ns, na), (on, status, action))
         return status, action
 
     return tick

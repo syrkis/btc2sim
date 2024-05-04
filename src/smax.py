@@ -14,8 +14,6 @@ import yaml
 from .bt import make_bt
 
 
-
-
 # bullet functions
 def dist_fn(env, pos):  # computing the distances between all ally and enemy agents
     delta = pos[None, :, :] - pos[:, None, :]

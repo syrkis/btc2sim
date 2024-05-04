@@ -30,7 +30,7 @@ attack    : "attack" foe
 stand     : "stand"
 in_sight  : "in_sight" (foe | friend) direction?
 in_reach  : "in_reach" foe
-in_region : "in_region" direction direction
+in_region : "in_region" direction direction?
 is_dying  : "is_dying" (foe | friend)
 is_armed  : "is_armed" (foe | friend)
 
