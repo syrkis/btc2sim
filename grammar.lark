@@ -26,7 +26,7 @@ atomic :
     | is_armed
 
 move      : "move" direction
-attack    : "attack" foe
+attack    : "attack" (foe | qualifier)
 stand     : "stand"
 in_sight  : "in_sight" (foe | friend) direction?
 in_reach  : "in_reach" foe
@@ -37,3 +37,4 @@ is_armed  : "is_armed" (foe | friend)
 direction : /north|east|south|west|center/
 foe       : /foe[_0-9]*/
 friend    : /friend[_0-9]*|self/
+qualifier : /strongest|weakest|closest|furthest/

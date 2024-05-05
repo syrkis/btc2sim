@@ -60,24 +60,35 @@ def agent_info_fn(state, _, agent, env):
 
 # actions
 def attack(target):  # TODO: attack closest if no target
-    if "_" in target:
-        target = int(target.split("_")[-1])
+    if target not in ["closest", "furthest", "weakest", "strongest"]:
+        target_id = int(target.split("_")[-1])
 
         def attack_fn(state, obs, agent, env):
             is_ally = agent.startswith("ally")
             self_obs, others_obs, idx = process_obs(obs, agent, env)
             sight_range, attack_range = agent_info_fn(state, obs, agent, env)
-            target_idx = jnp.where(is_ally, target + idx, target)
+            target_idx = jnp.where(is_ally, target_id + idx, target_id)
             target_obs = others_obs[target_idx]
             dist = jnp.linalg.norm(target_obs[1:3] - self_obs[1:3])
             status = jnp.where(dist < (attack_range / sight_range), RUNNING, FAILURE)
-            action = jnp.where(status != FAILURE, STAND, target + 5)
+            action = jnp.where(status != FAILURE, STAND, target_id + 5)
             return (status, action)
-    else:
+    else:  # if attack closest or furthest or weakest or strongest
 
         def attack_fn(state, obs, agent, env):
-            # attack closest
-            return (RUNNING, 5)
+            is_closest = jnp.where(target == "closest", True, False)
+            is_weakest = jnp.where(target == "weakest", True, False)
+            is_ally = agent.startswith("ally")
+            self_obs, others_obs, idx = process_obs(obs, agent, env)
+            m = jnp.where(is_ally, env.num_allies, env.num_enemies) - 1
+            n = jnp.where(is_ally, env.num_enemies, env.num_allies)
+            alive = (others_obs.T[0] > 0)[m : m + n]
+            dists = jnp.linalg.norm(others_obs.T[1:3], axis=0)[m : m + n]
+            sight_range, attack_range = agent_info_fn(state, obs, agent, env)
+            in_reach = jnp.logical_and(attack_range / sight_range > dists, alive)
+            dists = jnp.where(alive, dists, jnp.where(in_reach, jnp.inf, -jnp.inf))
+            targ = jnp.where(is_closest, jnp.argmin(dists), jnp.argmax(dists))
+            return (RUNNING, targ + 5)
 
     return attack_fn
 

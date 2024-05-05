@@ -30,7 +30,7 @@ S (
         C ( in_reach foe ) |>
         A ( move center )
     ) |>
-    A ( attack foe )
+    A ( attack furthest )
 )
 """
 

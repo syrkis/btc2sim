@@ -21,7 +21,7 @@ def parse_fn(string):
 
 
 def dict_fn(tree):
-    if tree.data.title() in ["String", "Direction", "Foe", "Friend"]:
+    if tree.data.title() in ["String", "Direction", "Foe", "Friend", "Qualifier"]:
         return tree.children[0].lower()
     elif tree.data.title() == "Node":
         return dict_fn(tree.children[0])
