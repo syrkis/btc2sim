@@ -60,30 +60,31 @@ def agent_info_fn(state, _, agent, env):
 
 # actions
 def attack(target):  # TODO: attack closest if no target
-    target = int(target.split("_")[-1])
+    if "_" in target:
+        target = int(target.split("_")[-1])
 
-    def attack_fn(state, obs, agent, env):
-        is_ally = agent.startswith("ally")
-        self_obs, others_obs, idx = process_obs(obs, agent, env)
-        sight_range, attack_range = agent_info_fn(state, obs, agent, env)
-        target_idx = jnp.where(is_ally, target + idx, target)
-        target_obs = others_obs[target_idx]
-        dist = jnp.linalg.norm(target_obs[1:3] - self_obs[1:3])
-        status = jnp.where(dist < (attack_range / sight_range), RUNNING, FAILURE)
-        action = jnp.where(status != FAILURE, STAND, target + 5)
-        return (status, action)
+        def attack_fn(state, obs, agent, env):
+            is_ally = agent.startswith("ally")
+            self_obs, others_obs, idx = process_obs(obs, agent, env)
+            sight_range, attack_range = agent_info_fn(state, obs, agent, env)
+            target_idx = jnp.where(is_ally, target + idx, target)
+            target_obs = others_obs[target_idx]
+            dist = jnp.linalg.norm(target_obs[1:3] - self_obs[1:3])
+            status = jnp.where(dist < (attack_range / sight_range), RUNNING, FAILURE)
+            action = jnp.where(status != FAILURE, STAND, target + 5)
+            return (status, action)
+    else:
+
+        def attack_fn(state, obs, agent, env):
+            # attack closest
+            return (RUNNING, 5)
 
     return attack_fn
 
 
 def move(direction):
     if direction == "center":
-        mat_to_dir = jnp.array(
-            [
-                [1, 3],
-                [0, 2],
-            ]
-        )
+        mat_to_dir = jnp.array([[1, 3], [0, 2]])
 
         def center_fn(state, obs, agent, env):
             agent_id = env.agent_ids[agent]
@@ -92,6 +93,8 @@ def move(direction):
             direction = jnp.where(self_pos[dimension] > 0, 1, 0)
             action = mat_to_dir[dimension, direction]
             # move on dimension with higest absolute value
+            is_alive = state.unit_health[agent_id] > 0
+            action = jnp.where(is_alive, action, STAND)
             return (RUNNING, action)
 
         return center_fn
@@ -151,7 +154,16 @@ def in_reach(other_agent):  # in shooting range
     else:
 
         def in_reach_fn(state, obs, self_agent, env):  # if any is in reach
-            pass
+            # ALMOST DONE
+            is_ally = self_agent.startswith("ally")
+            self_obs, others_obs, _ = process_obs(obs, self_agent, env)
+            n_targets = jnp.where(is_ally, env.num_enemies, env.num_allies)
+            m = jnp.where(is_ally, env.num_allies, env.num_enemies) - 1
+            alive = (others_obs.T[0] > 0)[m : m + n_targets]
+            dist = jnp.linalg.norm(others_obs.T[1:3], axis=0)[m : m + n_targets]
+            sight_range, attack_range = agent_info_fn(state, obs, self_agent, env)
+            flag = (jnp.logical_and(attack_range / sight_range > dist, alive)).any()
+            return jnp.where(flag, SUCCESS, FAILURE)
 
     return in_reach_fn
 

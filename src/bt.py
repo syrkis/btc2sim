@@ -30,7 +30,10 @@ def tree_fn(children: List[NF], node_kind: bool) -> NF:  # sequence / fallback
         for child in children:  # loop through all children
             ns, na = child(state, obs, agent, env)  # new state and action
             flag = jnp.logical_and(jnp.where(node_kind, ns != S, ns != F), on)
-            on, status, action = jnp.where(flag, (0, ns, na), (on, status, action))
+            # on, status, action = jnp.where(flag, (0, ns, na), (on, status, action))
+            on = jnp.where(flag, 0, on)
+            status = jnp.where(flag, ns, status)
+            action = jnp.where(flag, na, action)
         return status, action
 
     return tick
