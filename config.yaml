@@ -1,4 +1,4 @@
 n_envs: 6
-n_steps: 13
+n_steps: 15
 n_allies: 2
 n_enemies: 2

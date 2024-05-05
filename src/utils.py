@@ -15,6 +15,22 @@ import argparse
 from typing import Any, Callable, List, Tuple, Dict
 
 
+# scenarios
+scenarios = [
+    "3m",
+    "2s3z",
+    "25m",
+    "3s5z",
+    "8m",
+    "5m_vs_6m",
+    "10m_vs_11m",
+    "27m_vs_30m",
+    "3s5z_vs_3s6z",
+    "3s_vs_5z",
+    "6h_vs_8z",
+]
+
+
 # dataclasses
 @chex.dataclass
 class Status:  # for behavior tree

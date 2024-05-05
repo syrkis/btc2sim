@@ -77,16 +77,22 @@ def attack(target):  # TODO: attack closest if no target
 
         def attack_fn(state, obs, agent, env):
             is_closest = jnp.where(target == "closest", True, False)
-            is_weakest = jnp.where(target == "weakest", True, False)
+            fill = jnp.where(is_closest, jnp.inf, -jnp.inf)
             is_ally = agent.startswith("ally")
             self_obs, others_obs, idx = process_obs(obs, agent, env)
             m = jnp.where(is_ally, env.num_allies, env.num_enemies) - 1
             n = jnp.where(is_ally, env.num_enemies, env.num_allies)
-            alive = (others_obs.T[0] > 0)[m : m + n]
-            dists = jnp.linalg.norm(others_obs.T[1:3], axis=0)[m : m + n]
+            alive = others_obs.T[0] > 0
+            alive *= jnp.logical_and(
+                (jnp.arange(alive.size) >= m), jnp.arange(alive.size) < n
+            )
+            dists = jnp.linalg.norm(others_obs.T[1:3], axis=0)
+            dists *= jnp.logical_and(
+                (jnp.arange(dists.size) >= m), jnp.arange(dists.size) < n
+            ).astype(dists.dtype)
             sight_range, attack_range = agent_info_fn(state, obs, agent, env)
             in_reach = jnp.logical_and(attack_range / sight_range > dists, alive)
-            dists = jnp.where(alive, dists, jnp.where(in_reach, jnp.inf, -jnp.inf))
+            dists = jnp.where(in_reach, dists, fill)
             targ = jnp.where(is_closest, jnp.argmin(dists), jnp.argmax(dists))
             return (RUNNING, targ + 5)
 
@@ -170,8 +176,14 @@ def in_reach(other_agent):  # in shooting range
             self_obs, others_obs, _ = process_obs(obs, self_agent, env)
             n_targets = jnp.where(is_ally, env.num_enemies, env.num_allies)
             m = jnp.where(is_ally, env.num_allies, env.num_enemies) - 1
-            alive = (others_obs.T[0] > 0)[m : m + n_targets]
-            dist = jnp.linalg.norm(others_obs.T[1:3], axis=0)[m : m + n_targets]
+            alive = others_obs.T[0] > 0
+            alive *= jnp.logical_and(
+                (jnp.arange(alive.size) >= m), jnp.arange(alive.size) < n_targets
+            )
+            dist = jnp.linalg.norm(others_obs.T[1:3], axis=0)
+            dist *= jnp.logical_and(
+                (jnp.arange(dist.size) >= m), jnp.arange(dist.size) < n_targets
+            ).astype(dist.dtype)
             sight_range, attack_range = agent_info_fn(state, obs, self_agent, env)
             flag = (jnp.logical_and(attack_range / sight_range > dist, alive)).any()
             return jnp.where(flag, SUCCESS, FAILURE)
