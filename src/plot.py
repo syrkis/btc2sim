@@ -53,11 +53,18 @@ tick_params = {
 }
 
 
+# +
 # functions
+def compute_episode_duration(state_seq):
+    T = np.argmax([state_seq[i][1].time == 0 for i in range(1, len(state_seq))], axis=0)  # look for the first occurence when the time resets to 0 (after the first step)
+    T[T==0] = len(state_seq)-1  # as the secound step cannot be a new one; T==0 means that there was no ending 
+    return T 
+    
 def plot_fn(env, state_seq, reward_seq, expand=False, path=None):
     n_steps = len(state_seq)
     bullet_seq = bullet_fn(env, state_seq) if expand else None
     state_seq = state_seq if not expand else vmap(env.expand_state_seq)(state_seq)
+    episodes_duration = compute_episode_duration(state_seq)
     frames, returns = [], return_fn(reward_seq)
     unit_types = np.unique(np.array(state_seq[0][1].unit_types))
     unit_sight_range = [
@@ -80,6 +87,7 @@ def plot_fn(env, state_seq, reward_seq, expand=False, path=None):
             unit_attack_range,
             fills,
             actions,
+            episodes_duration,
         )
         seq = [(ax, j, *args) for j, ax in enumerate(axes.flatten())]
         for ax, j, *args in seq:
@@ -90,6 +98,8 @@ def plot_fn(env, state_seq, reward_seq, expand=False, path=None):
     ) + f"/worlds_{bg}{'_laggy' if not expand else ''}.mp4"
     imageio.mimsave(fname, frames, fps=24 if expand else 3)
 
+
+# -
 
 def return_fn(reward_seq):
     reward = [reward_fn(reward) for reward in reward_seq]
@@ -138,34 +148,38 @@ def axis_fn(
     unit_attack_range,
     fills,
     actions,
+    episodes_duration,
 ):
-    aux_ax_fn(ax, bullets, returns, i, j, actions)
-    for unit_idx, unit_type in enumerate(unit_types):
-        idx = state.unit_types[j, :] == unit_type
-        x = state.unit_positions[j, idx, 0]
-        y = state.unit_positions[j, idx, 1]
-        c = fills[j, idx]
-        s = state.unit_health[j, idx] ** 1.5 * 0.1
-        ec = [debug_colors[k%len(debug_colors)] for k in range(len(x))]
-        ax.scatter(x, y, s=s, c=c, edgecolor=ec, marker=markers[unit_type])
-        for i in range(len(x)):
-            if state.unit_health[j, idx][i] > 0:
-                circle = plt.Circle(
-                    (x[i], y[i]),
-                    unit_sight_range[unit_idx],
-                    color=ink,
-                    ls=(0, (1, 10)),
-                    fill=False,
-                )
-                ax.add_patch(circle)
-                circle = plt.Circle(
-                    (x[i], y[i]),
-                    unit_attack_range[unit_idx],
-                    color=ink,
-                    fill=True,
-                    alpha=0.05,
-                )
-                ax.add_patch(circle)
+    if i <= episodes_duration[j]:
+        aux_ax_fn(ax, bullets, returns, i, j, actions)
+        for unit_idx, unit_type in enumerate(unit_types):
+            idx = state.unit_types[j, :] == unit_type
+            x = state.unit_positions[j, idx, 0]
+            y = state.unit_positions[j, idx, 1]
+            c = fills[j, idx]
+            s = state.unit_health[j, idx] ** 1.5 * 0.1
+            ec = [debug_colors[k%len(debug_colors)] for k in range(len(x))]
+            ax.scatter(x, y, s=s, c=c, edgecolor=ec, marker=markers[unit_type])
+            for i in range(len(x)):
+                if state.unit_health[j, idx][i] > 0:
+                    circle = plt.Circle(
+                        (x[i], y[i]),
+                        unit_sight_range[unit_idx],
+                        color=ink,
+                        ls=(0, (1, 10)),
+                        fill=False,
+                    )
+                    ax.add_patch(circle)
+                    circle = plt.Circle(
+                        (x[i], y[i]),
+                        unit_attack_range[unit_idx],
+                        color=ink,
+                        fill=True,
+                        alpha=0.05,
+                    )
+                    ax.add_patch(circle)
+    else:
+        ax.axis('off')
 
 
 # -
