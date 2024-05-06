@@ -73,29 +73,38 @@ def attack(target):  # TODO: attack closest if no target
             status = jnp.where(dist < (attack_range / sight_range), RUNNING, FAILURE)
             action = jnp.where(status != FAILURE, STAND, target_id + 5)
             return (status, action)
-    else:  # if attack closest or furthest or weakest or strongest
-
+    elif target in ["closest", "furthest"]:  
+        # if attack closest or furthest
         def attack_fn(state, obs, agent, env):
             is_closest = jnp.where(target == "closest", True, False)
             fill = jnp.where(is_closest, jnp.inf, -jnp.inf)
             is_ally = agent.startswith("ally")
             self_obs, others_obs, idx = process_obs(obs, agent, env)
-            m = jnp.where(is_ally, env.num_allies, env.num_enemies) - 1
-            n = jnp.where(is_ally, env.num_enemies, env.num_allies)
-            alive = others_obs.T[0] > 0
-            alive *= jnp.logical_and(
-                (jnp.arange(alive.size) >= m), jnp.arange(alive.size) < n
-            )
-            dists = jnp.linalg.norm(others_obs.T[1:3], axis=0)
-            dists *= jnp.logical_and(
-                (jnp.arange(dists.size) >= m), jnp.arange(dists.size) < n
-            ).astype(dists.dtype)
+            n = jnp.where(is_ally, env.num_enemies, env.num_allies)  # number of foes 
+            enemies_obs = others_obs[-n:] 
+            alive = enemies_obs.T[0] > 0
+            dists = jnp.linalg.norm(enemies_obs.T[1:3], axis=0)
             sight_range, attack_range = agent_info_fn(state, obs, agent, env)
             in_reach = jnp.logical_and(attack_range / sight_range > dists, alive)
             dists = jnp.where(in_reach, dists, fill)
             targ = jnp.where(is_closest, jnp.argmin(dists), jnp.argmax(dists))
             return (RUNNING, targ + 5)
-
+    else:
+        # if attack strongest or weakest
+        def attack_fn(state, obs, agent, env):
+            is_weakest = jnp.where(target == "weakest", True, False)
+            fill = jnp.where(is_weakest, jnp.inf, -jnp.inf)
+            is_ally = agent.startswith("ally")
+            self_obs, others_obs, idx = process_obs(obs, agent, env)
+            n = jnp.where(is_ally, env.num_enemies, env.num_allies)  # number of foes 
+            enemies_obs = others_obs[-n:] 
+            alive = enemies_obs.T[0] > 0
+            dists = jnp.linalg.norm(enemies_obs.T[1:3], axis=0)
+            sight_range, attack_range = agent_info_fn(state, obs, agent, env)
+            in_reach = jnp.logical_and(attack_range / sight_range > dists, alive)
+            health = jnp.where(in_reach, enemies_obs.T[0], fill)
+            targ = jnp.where(is_weakest, jnp.argmin(health), jnp.argmax(health))
+            return (RUNNING, targ + 5)
     return attack_fn
 
 
