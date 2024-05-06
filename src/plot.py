@@ -13,12 +13,29 @@ from jax import numpy as jnp, vmap
 from tqdm import tqdm
 from src.smax import bullet_fn
 
+# +
 # globals
 rcParams["font.family"] = "monospace"
 rcParams["font.monospace"] = "Fira Code"
 bg = "black" if darkdetect.isDark() else "white"
 ink = "white" if bg == "black" else "black"
 markers = {0: "o", 1: "s", 2: "D", 3: "^", 4: "<", 5: ">", 6: "+"}
+
+
+action2txt_base = {
+    -2: " ",
+    -1: " ",
+    0: "↑",
+    1: "→",
+    2: "↓",
+    3: "←",
+    4: "∅",
+}
+def action2txt(a): 
+    return action2txt_base[a] if a in action2txt_base else f"{int(a-5)}"
+
+
+# -
 
 # params
 tick_params = {
@@ -151,12 +168,12 @@ def aux_ax_fn(ax, bullets, returns, i, j, actions):
         alpha = i % 8 / 8
         pos = (1 - alpha) * bullets[idx, 3:5] + alpha * bullets[idx, 5:]
         ax.scatter(pos[:, 0], pos[:, 1], s=10, c=ink, marker=",")
-    ally_actions = [str(actions[a][j].item()) for a in actions if a[0] == "a"]
-    enemy_actions = [str(actions[a][j].item()) for a in actions if a[0] == "e"]
+    ally_actions = [actions[a][j].item() for a in actions if a[0] == "a"]
+    enemy_actions = [actions[a][j].item() for a in actions if a[0] == "e"]
     ally_return = returns["ally"][i, j]
     enemy_return = returns["enemy"][i, j]
     ax.set_xlabel("\n{:.3f} | {:.3f}".format(ally_return, enemy_return), color=ink)
-    ax.set_title(f"{' ' .join(ally_actions)} | {' '.join(enemy_actions)}\n", color=ink)
+    ax.set_title(f"{' '.join([action2txt(a) for a in ally_actions])} | {' '.join([action2txt(a) for a in enemy_actions])}\n", color=ink)
     ax.set_facecolor(bg)
     ticks = np.arange(2, 31, 4)  # Assuming your grid goes from 0 to 32
     ax.set_xticks(ticks)
