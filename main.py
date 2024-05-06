@@ -34,7 +34,7 @@ def step_fn(btv, rng, old_state_v, obs_v, env):  # take a step in the env
 
 
 def traj_fn(btv, rng, env, state_seq, reward_seq):  # take n_steps in m env
-    rng, reset_rng = random.split(random.PRNGKey(0))  # split rng for reset and step
+    rng, reset_rng = random.split(rng)  # split rng for reset and step
     reset_keys = random.split(reset_rng, n_envs)  # split reset rng for n_envs
     obs_v, state_v = vmap(env.reset)(reset_keys)  # initiate envs
     traj_state = (btv, rng, state_v)  # initial state for step_fn
