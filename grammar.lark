@@ -25,7 +25,7 @@ atomic :
     | is_dying
     | is_armed
 
-move      : "move" direction
+move      : "move" (direction | foe qualifier)
 attack    : "attack" (foe | qualifier)
 stand     : "stand"
 in_sight  : "in_sight" (foe | friend) direction?
