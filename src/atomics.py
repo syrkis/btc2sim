@@ -163,9 +163,8 @@ def in_sight(target, d):  # is unit x in direction y?
 
 
 def in_reach(other_agent):  # in shooting range
-    if "_" in other_agent:
-        n = int(other_agent.split("_")[-1]) if "_" in other_agent else -1
-
+    if "_" in other_agent:  # specific target 
+        n = int(other_agent.split("_")[-1])
         def in_reach_fn(state, obs, self_agent, env):
             team, offset_fn = FF_DICT[
                 (self_agent.split("_")[0], other_agent.split("_")[0])
@@ -178,21 +177,13 @@ def in_reach(other_agent):  # in shooting range
             flag = jnp.logical_and(attack_range / sight_range > dist, alive)
             return jnp.where(flag, SUCCESS, FAILURE)
     else:
-
         def in_reach_fn(state, obs, self_agent, env):  # if any is in reach
-            # ALMOST DONE
             is_ally = self_agent.startswith("ally")
+            n = jnp.where(is_ally, env.num_enemies, env.num_allies)  # number of foes 
             self_obs, others_obs, _ = process_obs(obs, self_agent, env)
-            n_targets = jnp.where(is_ally, env.num_enemies, env.num_allies)
-            m = jnp.where(is_ally, env.num_allies, env.num_enemies) - 1
-            alive = others_obs.T[0] > 0
-            alive *= jnp.logical_and(
-                (jnp.arange(alive.size) >= m), jnp.arange(alive.size) < n_targets
-            )
-            dist = jnp.linalg.norm(others_obs.T[1:3], axis=0)
-            dist *= jnp.logical_and(
-                (jnp.arange(dist.size) >= m), jnp.arange(dist.size) < n_targets
-            ).astype(dist.dtype)
+            enemies_obs = others_obs[-n:] 
+            alive = enemies_obs.T[0] > 0
+            dist = jnp.linalg.norm(enemies_obs.T[1:3], axis=0)
             sight_range, attack_range = agent_info_fn(state, obs, self_agent, env)
             flag = (jnp.logical_and(attack_range / sight_range > dist, alive)).any()
             return jnp.where(flag, SUCCESS, FAILURE)
