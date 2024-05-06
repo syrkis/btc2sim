@@ -148,17 +148,42 @@ def in_region(x, y=None):  # only applies to self
     return in_region_fn
 
 
-def in_sight(target, d):  # is unit x in direction y?
-    n = int(target.split("_")[-1]) if "_" in target else -1
+def in_sight(target, d=None):  # is unit x in direction y?
+    if d is None:  # any direction
+        if "_" in  target:  # specified target
+            # TODO
+            rin_sight_fn = stand
+        else:  # any target  
+            target_is_foe = target=="foe"
+            def in_sight_fn(state, obs, agent, env):
+                is_ally = agent.startswith("ally")
+                n = jnp.where(is_ally, env.num_enemies, env.num_allies)  # number of foes 
+                self_obs, others_obs, _ = process_obs(obs, agent, env)
+                sight_range, attack_range = agent_info_fn(state, obs, agent, env)
+                
+                enemies_obs = others_obs[-n:]
+                alive = enemies_obs.T[0] > 0
+                dist = jnp.linalg.norm(enemies_obs.T[1:3], axis=0)
+                enemies_flag = (jnp.logical_and(1 > dist, alive)).any()
 
-    def in_sight_fn(state, obs, agent, env):
-        team, offset_fn = FF_DICT[(agent.split("_")[0], target.split("_")[0])]
-        offset = offset_fn(env)
-        _, others_obs, _ = process_obs(obs, agent, env)
-        target_pos = others_obs[n + offset][1:3]
-        status = jnp.where(d in ["east", "west"], target_pos[1] > 0, target_pos[0] > 0)
-        return jnp.where(status, SUCCESS, FAILURE)
+                allies_obs = others_obs[:-n]
+                alive = allies_obs.T[0] > 0
+                dist = jnp.linalg.norm(allies_obs.T[1:3], axis=0)
+                allies_flag = (jnp.logical_and(1 > dist, alive)).any()
 
+                flag = jnp.where(target_is_foe, enemies_flag, allies_flag)    # could do more optimally but it works
+                return jnp.where(flag, SUCCESS, FAILURE)
+    else:
+        n = int(target.split("_")[-1]) if "_" in target else -1
+
+        def in_sight_fn(state, obs, agent, env):
+            team, offset_fn = FF_DICT[(agent.split("_")[0], target.split("_")[0])]
+            offset = offset_fn(env)
+            _, others_obs, _ = process_obs(obs, agent, env)
+            target_pos = others_obs[n + offset][1:3]
+            status = jnp.where(d in ["east", "west"], target_pos[1] > 0, target_pos[0] > 0)
+            return jnp.where(status, SUCCESS, FAILURE)
+    
     return in_sight_fn
 
 
