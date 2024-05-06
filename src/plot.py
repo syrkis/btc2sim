@@ -122,6 +122,10 @@ def frame_fn(n_steps, fig, idx, path=None):
     return frame
 
 
+# +
+#sdebug_colors = ["red", "green", "blue", "pink", "orange", "purple", "cyan", "yellow"]  # for knowing who is who during isual debugging
+debug_colors = [ink]
+
 def axis_fn(
     ax,
     j,
@@ -142,25 +146,29 @@ def axis_fn(
         y = state.unit_positions[j, idx, 1]
         c = fills[j, idx]
         s = state.unit_health[j, idx] ** 1.5 * 0.1
-        ax.scatter(x, y, s=s, c=c, edgecolor=ink, marker=markers[unit_type])
+        ec = [debug_colors[k%len(debug_colors)] for k in range(len(x))]
+        ax.scatter(x, y, s=s, c=c, edgecolor=ec, marker=markers[unit_type])
         for i in range(len(x)):
-            circle = plt.Circle(
-                (x[i], y[i]),
-                unit_sight_range[unit_idx],
-                color=ink,
-                ls=(0, (1, 10)),
-                fill=False,
-            )
-            ax.add_patch(circle)
-            circle = plt.Circle(
-                (x[i], y[i]),
-                unit_attack_range[unit_idx],
-                color=ink,
-                fill=True,
-                alpha=0.05,
-            )
-            ax.add_patch(circle)
+            if state.unit_health[j, idx][i] > 0:
+                circle = plt.Circle(
+                    (x[i], y[i]),
+                    unit_sight_range[unit_idx],
+                    color=ink,
+                    ls=(0, (1, 10)),
+                    fill=False,
+                )
+                ax.add_patch(circle)
+                circle = plt.Circle(
+                    (x[i], y[i]),
+                    unit_attack_range[unit_idx],
+                    color=ink,
+                    fill=True,
+                    alpha=0.05,
+                )
+                ax.add_patch(circle)
 
+
+# -
 
 def aux_ax_fn(ax, bullets, returns, i, j, actions):
     if bullets is not None:
