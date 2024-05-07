@@ -86,6 +86,7 @@ def attack(qualifier):  # TODO: attack closest if no target
         dist = jnp.where(in_reach, jnp.where(use_health, health, dist), fill)
         targ = jnp.where(use_min, jnp.argmin(dist), jnp.argmax(dist)) 
         flag = jnp.where( in_reach.any(), RUNNING, FAILURE)
+        flag = jnp.where(self_obs[3] <= 0, flag, FAILURE)  # check cooldown
         return (flag, targ + 5 - m)
 
     return attack_fn
