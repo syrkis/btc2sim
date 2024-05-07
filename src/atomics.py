@@ -41,7 +41,6 @@ Maybe we should have the agent index agents by distance?
 
 # # helpers
 
-@partial(jax.jit, static_argnums=(1, 2))
 def process_obs(obs, agent, env):
     n, k = env.num_agents, 10  # len(env.own_features)
     is_ally = agent.startswith("ally")
@@ -64,11 +63,14 @@ def agent_info_fn(state, _, agent, env):
 
 # ## Attacks 
 
-def attack(qualifier):  # TODO: attack closest if no target
+def attack(qualifier, unit="any"):  # TODO: attack closest if no target
     assert (qualifier in ["closest", "furthest", "strongest", "weakest"])
+    assert (unit in ["any", "marine", "marauder", "stalker", "zealot", "zergling", "hydralisk"])
     use_health = qualifier in ["strongest", "weakest"]
     use_min = qualifier in ["closest", "weakest"]
-    
+    use_unit_type = unit != "any"
+    target_unit = 5 + {"marine":0, "marauder":1, "stalker":2, "zealot":3, "zergling":4, "hydralisk":5}[unit] if use_unit_type else None
+
     def attack_fn(state, obs, agent, env):
         fill = jnp.where(use_min, jnp.inf, -jnp.inf)
         is_ally = agent.startswith("ally")
@@ -77,7 +79,8 @@ def attack(qualifier):  # TODO: attack closest if no target
         m = jnp.where(is_ally, env.num_allies, env.num_enemies) - 1  # number of allies
         alive = others_obs.T[0] > 0
         is_enemies = jnp.arange(alive.size) >= (alive.size - n)
-        alive = jnp.logical_and(alive, is_enemies)
+        is_unit_types = jnp.where(use_unit_type, others_obs.T[target_unit], 1)
+        alive = jnp.logical_and(jnp.logical_and(alive, is_enemies), is_unit_types)
         dist = jnp.linalg.norm(others_obs.T[1:3], axis=0)
         sight_range, attack_range = agent_info_fn(state, obs, agent, env)
         in_reach = jnp.logical_and(attack_range / sight_range > dist, alive)
@@ -94,13 +97,17 @@ def attack(qualifier):  # TODO: attack closest if no target
 
 # ## Move
 
-def move(direction, qualifier=None, target=None):
+def move(direction, qualifier=None, target=None, unit="any"):
     if direction in ["toward", "away_from"]:  # target = another agent
         assert (target in ["foe", "friend"])
         assert (qualifier in ["closest", "furthest", "strongest", "weakest"])
+        assert (unit in [None, "marine", "marauder", "stalker", "zealot", "zergling", "hydralisk"])
+        
         use_health = qualifier in ["strongest", "weakest"]
         use_min = qualifier in ["closest", "weakest"]
-        target_foe = target=="foe"
+        use_unit_type = unit != "any"
+        target_unit = 5 + {"marine":0, "marauder":1, "stalker":2, "zealot":3, "zergling":4, "hydralisk":5}[unit] if use_unit_type else None
+        target_foe = target == "foe"
         move_toward = direction == "toward"
         def move_fn(state, obs, agent, env):
             is_ally = agent.startswith("ally")
@@ -110,7 +117,8 @@ def move(direction, qualifier=None, target=None):
             sight_range, attack_range = agent_info_fn(state, obs, agent, env)
             alive = others_obs.T[0] > 0  # takes health and in_sight into consideration as health = 0 if not in sight 
             target_team = jnp.where(target_foe, jnp.arange(alive.size) >= (alive.size - n), jnp.arange(alive.size) < (alive.size - n))
-            alive = jnp.logical_and(alive, target_team)
+            is_unit_types = jnp.where(use_unit_type, others_obs.T[target_unit], 1)
+            alive = jnp.logical_and(jnp.logical_and(alive, target_team), is_unit_types)
             dists = jnp.linalg.norm(others_obs.T[1:3], axis=0)
             health = others_obs.T[0]
             dists = jnp.where(alive, jnp.where(use_health, health, dists), fill)
@@ -155,14 +163,17 @@ def stand(*_):
 
 def in_region(x, y=None):  # only applies to self
     y = x if y is None else y  # in_region center instead of in_region center center
-    dir2int = {"north": 1, "south": -1, "west": -1, "east": 1, "center": 0}
+    target_row, target_col = {
+        ("north", "west"): (1, -1), ("north", "north"): (1, 0), ("north", "east"): (1, 1),
+        ("west", "west"): (0, -1), ("center", "center"): (0, 0), ("east", "east"): (0, 1),
+        ("south", "west"): (-1, -1), ("south", "south"): (-1, 0), ("south", "east"): (-1, 1),
+    }[(x, y)]
 
     def in_region_fn(state, obs, agent, env):
         self_pos = obs[-len(env.own_features) :][1:3]
-        # confirm pos ranges from -1 to 1 (might be from 0 to 1)
-        row = jnp.where(self_pos[0] > 2 / 3, 1, jnp.where(self_pos[0] < 1 / 3, -1, 0))
-        col = jnp.where(self_pos[1] > 2 / 3, 1, jnp.where(self_pos[1] < 1 / 3, -1, 0))
-        flag = jnp.logical_and(row == dir2int[x], col == dir2int[y])
+        col = jnp.where(self_pos[0] > 2 / 3, 1, jnp.where(self_pos[0] < 1 / 3, -1, 0))
+        row = jnp.where(self_pos[1] > 2 / 3, 1, jnp.where(self_pos[1] < 1 / 3, -1, 0))
+        flag = jnp.logical_and(row == target_row, col == target_col)
         return jnp.where(flag, SUCCESS, FAILURE)
 
     return in_region_fn
@@ -170,10 +181,12 @@ def in_region(x, y=None):  # only applies to self
 
 # ## In sight
 
-def in_sight(target, d=None):  # is unit x in direction y?
+def in_sight(target, unit="any"):  # is unit x in direction y?
     assert (target in ["foe", "friend"])
-    
+    use_unit_type = unit != "any"
+    target_unit = 5 + {"marine":0, "marauder":1, "stalker":2, "zealot":3, "zergling":4, "hydralisk":5}[unit] if use_unit_type else None
     target_foe = target == "foe"
+    
     def in_sight_fn(state, obs, agent, env):
         is_ally = agent.startswith("ally")
         n = jnp.where(is_ally, env.num_enemies, env.num_allies)  # number of foes 
@@ -181,7 +194,8 @@ def in_sight(target, d=None):  # is unit x in direction y?
         sight_range, attack_range = agent_info_fn(state, obs, agent, env)
         alive = others_obs.T[0] > 0
         target_team = jnp.where(target_foe, jnp.arange(alive.size) >= (alive.size - n), jnp.arange(alive.size) < (alive.size - n))
-        alive = jnp.logical_and(alive, target_team)
+        is_unit_types = jnp.where(use_unit_type, others_obs.T[target_unit], 1)
+        alive = jnp.logical_and(jnp.logical_and(alive, target_team), is_unit_types)
         enemies_flag = alive.any()
         return jnp.where(enemies_flag, SUCCESS, FAILURE)               
 
@@ -190,17 +204,20 @@ def in_sight(target, d=None):  # is unit x in direction y?
 
 # ## In reach
 
-def in_reach(other_agent):  # in shooting range
+def in_reach(other_agent, unit="any"):  # in shooting range
     assert (other_agent in ["foe", "friend"])
     on_foe = other_agent == "foe"
-    
+    use_unit_type = unit != "any"
+    target_unit = 5 + {"marine":0, "marauder":1, "stalker":2, "zealot":3, "zergling":4, "hydralisk":5}[unit] if use_unit_type else None
+
     def in_reach_fn(state, obs, self_agent, env):  # if any is in reach
         is_ally = self_agent.startswith("ally")
         n = jnp.where(is_ally, env.num_enemies, env.num_allies)  # number of foes 
         self_obs, others_obs, _ = process_obs(obs, self_agent, env)
         alive = others_obs.T[0] > 0
         target_team = jnp.where( on_foe, jnp.arange(alive.size) >= (alive.size - n), jnp.arange(alive.size) < (alive.size - n))
-        alive = jnp.logical_and(alive, target_team)
+        is_unit_types = jnp.where(use_unit_type, others_obs.T[target_unit], 1)
+        alive = jnp.logical_and(jnp.logical_and(alive, target_team), is_unit_types)
         dist = jnp.linalg.norm(others_obs.T[1:3], axis=0)
         sight_range, attack_range = agent_info_fn(state, obs, self_agent, env)
         in_range = attack_range / sight_range > dist
@@ -215,7 +232,7 @@ def in_reach(other_agent):  # in shooting range
 def is_armed(agent):
     on_self = agent == "self"
     on_foe = agent == "foe"  # used only if not on_self
-    @partial(jax.jit, static_argnums=(2, 3))
+    
     def is_armed_fn(state, obs, self_agent, env):
         self_obs, others_obs, _ = process_obs(obs, self_agent, env)
         alive = others_obs.T[0] > 0
@@ -239,7 +256,6 @@ def is_dying(agent, hp_level):
     on_foe = agent == "foe"  # used only if not on_self
     threshold = {"low": 0.25, "middle": 0.5, "high": 0.75}[hp_level]
        
-    @partial(jax.jit, static_argnums=(2, 3))
     def aux(state, obs, self_agent, env):
         self_obs, others_obs, _ = process_obs(obs, self_agent, env)
         alive = others_obs.T[0] > 0
