@@ -3,84 +3,46 @@
 # by: Noah Syrkis
 
 # imports
-from jax import random
 import streamlit as st
 from jaxmarl import make
+from jaxmarl.environments.smax import map_name_to_scenario
+from jax import vmap, jit, random
 import lark
 import darkdetect
+import ollama
 
-from src.utils import DEFAULT_BT
+from src.utils import DEFAULT_BT, scenarios
 from src.bank import grammar_fn, parse_fn, dict_fn
+from src.bt import make_bt
 
 # constants
 grammar = "grammar.lark"
+page_title = "Command and control simulations"
 
 
-def conf_fn():
-    st.set_page_config(
-        page_title="Command and Control Simulator",
-        page_icon="C2",
-        layout="wide",
-        # initial_sidebar_state="expanded",
-    )
-
-
-def draw_bt(bt):
-    pass
-
-
-def header_fn():
-    st.title("Command and Control Simulator")
-    cols = st.columns(2)
-    cols[0].write("To the right you see the formal grammar for the trord language.")
-    cols[0].write("To the left you can enter the behavior trees for each team.")
-    cols[0].write("Below you can play the simulation.")
-    cols[0].write(f"you are playing against this BT")
-    cols[0].write(DEFAULT_BT)
-
-    # describe language
-    cols[1].code(
-        """
-        node: action
-            | condition
-            | sequence
-            | fallback
-
-        nodes: node ( "::" node )*
-        arg: /enemy_[0-9]*|friend_[0-9]*|north|east|south|west|center/
-        args: ( STRING )*
-        atomic: STRING args
-
-        action: "A" "(" atomic ")"
-        condition: "C" "(" atomic ")"
-        sequence: "S" "(" nodes ")"
-        fallback: "F" "(" nodes ")"
-        """
-    )
-
-
-def cols_fn():
-    st.write("Enter the behavior trees for each team.")
-    cols = st.columns(2)
-    bt_str = DEFAULT_BT.strip()
-    allies_color = lambda: "White" if darkdetect.isDark() else "Black"
-    enemies_color = lambda: "Black" if darkdetect.isDark() else "White"
-    tree = cols[0].text_area(f"{allies_color()} team", bt_str)
-    tree = parse_fn(tree)
-    cols[0].text(tree)
-
-
-def play_fn():
-    pass
-
-
-def main():
-    conf_fn()
-    header_fn()
-    cols_fn()
-    env = make("SMAX")
+# functions
+def play_fn(bt, scenario):
+    btv = jit(vmap(bt, in_axes=(0, 0, None)), static_argnums=(2,))
+    env = make("SMAX", scenario=map_name_to_scenario(scenario))
     rng = random.PRNGKey(0)
     obs, state = env.reset(rng)
+    for _ in range(100):
+        action = bt(obs)
+        obs, state, _ = env.step(action, state)
+
+
+# content
+def main():
+    st.set_page_config(page_title=page_title, page_icon="C2", layout="wide")
+    st.title(page_title)
+    st.sidebar.title("Settings")
+    st.sidebar.write("Configure the simulation.")
+    bt_str = st.sidebar.text_area("Behavior Tree", DEFAULT_BT.strip()).strip()
+    bt_fn = dict_fn(parse_fn(bt_str))
+    st.sidebar.write(bt_fn)
+    scenario = st.sidebar.selectbox("Scenario", scenarios)
+    if st.sidebar.button("Run"):
+        play_fn(bt_fn, scenario)
 
 
 if __name__ == "__main__":

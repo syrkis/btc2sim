@@ -41,12 +41,38 @@ class Status:  # for behavior tree
 
 # default behavior tree
 DEFAULT_BT = """
-S (
-    F (
-        C ( in_reach foe ) |>
-        A ( move center )
-    ) |>
-    A ( attack furthest )
+F (
+    A ( move toward closest foe) ::
+    S (
+        C ( in_region east) ::
+        F (
+            S (
+                C ( is_flock friend south) ::
+                A ( move north)
+            ) ::
+            S (
+                C ( is_flock friend north) ::
+                A ( move south)
+            ) ::
+            A ( move toward closest friend)
+        )
+    ) ::
+    S (
+        C ( in_region north east) ::
+        A ( move west)
+    ) ::
+    S (
+        C ( in_region north) ::
+        A ( move west)
+    ) ::
+    S (
+        C ( in_region south) ::
+        A ( move west)
+    ) ::
+    S (
+        C ( in_region south east) ::
+        A ( move west)
+    )
 )
 """
 
