@@ -24,20 +24,21 @@ atomic :
     | in_region
     | is_dying
     | is_armed
+    
 
 move      : "move" (direction | sense qualifier (foe | friend))
 attack    : "attack" (foe | qualifier)
 stand     : "stand"
-in_sight  : "in_sight" (foe | friend) direction?
+in_sight  : "in_sight" (foe | friend)
 in_reach  : "in_reach" (foe | friend)
 in_region : "in_region" direction direction?
 is_dying  : "is_dying" (self | foe | friend) hp_level
-is_armed  : "is_armed" (foe | friend)
+is_armed  : "is_armed" (self | foe | friend)
 
 sense     : /toward|away_from/
 direction : /north|east|south|west|center/
-foe       : /foe[_0-9]*/
-friend    : /friend[_0-9]*|self/
+foe       : /foe/
+friend    : /friend/
 qualifier : /strongest|weakest|closest|furthest/
 hp_level  : /low|middle|high/
 self      : /self/
