@@ -155,14 +155,17 @@ def stand(*_):
 
 def in_region(x, y=None):  # only applies to self
     y = x if y is None else y  # in_region center instead of in_region center center
-    dir2int = {"north": 1, "south": -1, "west": -1, "east": 1, "center": 0}
+    target_row, target_col = {
+        ("north", "west"): (1, -1), ("north", "north"): (1, 0), ("north", "east"): (1, 1),
+        ("west", "west"): (0, -1), ("center", "center"): (0, 0), ("east", "east"): (0, 1),
+        ("south", "west"): (-1, -1), ("south", "south"): (-1, 0), ("south", "east"): (-1, 1),
+    }[(x, y)]
 
     def in_region_fn(state, obs, agent, env):
         self_pos = obs[-len(env.own_features) :][1:3]
-        # confirm pos ranges from -1 to 1 (might be from 0 to 1)
-        row = jnp.where(self_pos[0] > 2 / 3, 1, jnp.where(self_pos[0] < 1 / 3, -1, 0))
-        col = jnp.where(self_pos[1] > 2 / 3, 1, jnp.where(self_pos[1] < 1 / 3, -1, 0))
-        flag = jnp.logical_and(row == dir2int[x], col == dir2int[y])
+        col = jnp.where(self_pos[0] > 2 / 3, 1, jnp.where(self_pos[0] < 1 / 3, -1, 0))
+        row = jnp.where(self_pos[1] > 2 / 3, 1, jnp.where(self_pos[1] < 1 / 3, -1, 0))
+        flag = jnp.logical_and(row == target_row, col == target_col)
         return jnp.where(flag, SUCCESS, FAILURE)
 
     return in_region_fn
