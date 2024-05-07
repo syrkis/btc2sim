@@ -255,6 +255,54 @@ def is_dying(agent, hp_level):
     return aux
 
 
+# ## in flock
+
+def is_flock(team, direction): 
+    on_foe = team == "foe"
+    if direction == "center":
+        def is_flock_fn(state, obs, agent, env):
+            self_obs, others_obs, _ = process_obs(obs, agent, env)
+            alive = others_obs.T[0] > 0
+            is_ally = agent.startswith("ally")
+            n = jnp.where(is_ally, env.num_enemies, env.num_allies)  # number of enemies
+            target_team = jnp.where(on_foe, jnp.arange(alive.size) >= (alive.size - n), jnp.arange(alive.size) < (alive.size - n))
+            alive = jnp.logical_and(alive, target_team)
+            x = jnp.where(alive, others_obs.T[1], 0)
+            y = jnp.where(alive, others_obs.T[2], 0)
+            SE = x > y
+            NE = x > -y 
+            SW = x < -y
+            NW = x < y 
+            N = jnp.logical_and(NE, NW).any()
+            E = jnp.logical_and(NE, SE).any()
+            S = jnp.logical_and(SE, SW).any()
+            W = jnp.logical_and(SW, NW).any()
+            status = jnp.logical_and(jnp.logical_and(N, S), jnp.logical_and(E, W))
+            return jnp.where(alive.any(), status, FAILURE)
+    else:
+        assert (direction in ["north", "west", "east", "south"])
+        is_north = SUCCESS if direction == "north" else FAILURE
+        is_west = SUCCESS if direction == "west" else FAILURE
+        is_east = SUCCESS if direction == "east" else FAILURE
+        is_south = SUCCESS if direction == "south" else FAILURE
+        
+        def is_flock_fn(state, obs, agent, env):
+            self_obs, others_obs, _ = process_obs(obs, agent, env)
+            alive = others_obs.T[0] > 0
+            is_ally = agent.startswith("ally")
+            n = jnp.where(is_ally, env.num_enemies, env.num_allies)  # number of enemies
+            target_team = jnp.where(on_foe, jnp.arange(alive.size) >= (alive.size - n), jnp.arange(alive.size) < (alive.size - n))
+            alive = jnp.logical_and(alive, target_team)
+            x = jnp.mean(jnp.where(alive, others_obs.T[1], 0))
+            y = jnp.mean(jnp.where(alive, others_obs.T[2], 0))
+            SE = x > y
+            NE = x > -y 
+            status = jnp.where(SE, jnp.where(NE, is_east, is_south), jnp.where(NE, is_north, is_west))
+            return jnp.where(alive.any(), status, FAILURE)
+
+    return is_flock_fn
+
+
 # # Main
 
 def main():
