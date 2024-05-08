@@ -101,7 +101,7 @@ def move(direction, qualifier=None, target=None, unit="any"):
     if direction in ["toward", "away_from"]:  # target = another agent
         assert (target in ["foe", "friend"])
         assert (qualifier in ["closest", "furthest", "strongest", "weakest"])
-        assert (unit in [None, "marine", "marauder", "stalker", "zealot", "zergling", "hydralisk"])
+        assert (unit in ["any", "marine", "marauder", "stalker", "zealot", "zergling", "hydralisk"])
         
         use_health = qualifier in ["strongest", "weakest"]
         use_min = qualifier in ["closest", "weakest"]
