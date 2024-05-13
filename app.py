@@ -17,32 +17,46 @@ from src.bt import make_bt
 
 # constants
 grammar = "grammar.lark"
-page_title = "Command and control simulations"
+page_title = "c2sims | meta gaming platform"
+
+st.set_page_config(
+    page_title=page_title,
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 
-# functions
-def play_fn(bt, scenario):
-    btv = jit(vmap(bt, in_axes=(0, 0, None)), static_argnums=(2,))
-    env = make("SMAX", scenario=map_name_to_scenario(scenario))
-    rng = random.PRNGKey(0)
-    obs, state = env.reset(rng)
-    for _ in range(100):
-        action = bt(obs)
-        obs, state, _ = env.step(action, state)
-
-
-# content
 def main():
-    st.set_page_config(page_title=page_title, page_icon="C2", layout="wide")
+    body_fn()
+    sidebar_fn()
+
+
+def body_fn():
     st.title(page_title)
+    # vertical space
+    for i in range(4):
+        st.write("")
+    cols = st.columns(2)
+    with cols[0]:
+        # llm chat
+        st.text_area(
+            "Chat",
+            height=400,
+            value="I am your AI commander assistant. How can I help you?",
+        )
+    with cols[1]:
+        bt = st.text_area("Tree", DEFAULT_BT, height=400)
+    st.image(
+        "https://syrkis.ams3.digitaloceanspaces.com/noah/rhos/0.jpg",
+        caption="Rhos, a character from the novel 'The Last Ringbearer' by Kirill Eskov",
+        use_column_width=True,
+    )
+
+
+def sidebar_fn():
     st.sidebar.title("Settings")
-    st.sidebar.write("Configure the simulation.")
-    bt_str = st.sidebar.text_area("Behavior Tree", DEFAULT_BT.strip()).strip()
-    bt_fn = dict_fn(parse_fn(bt_str))
-    st.sidebar.write(bt_fn)
-    scenario = st.sidebar.selectbox("Scenario", scenarios)
-    if st.sidebar.button("Run"):
-        play_fn(bt_fn, scenario)
+    st.sidebar.write("Choose a scenario")
+    scenario = st.sidebar.selectbox("", scenarios)
 
 
 if __name__ == "__main__":
