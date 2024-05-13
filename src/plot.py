@@ -60,7 +60,7 @@ def compute_episode_duration(state_seq):
     T[T==0] = len(state_seq)-1  # as the secound step cannot be a new one; T==0 means that there was no ending 
     return T 
     
-def plot_fn(env, state_seq, reward_seq, expand=False, path=None):
+def plot_fn(env, state_seq, reward_seq, expand=False, path=None, verbose=True):
     n_steps = len(state_seq)
     bullet_seq = bullet_fn(env, state_seq) if expand else None
     state_seq = state_seq if not expand else vmap(env.expand_state_seq)(state_seq)
@@ -74,7 +74,7 @@ def plot_fn(env, state_seq, reward_seq, expand=False, path=None):
         env.unit_type_attack_ranges[unit_type] for unit_type in unit_types
     ]
     fills = np.where(np.array(state_seq[0][1].unit_teams) == 1, ink, "None")
-    for i, (_, state, actions) in tqdm(enumerate(state_seq), total=len(state_seq)):
+    for i, (_, state, actions) in tqdm(enumerate(state_seq), total=len(state_seq)) if verbose else enumerate(state_seq):
         fig, axes = plt.subplots(2, 3, figsize=(18.08, 12), facecolor=bg, dpi=50)
         bullets = bullet_seq[i // 8] if expand and i < (len(bullet_seq) * 8) else None
         args = (
@@ -90,9 +90,12 @@ def plot_fn(env, state_seq, reward_seq, expand=False, path=None):
             episodes_duration,
         )
         seq = [(ax, j, *args) for j, ax in enumerate(axes.flatten())]
+        active_axis = False
         for ax, j, *args in seq:
-            axis_fn(ax, j, *args)
+            active_axis += axis_fn(ax, j, *args)
         frames.append(frame_fn(n_steps, fig, i // 8 if expand else i, path))
+        if not active_axis:
+            break
     fname = (
         "docs/figs" if path is None else path
     ) + f"/worlds_{bg}{'_laggy' if not expand else ''}.mp4"
@@ -133,7 +136,7 @@ def frame_fn(n_steps, fig, idx, path=None):
 
 
 # +
-#sdebug_colors = ["red", "green", "blue", "pink", "orange", "purple", "cyan", "yellow"]  # for knowing who is who during isual debugging
+debug_colors = ["red", "green", "blue", "pink", "orange", "purple", "cyan", "yellow"]  # for knowing who is who during isual debugging
 debug_colors = [ink]
 
 def axis_fn(
@@ -178,8 +181,10 @@ def axis_fn(
                         alpha=0.05,
                     )
                     ax.add_patch(circle)
+        return True
     else:
         ax.axis('off')
+        return False 
 
 
 # -
