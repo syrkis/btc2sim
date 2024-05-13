@@ -5,11 +5,6 @@
 # imports
 import streamlit as st
 from jaxmarl import make
-from jaxmarl.environments.smax import map_name_to_scenario
-from jax import vmap, jit, random
-import lark
-import darkdetect
-import ollama
 
 from src.utils import DEFAULT_BT, scenarios
 from src.bank import grammar_fn, parse_fn, dict_fn
