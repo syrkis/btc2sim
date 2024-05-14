@@ -43,7 +43,7 @@ def body_fn():
         bt = st.text_area("Tree", DEFAULT_BT, height=400)
     st.image(
         "https://syrkis.ams3.digitaloceanspaces.com/noah/rhos/0.jpg",
-        caption="Rhos, a character from the novel 'The Last Ringbearer' by Kirill Eskov",
+        caption="SMAX playback of BT",
         use_column_width=True,
     )
 
