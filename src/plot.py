@@ -60,7 +60,7 @@ def compute_episode_duration(state_seq):
     T[T==0] = len(state_seq)-1  # as the secound step cannot be a new one; T==0 means that there was no ending 
     return T 
     
-def plot_fn(env, state_seq, reward_seq, expand=False, path=None, verbose=True):
+def plot_fn(env, state_seq, reward_seq, expand=False, path=None, verbose=True, for_LLM=False):
     n_steps = len(state_seq)
     bullet_seq = bullet_fn(env, state_seq) if expand else None
     state_seq = state_seq if not expand else vmap(env.expand_state_seq)(state_seq)
@@ -88,6 +88,7 @@ def plot_fn(env, state_seq, reward_seq, expand=False, path=None, verbose=True):
             fills,
             actions,
             episodes_duration,
+            for_LLM,
         )
         seq = [(ax, j, *args) for j, ax in enumerate(axes.flatten())]
         active_axis = False
@@ -152,6 +153,7 @@ def axis_fn(
     fills,
     actions,
     episodes_duration,
+    for_LLM,
 ):
     if i <= episodes_duration[j]:
         aux_ax_fn(ax, bullets, returns, i, j, actions)
@@ -160,11 +162,11 @@ def axis_fn(
             x = state.unit_positions[j, idx, 0]
             y = state.unit_positions[j, idx, 1]
             c = fills[j, idx]
-            s = state.unit_health[j, idx] ** 1.5 * 0.1
+            s = (state.unit_health[j, idx]/state.unit_health[0, idx]) ** 1.5 * 100
             ec = [debug_colors[k%len(debug_colors)] for k in range(len(x))]
-            ax.scatter(x, y, s=s, c=c, edgecolor=ec, marker=markers[unit_type])
+            ax.scatter(x, y, s=s, c=c, edgecolor=ec, marker="o" if for_LLM else markers[unit_type])
             for i in range(len(x)):
-                if state.unit_health[j, idx][i] > 0:
+                if not for_LLM and state.unit_health[j, idx][i] > 0:
                     circle = plt.Circle(
                         (x[i], y[i]),
                         unit_sight_range[unit_idx],
