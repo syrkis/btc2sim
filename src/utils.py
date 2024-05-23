@@ -39,44 +39,6 @@ class Status:  # for behavior tree
     FAILURE: int = -1
 
 
-# default behavior tree
-DEFAULT_BT = """
-F (
-    A ( move toward closest foe) ::
-    S (
-        C ( in_region east) ::
-        F (
-            S (
-                C ( is_flock friend south) ::
-                A ( move north)
-            ) ::
-            S (
-                C ( is_flock friend north) ::
-                A ( move south)
-            ) ::
-            A ( move toward closest friend)
-        )
-    ) ::
-    S (
-        C ( in_region north east) ::
-        A ( move west)
-    ) ::
-    S (
-        C ( in_region north) ::
-        A ( move west)
-    ) ::
-    S (
-        C ( in_region south) ::
-        A ( move west)
-    ) ::
-    S (
-        C ( in_region south east) ::
-        A ( move west)
-    )
-)
-"""
-
-
 # default action
 STAND = 4  # do nothing
 

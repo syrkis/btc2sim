@@ -52,11 +52,15 @@ def load_model():
 
 # functions
 def main():
+    ds = tfds.load("mtnt/en-fr", split="train")
     sampler = load_model()
     prompt = ["\n# What is the meaning of life?"]
-    reply = sampler(input_strings=prompt, total_generation_steps=100)
-    for input_string, out_string in zip(prompt, reply.text):
-        print(f"Prompt:\n{input_string}\nOutput:\n{out_string}")
+    ds = ds.take(2).cache()
+    ds = ds.as_numpy_iterator()
+
+    """reply = sampler(input_strings=prompt, total_generation_steps=100)
+        for input_string, out_string in zip(prompt, reply.text):
+             print(f"Prompt:\n{input_string}\nOutput:\n{out_string}") """
 
 
 if __name__ == "__main__":

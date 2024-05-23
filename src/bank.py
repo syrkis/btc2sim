@@ -6,8 +6,10 @@
 from lark import Lark
 import yaml
 import json
+import os
+from jax import vmap, jit
 
-from .atomics import ATOMICS
+from .bt import make_bt
 
 
 # functions
@@ -21,7 +23,17 @@ def parse_fn(string):
 
 
 def dict_fn(tree):
-    if tree.data.title() in ["String", "Direction", "Foe", "Friend", "Qualifier", "Sense", "Hp_Level", "Self", "Unit"]:
+    if tree.data.title() in [
+        "String",
+        "Direction",
+        "Foe",
+        "Friend",
+        "Qualifier",
+        "Sense",
+        "Hp_Level",
+        "Self",
+        "Unit",
+    ]:
         return tree.children[0].lower()
     elif tree.data.title() == "Node":
         return dict_fn(tree.children[0])
@@ -37,27 +49,22 @@ def dict_fn(tree):
         return key, value[0] if len(value) == 1 else value
 
 
+def load_trees(env):
+    # bank dir is in the data folder of the parant of this very file
+    with open("data/bank.yaml", "r") as f:
+        bank = yaml.safe_load(f)
+    # replace tree with parsed tree
+    for idx, tree in enumerate(bank):
+        bt = make_bt(env, dict_fn(parse_fn(tree["tree"])))
+        # bt = vmap(bt, in_axes=(0, 0, None))
+        # bt = jit(bt, static_argnums=(2))
+        bank[idx]["tree"] = bt
+    return bank
+
+
 def main():
-    bt_str = """
-    S (
-        F (
-            C ( in_region east center ) |> 
-            A ( move north ) ) |>
-        A ( attack foe_0 ) |>
-        A ( stand ) |>
-        C ( in_sight foe_0 ) |>
-        C ( in_reach foe_1 ) |>
-        C ( in_region east center ) |>
-        C ( is_dying self ) |>
-        C ( is_armed friend_3 )
-    )
-    """
-    tree = parse_fn(bt_str)
-    dict_tree = dict_fn(tree)
-    print(dict_tree)
-    exit()
-    json_tree = json.dumps(dict_tree, indent=2)
-    print(dict_tree)
+    trees = load_trees()
+    print(trees)
 
 
 if __name__ == "__main__":

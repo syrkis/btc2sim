@@ -13,9 +13,8 @@ import os
 from functools import partial
 from typing import Any, Callable, List, Tuple, Dict
 
-from src.utils import Status, NodeFunc as NF, STAND, DEFAULT_BT
+from src.utils import Status, NodeFunc as NF, STAND
 import src.atomics as atomics
-from .bank import grammar_fn, parse_fn, dict_fn
 
 # constants
 ATOMIC_FNS = {fn: getattr(atomics, fn) for fn in dir(atomics) if not fn.startswith("_")}
@@ -25,7 +24,9 @@ PARENT_DIR = os.path.dirname(os.path.dirname(__file__))
 
 # functions
 def tree_fn(children: List[NF], node_kind: bool) -> NF:  # sequence / fallback
+    # run parallel trees
     def tick(state, obs: jnp.array, agent, env) -> Status:
+        # idxs describes which of the trees should run
         status, action, on = (S if node_kind else F, STAND, True)  # on=need act?
         for child in children:  # loop through all children
             ns, na = child(state, obs, agent, env)  # new state and action
@@ -70,10 +71,4 @@ def make_bt(env, tree) -> NF:
 
 
 def main():
-    bt_str = DEFAULT_BT
-    tree = dict_fn(grammar_fn().parse(bt_str))
-    env = make("SMAX", num_allies=2, num_enemies=2)
-    bt = make_bt(env, tree)
-    rng = jax.random.PRNGKey(1)
-    obs, state = env.reset(rng)
-    acts = {a: bt(state, obs[a], a)[1] for idx, a in enumerate(env.agents)}
+    pass

@@ -7,7 +7,7 @@ from .smax import bullet_fn
 from .plot import plot_fn
 from .bt import make_bt
 from .utils import parse_args
-from .bank import grammar_fn, parse_fn, dict_fn
+from .bank import grammar_fn, parse_fn, dict_fn, load_trees
 
 import src.bt as bt
 import src.atomics as atomics
@@ -27,4 +27,5 @@ __all__ = [
     "grammar_fn",
     "parse_fn",
     "dict_fn",
+    "load_trees",
 ]

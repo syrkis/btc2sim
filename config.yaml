@@ -1,4 +1,5 @@
-n_envs: 6
+n_envs: 50
+n_trees : 20
 n_steps: 15
 n_allies: 2
 n_enemies: 2
