@@ -73,6 +73,9 @@ def plot_fn(env, state_seq, reward_seq, expand=False, path=None, verbose=True, f
     unit_attack_range = [
         env.unit_type_attack_ranges[unit_type] for unit_type in unit_types
     ]
+    unit_health = [
+        env.unit_type_health[unit_type] for unit_type in unit_types
+    ]
     fills = np.where(np.array(state_seq[0][1].unit_teams) == 1, ink, "None")
     for i, (_, state, actions) in tqdm(enumerate(state_seq), total=len(state_seq)) if verbose else enumerate(state_seq):
         fig, axes = plt.subplots(2, 3, figsize=(18.08, 12), facecolor=bg, dpi=50)
@@ -85,6 +88,7 @@ def plot_fn(env, state_seq, reward_seq, expand=False, path=None, verbose=True, f
             unit_types,
             unit_sight_range,
             unit_attack_range,
+            unit_health,
             fills,
             actions,
             episodes_duration,
@@ -150,6 +154,7 @@ def axis_fn(
     unit_types,
     unit_sight_range,
     unit_attack_range,
+    unit_health,
     fills,
     actions,
     episodes_duration,
@@ -162,7 +167,7 @@ def axis_fn(
             x = state.unit_positions[j, idx, 0]
             y = state.unit_positions[j, idx, 1]
             c = fills[j, idx]
-            s = (state.unit_health[j, idx]/state.unit_health[0, idx]) ** 1.5 * 100
+            s = (state.unit_health[j, idx]/unit_health[unit_idx]) * 125
             ec = [debug_colors[k%len(debug_colors)] for k in range(len(x))]
             ax.scatter(x, y, s=s, c=c, edgecolor=ec, marker="o" if for_LLM else markers[unit_type])
             for i in range(len(x)):
