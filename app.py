@@ -22,15 +22,11 @@ st.set_page_config(
 
 
 def main():
-    body_fn()
-    sidebar_fn()
+    sims_fn(*cols_fn(sidebar_fn()))
 
 
-def body_fn():
+def cols_fn(scenario):
     st.title(page_title)
-    # vertical space
-    for i in range(4):
-        st.write("")
     cols = st.columns(2)
     with cols[0]:
         # llm chat
@@ -46,12 +42,23 @@ def body_fn():
         caption="SMAX playback of BT",
         use_column_width=True,
     )
+    return bt, scenario
+
+
+def sims_fn(bt, scenario):
+    # parse
+    grammar = grammar_fn()
+    parse = parse_fn(grammar)
+    dict = dict_fn(parse, bt)
+    # make
+    make(dict, scenario)
 
 
 def sidebar_fn():
     st.sidebar.title("Settings")
     st.sidebar.write("Choose a scenario")
     scenario = st.sidebar.selectbox("", scenarios)
+    return scenario
 
 
 if __name__ == "__main__":

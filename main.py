@@ -6,22 +6,21 @@
 import yaml
 from jax import random, vmap, jit
 from jax import numpy as jnp
-from tqdm import tqdm
-from functools import partial
 from jaxmarl import make
 from jaxmarl.environments.smax import map_name_to_scenario
+from tqdm import tqdm
+from functools import partial
 from src import parse_args, scripts, make_bt, plot_fn, grammar_fn, parse_fn, dict_fn
 from src.utils import Status, STAND, DEFAULT_BT, scenarios
 
 
 # constants
-
 with open("config.yaml", "r") as f:
     conf = yaml.safe_load(f)
-    n_envs = conf["n_envs"]
-    n_steps = conf["n_steps"]
-    n_allies = conf["n_allies"]
-    n_enemies = conf["n_enemies"]
+n_envs = conf["n_envs"]
+n_steps = conf["n_steps"]
+n_allies = conf["n_allies"]
+n_enemies = conf["n_enemies"]
 
 
 # trajectory functions
