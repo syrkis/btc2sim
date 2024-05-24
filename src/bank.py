@@ -49,13 +49,13 @@ def dict_fn(tree):
         return key, value[0] if len(value) == 1 else value
 
 
-def load_trees(env):
+def load_trees():
     # bank dir is in the data folder of the parant of this very file
     with open("data/bank.yaml", "r") as f:
         bank = yaml.safe_load(f)
     # replace tree with parsed tree
     for idx, tree in enumerate(bank):
-        bt = make_bt(env, dict_fn(parse_fn(tree["tree"])))
+        bt = make_bt(dict_fn(parse_fn(tree["tree"])))
         # bt = vmap(bt, in_axes=(0, 0, None))
         # bt = jit(bt, static_argnums=(2))
         bank[idx]["tree"] = bt

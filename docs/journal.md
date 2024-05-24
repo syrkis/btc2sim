@@ -8,5 +8,5 @@ type: slides
 # May 23rd, 2024
 
 - [ ] Fix bullets rendering
-- [ ] Paralell behavior of the simulator
+- [x] Paralell behavior of the simulator
 - [ ] Fast plotting

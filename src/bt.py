@@ -51,7 +51,7 @@ def atomic_fn(fn: Callable, dec_fn: Callable = None) -> NF:
     return tick
 
 
-def make_bt(env, tree) -> NF:
+def make_bt(tree) -> NF:
     def make_node(node: dict) -> NF:
         if node[0] in ["sequence", "fallback"]:
             children = [make_node(child) for child in node[1]]
@@ -67,7 +67,7 @@ def make_bt(env, tree) -> NF:
             return atomic_fn(subtree, dec_fn)
         raise ValueError(f"Invalid node type: {node}")
 
-    return partial(make_node(tree), env=env)  # partial to pass env to all nodes
+    return partial(make_node(tree))  # partial to pass env to all nodes
 
 
 def main():
