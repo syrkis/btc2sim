@@ -8,5 +8,13 @@ type: slides
 # May 23rd, 2024
 
 - [ ] Fix bullets rendering
-- [x] Paralell behavior of the simulator
 - [ ] Fast plotting
+- [x] Paralell behavior of the simulator
+- [x] In jax, jitted parallel scenes
+
+# May 24th, 2024
+
+- [ ] Fix bullets rendering
+- [ ] Fast plotting
+- [ ] LMM for eval
+- [ ] website

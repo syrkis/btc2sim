@@ -4,14 +4,16 @@
 
 # imports
 import yaml
+from tqdm import tqdm
+from functools import partial
+
 from jax import random, vmap, jit
 from jax import numpy as jnp
 from jaxmarl import make
 from jaxmarl.environments.smax import map_name_to_scenario as n2s
-from tqdm import tqdm
-from functools import partial
-from src import parse_args, scripts, make_bt, plot_fn, grammar_fn, dict_fn, load_trees
-from src.utils import Status, STAND, scenarios
+
+from src import parse_args, scripts, plot_fn, load_trees
+from src.utils import STAND, scenarios
 
 
 # constants
@@ -20,8 +22,6 @@ with open("config.yaml", "r") as f:
 n_envs = conf["n_envs"]
 n_trees = conf["n_trees"]
 n_steps = conf["n_steps"]
-n_allies = conf["n_allies"]
-n_enemies = conf["n_enemies"]
 
 
 # trajectory functions
@@ -34,7 +34,7 @@ def step_fn(bts, rng, old_state_v, obs_v, env):  # take a step in the env
     return obs_v, (bts, rng, state_v), (step_keys, old_state_v, acts), reward_v
 
 
-def traj_fn(btv, rng, env):  # take n_steps in m env
+def traj_fn(rng, btv, env):  # take n_steps in m env
     state_seq, reward_seq = [], []
     rng, reset_rng = random.split(rng)  # split rng for reset and step
     reset_keys = random.split(reset_rng, n_envs * n_trees)  # split reset rng for n_envs
@@ -65,9 +65,10 @@ def trees_fn(bts):
 def run_fn(rng, bts, envs):
     rngs = random.split(rng, len(envs))
     bts = trees_fn(load_trees())
-    seqs = [
-        traj_fn(bts, rngs[i], env) for i, env in tqdm(enumerate(envs), total=len(envs))
-    ]
+    seqs = []
+    # jit_traj_fn = jit(traj_fn, static_argnums=(1, 2))
+    for i, env in tqdm(enumerate(envs), total=len(envs)):
+        seqs.append(traj_fn(rngs[i], bts, env))
     return seqs
 
 
@@ -82,6 +83,7 @@ def main():
         envs = tuple([make("SMAX", scenario=n2s(s)) for s in scenarios])
         rng = random.PRNGKey(0)
         seqs = run_fn(rng, bts, envs)
+        print(len(seqs))
         # plot_fn(env, seq[0], seq[1], expand=True)
 
 

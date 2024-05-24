@@ -31,7 +31,9 @@ action2txt_base = {
     3: "←",
     4: "∅",
 }
-def action2txt(a): 
+
+
+def action2txt(a):
     return action2txt_base[a] if a in action2txt_base else f"{int(a-5)}"
 
 
@@ -56,11 +58,18 @@ tick_params = {
 # +
 # functions
 def compute_episode_duration(state_seq):
-    T = np.argmax([state_seq[i][1].time == 0 for i in range(1, len(state_seq))], axis=0)  # look for the first occurence when the time resets to 0 (after the first step)
-    T[T==0] = len(state_seq)-1  # as the secound step cannot be a new one; T==0 means that there was no ending 
-    return T 
-    
-def plot_fn(env, state_seq, reward_seq, expand=False, path=None, verbose=True, for_LLM=False):
+    T = np.argmax(
+        [state_seq[i][1].time == 0 for i in range(1, len(state_seq))], axis=0
+    )  # look for the first occurence when the time resets to 0 (after the first step)
+    T[T == 0] = (
+        len(state_seq) - 1
+    )  # as the secound step cannot be a new one; T==0 means that there was no ending
+    return T
+
+
+def plot_fn(
+    env, state_seq, reward_seq, expand=False, path=None, verbose=True, for_LLM=False
+):
     n_steps = len(state_seq)
     bullet_seq = bullet_fn(env, state_seq) if expand else None
     state_seq = state_seq if not expand else vmap(env.expand_state_seq)(state_seq)
@@ -73,11 +82,13 @@ def plot_fn(env, state_seq, reward_seq, expand=False, path=None, verbose=True, f
     unit_attack_range = [
         env.unit_type_attack_ranges[unit_type] for unit_type in unit_types
     ]
-    unit_health = [
-        env.unit_type_health[unit_type] for unit_type in unit_types
-    ]
+    unit_health = [env.unit_type_health[unit_type] for unit_type in unit_types]
     fills = np.where(np.array(state_seq[0][1].unit_teams) == 1, ink, "None")
-    for i, (_, state, actions) in tqdm(enumerate(state_seq), total=len(state_seq)) if verbose else enumerate(state_seq):
+    for i, (_, state, actions) in (
+        tqdm(enumerate(state_seq), total=len(state_seq))
+        if verbose
+        else enumerate(state_seq)
+    ):
         fig, axes = plt.subplots(2, 3, figsize=(18.08, 12), facecolor=bg, dpi=50)
         bullets = bullet_seq[i // 8] if expand and i < (len(bullet_seq) * 8) else None
         args = (
@@ -108,6 +119,7 @@ def plot_fn(env, state_seq, reward_seq, expand=False, path=None, verbose=True, f
 
 
 # -
+
 
 def return_fn(reward_seq):
     reward = [reward_fn(reward) for reward in reward_seq]
@@ -141,8 +153,18 @@ def frame_fn(n_steps, fig, idx, path=None):
 
 
 # +
-debug_colors = ["red", "green", "blue", "pink", "orange", "purple", "cyan", "yellow"]  # for knowing who is who during isual debugging
+debug_colors = [
+    "red",
+    "green",
+    "blue",
+    "pink",
+    "orange",
+    "purple",
+    "cyan",
+    "yellow",
+]  # for knowing who is who during isual debugging
 debug_colors = [ink]
+
 
 def axis_fn(
     ax,
@@ -167,9 +189,16 @@ def axis_fn(
             x = state.unit_positions[j, idx, 0]
             y = state.unit_positions[j, idx, 1]
             c = fills[j, idx]
-            s = (state.unit_health[j, idx]/unit_health[unit_idx]) * 125
-            ec = [debug_colors[k%len(debug_colors)] for k in range(len(x))]
-            ax.scatter(x, y, s=s, c=c, edgecolor=ec, marker="o" if for_LLM else markers[unit_type])
+            s = (state.unit_health[j, idx] / unit_health[unit_idx]) * 125
+            ec = [debug_colors[k % len(debug_colors)] for k in range(len(x))]
+            ax.scatter(
+                x,
+                y,
+                s=s,
+                c=c,
+                edgecolor=ec,
+                marker="o" if for_LLM else markers[unit_type],
+            )
             for i in range(len(x)):
                 if not for_LLM and state.unit_health[j, idx][i] > 0:
                     circle = plt.Circle(
@@ -190,11 +219,12 @@ def axis_fn(
                     ax.add_patch(circle)
         return True
     else:
-        ax.axis('off')
-        return False 
+        ax.axis("off")
+        return False
 
 
 # -
+
 
 def aux_ax_fn(ax, bullets, returns, i, j, actions):
     if bullets is not None:
@@ -207,7 +237,10 @@ def aux_ax_fn(ax, bullets, returns, i, j, actions):
     ally_return = returns["ally"][i, j]
     enemy_return = returns["enemy"][i, j]
     ax.set_xlabel("\n{:.3f} | {:.3f}".format(ally_return, enemy_return), color=ink)
-    ax.set_title(f"{' '.join([action2txt(a) for a in ally_actions])} | {' '.join([action2txt(a) for a in enemy_actions])}\n", color=ink)
+    ax.set_title(
+        f"{' '.join([action2txt(a) for a in ally_actions])} | {' '.join([action2txt(a) for a in enemy_actions])}\n",
+        color=ink,
+    )
     ax.set_facecolor(bg)
     ticks = np.arange(2, 31, 4)  # Assuming your grid goes from 0 to 32
     ax.set_xticks(ticks)
