@@ -48,10 +48,10 @@ def traj_fn(rng, btv, env):  # take n_steps in m env
 
 
 def trees_fn(bts):
-    def bts_fn(state, idx, obs, agent, env):
+    def bts_fn(env_state, idx, obs, agent, env):
         state, action = STAND, STAND
         for i, bt in enumerate(bts):
-            tree_state, tree_action = bt["tree"](state, obs, agent, env)
+            tree_state, tree_action = bt["tree"](env_state, obs, agent, env)
             state = jnp.where(idx == i, tree_state, state)
             action = jnp.where(idx == i, tree_action, action)
         return action
