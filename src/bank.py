@@ -58,6 +58,7 @@ def load_trees():
         bt = make_bt(dict_fn(parse_fn(tree["tree"])))
         # bt = vmap(bt, in_axes=(0, 0, None))
         # bt = jit(bt, static_argnums=(2))
+        bank[idx]["tree_str"] = tree["tree"]
         bank[idx]["tree"] = bt
     return bank
 

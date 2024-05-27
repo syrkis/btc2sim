@@ -4,54 +4,103 @@
 
 # imports
 import streamlit as st
-from jaxmarl import make
 
-from src.utils import DEFAULT_BT, scenarios
-from src.bank import grammar_fn, parse_fn, dict_fn
-from src.bt import make_bt
+from jaxmarl import make
+from jaxmarl.environments.smax import map_name_to_scenario
+from jax import jit, vmap, random
+import jax
+
+
+from src.utils import scenarios
+from src.bank import load_trees
 
 # constants
 grammar = "grammar.lark"
 page_title = "c2sims | meta gaming platform"
 
-st.set_page_config(
-    page_title=page_title,
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+# set page config
+conf = dict(initial_sidebar_state="expanded", layout="wide", page_title=page_title)
+st.set_page_config(**conf)
+
+
+##################
+# Main
+##################
 
 
 def main():
-    sims_fn(*cols_fn(sidebar_fn()))
-
-
-def cols_fn(scenario):
     st.title(page_title)
-    cols = st.columns(2)
-    with cols[0]:
-        # llm chat
-        st.text_area(
-            "Chat",
-            height=400,
-            value="I am your AI commander assistant. How can I help you?",
-        )
-    with cols[1]:
-        bt = st.text_area("Tree", DEFAULT_BT, height=400)
-    st.image(
-        "https://syrkis.ams3.digitaloceanspaces.com/noah/rhos/0.jpg",
-        caption="SMAX playback of BT",
-        use_column_width=True,
+    scenario = sidebar_fn()
+    tree_bank = load_trees()
+
+    # columns
+    top_cols = st.columns(2)
+    low_cols = st.columns(2)
+
+    # inputs
+    chat = natural_language_fn(top_cols[0])
+    tree = domain_langauge_fn(top_cols[1], tree_bank)
+
+    # simulation
+    rng = random.PRNGKey(0)
+    seqs = simulate_fn(rng, tree, scenario)
+
+    # outputs
+    playbacks = playbacks_fn(low_cols[0], seqs)
+    metrics = metrics_fn(low_cols[1], seqs)
+
+
+##################
+# Output Functions
+##################
+
+
+def simulate_fn(rng, bt, scenario):
+    # simulate the behavior tree
+    rng, key = random.split(rng)
+    reset_keys = random.split(key, 6)
+    env = make("SMAX", scenario=map_name_to_scenario(scenario))
+    obs, state = vmap(env.reset)(reset_keys)
+    seqs = []
+    for i in range(10):  # could replace with a lax.scan for speed
+        rng, key = random.split(rng)
+        step_keys = random.split(key, 6)
+        action = {a: bt(state, obs[a], a, env)[1] for a in env.agents}
+        obs, state, reward, done, info = vmap(env.step)(step_keys, state, action)
+        seqs.append((obs, state, reward, done, info))
+    return seqs
+
+
+def metrics_fn(col, seqs):
+    col.write("Metrics")
+    returns = [seq[2] for seq in seqs]
+    col.write(returns)
+    return returns
+
+
+def playbacks_fn(col, seqs):
+    col.write("Playbacks")
+    pass
+
+
+##################
+# Input Functions
+##################
+
+
+def natural_language_fn(col):
+    col.text_area(
+        "Natural Language",
+        height=400,
+        value="I am your AI commander assistant. How can I help you?",
     )
-    return bt, scenario
 
 
-def sims_fn(bt, scenario):
-    # parse
-    grammar = grammar_fn()
-    parse = parse_fn(grammar)
-    dict = dict_fn(parse, bt)
-    # make
-    make(dict, scenario)
+def domain_langauge_fn(col, tree_bank):
+    tree = col.text_area("Domain Language", height=400, value=tree_bank[0]["tree_str"])
+    tree = vmap(tree_bank[0]["tree"], in_axes=(0, 0, None, None))
+    # pretty print string of tree
+    return tree
 
 
 def sidebar_fn():
@@ -60,6 +109,10 @@ def sidebar_fn():
     scenario = st.sidebar.selectbox("", scenarios)
     return scenario
 
+
+##################
+# Run
+##################
 
 if __name__ == "__main__":
     main()
