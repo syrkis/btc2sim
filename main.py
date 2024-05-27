@@ -28,7 +28,7 @@ n_steps = conf["n_steps"]
 def step_fn(bts, rng, old_state_v, obs_v, env):  # take a step in the env
     rng, step_rng = random.split(rng)
     step_keys = random.split(step_rng, n_envs * n_trees)
-    idxs = jnp.arange(n_envs * n_trees) % n_envs
+    idxs = jnp.arange(n_envs * n_trees) % n_trees
     acts = {a: bts(old_state_v, idxs, obs_v[a], a, env) for a in env.agents}
     obs_v, state_v, reward_v, done, info = vmap(env.step)(step_keys, old_state_v, acts)
     return obs_v, (bts, rng, state_v), (step_keys, old_state_v, acts), reward_v
