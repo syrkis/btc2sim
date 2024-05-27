@@ -110,9 +110,10 @@ def attack(qualifier, unit="any"):  # TODO: attack closest if no target
         health = others_obs.T[0]
         dist = jnp.where(in_reach, jnp.where(use_health, health, dist), fill)
         targ = jnp.where(use_min, jnp.argmin(dist), jnp.argmax(dist))
-        flag = jnp.where(in_reach.any(), RUNNING, FAILURE)
-        flag = jnp.where(self_obs[3] <= 0, flag, FAILURE)  # check cooldown
-        return (flag, targ + 5 - m)
+        alive_and_not_in_cooldown = jnp.logical_and(in_reach.any(), self_obs[3] <= 0)
+        flag = jnp.where(alive_and_not_in_cooldown, RUNNING, FAILURE) 
+        action = jnp.where(alive_and_not_in_cooldown, targ + 5 - m, STAND)
+        return (flag, action)
 
     return attack_fn
 
@@ -180,6 +181,7 @@ def move(direction, qualifier=None, target=None, unit="any"):
             action = jnp.where(SE, jnp.where(NE, 1, 2), jnp.where(NE, 0, 3))
             action = jnp.where(move_toward, action, (action + 2) % 4)
             flag = jnp.where(alive.any(), RUNNING, FAILURE)
+            action = jnp.where(alive.any(), action, STAND)
             return (flag, action)
 
         return move_fn
