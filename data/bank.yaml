@@ -1,3 +1,8 @@
+- hash: "0x3f4434"
+  tags: ["agressive", "deffensive"]
+  desc: "Team brawl"
+  tree: "F ( A ( attack strongest) |> A ( move toward weakest foe) |> A ( move center) )"
+  embd: "0.3 0.32 0.32"
 - hash: "0x3f4d"
   tags: ["agressive", "deffensive"]
   desc: "Moves north"
