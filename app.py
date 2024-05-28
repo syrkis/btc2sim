@@ -12,7 +12,8 @@ import jax
 
 
 from src.utils import scenarios
-from src.bank import load_trees
+from src.bank import load_trees, parse_fn, dict_fn
+from src.bt import make_bt
 
 # constants
 grammar = "grammar.lark"
@@ -46,8 +47,8 @@ def main():
     seqs = simulate_fn(rng, tree, scenario)
 
     # outputs
-    playbacks = playbacks_fn(low_cols[0], seqs)
-    metrics = metrics_fn(low_cols[1], seqs)
+    metrics = metrics_fn(low_cols[0], seqs)
+    playbacks = playbacks_fn(low_cols[1], seqs)
 
 
 ##################
@@ -97,8 +98,15 @@ def natural_language_fn(col):
 
 
 def domain_langauge_fn(col, tree_bank):
-    tree = col.text_area("Domain Language", height=400, value=tree_bank[0]["tree_str"])
-    tree = vmap(tree_bank[0]["tree"], in_axes=(0, 0, None, None))
+    default_tree = tree_bank[0]["tree_str"]
+    tree_str = col.text_area("Domain Language", height=400, value=default_tree)
+    try:
+        tree_dict = parse_fn(tree_str)
+    except:
+        tree_dict = parse_fn(default_tree)
+        col.warning("Invalid tree string. Using default tree.")
+    tree = vmap(make_bt(dict_fn(tree_dict)), in_axes=(0, 0, None, None))
+    # tree = vmap(tree_bank[0]["tree"], in_axes=(0, 0, None, None))
     # pretty print string of tree
     return tree
 
