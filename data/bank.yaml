@@ -1,4 +1,4 @@
-- desc: "1 by 1 chase"
+- name: "1 by 1 chase"
   tree: "F ( A ( attack weakest) |> A ( move toward weakest foe) |> A ( move center) )"
-- desc: "team brawl"
+- name: "team brawl"
   tree: "F ( A ( attack strongest) |> A ( move toward weakest foe) |> A ( move center) )"
