@@ -79,7 +79,7 @@ def attack(qualifier, unit="any"):  # TODO: attack closest if no target
     use_health = qualifier in ["strongest", "weakest"]
     use_min = qualifier in ["closest", "weakest"]
     use_unit_type = unit != "any"
-    target_unit = {
+    target_type = {
             "marine": -6,
             "marauder": -5,
             "stalker": -4,
@@ -98,7 +98,7 @@ def attack(qualifier, unit="any"):  # TODO: attack closest if no target
         m = jnp.where(is_ally, env.num_allies, env.num_enemies) - 1  # number of allies
         alive = others_obs.T[0] > 0
         is_enemies = jnp.arange(alive.size) >= (alive.size - n)
-        is_unit_types = jnp.where(use_unit_type, others_obs.T[target_unit], 1)
+        is_unit_types = jnp.where(use_unit_type, others_obs.T[target_type], 1)
         alive = jnp.logical_and(jnp.logical_and(alive, is_enemies), is_unit_types)
         dist = jnp.linalg.norm(others_obs.T[1:3], axis=0)
         sight_range, attack_range = agent_info_fn(state, obs, agent, env)
@@ -162,7 +162,7 @@ def move(direction, qualifier=None, target=None, unit="any"):
                 jnp.arange(alive.size) >= (alive.size - n),
                 jnp.arange(alive.size) < (alive.size - n),
             )
-            is_unit_types = jnp.where(use_unit_type, others_obs.T[target_unit], 1)
+            is_unit_types = jnp.where(use_unit_type, others_obs.T[target_type], 1)
             alive = jnp.logical_and(jnp.logical_and(alive, target_team), is_unit_types)
             dists = jnp.linalg.norm(others_obs.T[1:3], axis=0)
             health = others_obs.T[0]
@@ -263,7 +263,7 @@ def in_sight(target, unit="any"):  # is unit x in direction y?
             jnp.arange(alive.size) >= (alive.size - n),
             jnp.arange(alive.size) < (alive.size - n),
         )
-        is_unit_types = jnp.where(use_unit_type, others_obs.T[target_unit], 1)
+        is_unit_types = jnp.where(use_unit_type, others_obs.T[target_type], 1)
         alive = jnp.logical_and(jnp.logical_and(alive, target_team), is_unit_types)
         enemies_flag = alive.any()
         return jnp.where(enemies_flag, SUCCESS, FAILURE)
@@ -298,7 +298,7 @@ def in_reach(other_agent, unit="any"):  # in shooting range
             jnp.arange(alive.size) >= (alive.size - n),
             jnp.arange(alive.size) < (alive.size - n),
         )
-        is_unit_types = jnp.where(use_unit_type, others_obs.T[target_unit], 1)
+        is_unit_types = jnp.where(use_unit_type, others_obs.T[target_type], 1)
         alive = jnp.logical_and(jnp.logical_and(alive, target_team), is_unit_types)
         dist = jnp.linalg.norm(others_obs.T[1:3], axis=0)
         sight_range, attack_range = agent_info_fn(state, obs, self_agent, env)
