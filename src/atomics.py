@@ -79,19 +79,16 @@ def attack(qualifier, unit="any"):  # TODO: attack closest if no target
     use_health = qualifier in ["strongest", "weakest"]
     use_min = qualifier in ["closest", "weakest"]
     use_unit_type = unit != "any"
-    target_unit = (
-        5
-        + {
-            "marine": 0,
-            "marauder": 1,
-            "stalker": 2,
-            "zealot": 3,
-            "zergling": 4,
-            "hydralisk": 5,
+    target_unit = {
+            "marine": -6,
+            "marauder": -5,
+            "stalker": -4,
+            "zealot": -3,
+            "zergling": -2,
+            "hydralisk": -1,
+            "any": None,
         }[unit]
-        if use_unit_type
-        else None
-    )
+
 
     def attack_fn(state, obs, agent, env):
         fill = jnp.where(use_min, jnp.inf, -jnp.inf)
@@ -138,19 +135,16 @@ def move(direction, qualifier=None, target=None, unit="any"):
         use_health = qualifier in ["strongest", "weakest"]
         use_min = qualifier in ["closest", "weakest"]
         use_unit_type = unit != "any"
-        target_unit = (
-            5
-            + {
-                "marine": 0,
-                "marauder": 1,
-                "stalker": 2,
-                "zealot": 3,
-                "zergling": 4,
-                "hydralisk": 5,
-            }[unit]
-            if use_unit_type
-            else None
-        )
+        target_type = {
+            "marine": -6,
+            "marauder": -5,
+            "stalker": -4,
+            "zealot": -3,
+            "zergling": -2,
+            "hydralisk": -1,
+            "any": None,
+        }[unit]
+        
         target_foe = target == "foe"
         move_toward = direction == "toward"
 
@@ -246,19 +240,16 @@ def in_region(x, y=None):  # only applies to self
 def in_sight(target, unit="any"):  # is unit x in direction y?
     assert target in ["foe", "friend"]
     use_unit_type = unit != "any"
-    target_unit = (
-        5
-        + {
-            "marine": 0,
-            "marauder": 1,
-            "stalker": 2,
-            "zealot": 3,
-            "zergling": 4,
-            "hydralisk": 5,
+    target_type = {
+            "marine": -6,
+            "marauder": -5,
+            "stalker": -4,
+            "zealot": -3,
+            "zergling": -2,
+            "hydralisk": -1,
+            "any": None,
         }[unit]
-        if use_unit_type
-        else None
-    )
+
     target_foe = target == "foe"
 
     def in_sight_fn(state, obs, agent, env):
@@ -287,19 +278,15 @@ def in_reach(other_agent, unit="any"):  # in shooting range
     assert other_agent in ["foe", "friend"]
     on_foe = other_agent == "foe"
     use_unit_type = unit != "any"
-    target_unit = (
-        5
-        + {
-            "marine": 0,
-            "marauder": 1,
-            "stalker": 2,
-            "zealot": 3,
-            "zergling": 4,
-            "hydralisk": 5,
+    target_type = {
+            "marine": -6,
+            "marauder": -5,
+            "stalker": -4,
+            "zealot": -3,
+            "zergling": -2,
+            "hydralisk": -1,
+            "any": None,
         }[unit]
-        if use_unit_type
-        else None
-    )
 
     def in_reach_fn(state, obs, self_agent, env):  # if any is in reach
         is_ally = self_agent.startswith("ally")
@@ -378,23 +365,23 @@ def is_dying(agent, hp_level):
 
 # ## is type
 
-def is_type(unit="any"):  # in shooting range
-    use_unit_type = unit != "any"
-    if use_unit_type:
-        target_type = {
-                "marine": -6,
-                "marauder": -5,
-                "stalker": -4,
-                "zealot": -3,
-                "zergling": -2,
-                "hydralisk": -1,
-        }[unit]
-    if use_unit_type:
-        def aux(_, obs, __, ___):
-            return jnp.where(obs[target_type] == 1, SUCCESS, FAILURE)
-    else:
-        def aux(*_):
-            return SUCCESS
+def is_type(negation, unit):
+    assert unit in ["marine", "marauder", "stalker", "zealot", "zergling", "hydralisk"]
+    assert negation in ["a", "not_a"]
+    target_type = {
+            "marine": -6,
+            "marauder": -5,
+            "stalker": -4,
+            "zealot": -3,
+            "zergling": -2,
+            "hydralisk": -1,
+    }[unit]
+    true_condition = SUCCESS if negation == "a" else FAILURE
+    false_condition = FAILURE if negation == "a" else SUCCESS
+
+    def aux(_, obs, __, ___):
+        return jnp.where(obs[target_type] == 1, true_condition, false_condition)
+
     return aux
 
 # ## in flock

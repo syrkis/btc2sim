@@ -33,6 +33,8 @@ def dict_fn(tree):
         "Hp_Level",
         "Self",
         "Unit",
+        "Negation",
+        "Any",
     ]:
         return tree.children[0].lower()
     elif tree.data.title() == "Node":
