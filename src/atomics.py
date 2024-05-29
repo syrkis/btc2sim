@@ -376,6 +376,27 @@ def is_dying(agent, hp_level):
     return aux
 
 
+# ## is type
+
+def is_type(unit="any"):  # in shooting range
+    use_unit_type = unit != "any"
+    if use_unit_type:
+        target_type = {
+                "marine": -6,
+                "marauder": -5,
+                "stalker": -4,
+                "zealot": -3,
+                "zergling": -2,
+                "hydralisk": -1,
+        }[unit]
+    if use_unit_type:
+        def aux(_, obs, __, ___):
+            return jnp.where(obs[target_type] == 1, SUCCESS, FAILURE)
+    else:
+        def aux(*_):
+            return SUCCESS
+    return aux
+
 # ## in flock
 
 
