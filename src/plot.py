@@ -197,7 +197,7 @@ def axis_fn(
                 s=s,
                 c=c,
                 edgecolor=ec,
-                marker="o" if for_LLM else markers[unit_type],
+                marker=markers[unit_type],
             )
             for i in range(len(x)):
                 if not for_LLM and state.unit_health[j, idx][i] > 0:
