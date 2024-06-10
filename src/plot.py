@@ -11,6 +11,7 @@ from matplotlib import rcParams
 import numpy as np
 from jax import numpy as jnp, vmap
 from tqdm import tqdm
+from matplotlib.patches import Rectangle
 from src.smax import bullet_fn
 
 # +
@@ -84,6 +85,17 @@ def plot_fn(
     ]
     unit_health = [env.unit_type_health[unit_type] for unit_type in unit_types]
     fills = np.where(np.array(state_seq[0][1].unit_teams) == 1, ink, "None")
+    for coord, orient in zip(env.obstacle_coordinates, env.obstacle_orientation):
+        # orientation = 0: horizontal, 1: vertical. Length is always 1
+        ax.add_patch(
+            Rectangle(
+                coord,
+                orient[0],
+                orient[1],
+                color="black",
+            )
+        )
+
     for i, (_, state, actions) in (
         tqdm(enumerate(state_seq), total=len(state_seq))
         if verbose
@@ -130,7 +142,9 @@ def return_fn(reward_seq):
 
 def reward_fn(reward):
     ally_rewards = jnp.stack([v for k, v in reward[0].items() if k.startswith("ally")])
-    enemy_rewards = jnp.stack([v for k, v in reward[0].items() if k.startswith("enemy")])
+    enemy_rewards = jnp.stack(
+        [v for k, v in reward[0].items() if k.startswith("enemy")]
+    )
     return ally_rewards.sum(axis=0), enemy_rewards.sum(axis=0)
 
 
