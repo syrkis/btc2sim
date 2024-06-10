@@ -129,8 +129,8 @@ def return_fn(reward_seq):
 
 
 def reward_fn(reward):
-    ally_rewards = jnp.stack([v for k, v in reward.items() if k.startswith("ally")])
-    enemy_rewards = jnp.stack([v for k, v in reward.items() if k.startswith("enemy")])
+    ally_rewards = jnp.stack([v for k, v in reward[0].items() if k.startswith("ally")])
+    enemy_rewards = jnp.stack([v for k, v in reward[0].items() if k.startswith("enemy")])
     return ally_rewards.sum(axis=0), enemy_rewards.sum(axis=0)
 
 
