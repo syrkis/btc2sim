@@ -104,6 +104,7 @@ def plot_fn(
             actions,
             episodes_duration,
             for_LLM,
+            env.num_allies,
         )
         seq = [(ax, j, *args) for j, ax in enumerate(axes.flatten())]
         active_axis = False
@@ -181,11 +182,26 @@ def axis_fn(
     actions,
     episodes_duration,
     for_LLM,
+    num_allies,
 ):
     if i <= episodes_duration[j]:
         aux_ax_fn(ax, bullets, returns, i, j, actions)
+        if for_LLM:
+            ax.set_facecolor("lightgray")
+            
+            all_positions = state.unit_positions[j, :, :2]
+            allies_positions = state.unit_positions[j, :num_allies, :2]
+            x_expanded = all_positions[:, np.newaxis, :]
+            y_expanded = allies_positions[np.newaxis, :, :]
+            distances = np.linalg.norm(x_expanded - y_expanded, axis=2)
+            ranges = jnp.array([unit_sight_range[u] for u in state.unit_types[j, :]])
+            in_sight = jnp.any(distances < ranges[:, np.newaxis], axis=1)
+            team = jnp.arange(len(all_positions)) < num_allies
         for unit_idx, unit_type in enumerate(unit_types):
             idx = state.unit_types[j, :] == unit_type
+            if for_LLM:
+                idx = jnp.logical_and(idx, in_sight)
+            
             x = state.unit_positions[j, idx, 0]
             y = state.unit_positions[j, idx, 1]
             c = fills[j, idx]
@@ -200,23 +216,34 @@ def axis_fn(
                 marker=markers[unit_type],
             )
             for i in range(len(x)):
-                if not for_LLM and state.unit_health[j, idx][i] > 0:
-                    circle = plt.Circle(
-                        (x[i], y[i]),
-                        unit_sight_range[unit_idx],
-                        color=ink,
-                        ls=(0, (1, 10)),
-                        fill=False,
-                    )
-                    ax.add_patch(circle)
-                    circle = plt.Circle(
-                        (x[i], y[i]),
-                        unit_attack_range[unit_idx],
-                        color=ink,
-                        fill=True,
-                        alpha=0.05,
-                    )
-                    ax.add_patch(circle)
+                if state.unit_health[j, idx][i] > 0:
+                    if not for_LLM :
+                        circle = plt.Circle(
+                            (x[i], y[i]),
+                            unit_sight_range[unit_idx],
+                            color=ink,
+                            ls=(0, (1, 10)),
+                            fill=False,
+                        )
+                        ax.add_patch(circle)
+                        circle = plt.Circle(
+                            (x[i], y[i]),
+                            unit_attack_range[unit_idx],
+                            color=ink,
+                            fill=True,
+                            alpha=0.05,
+                        )
+                        ax.add_patch(circle)
+                    elif team[idx][i]:
+                        circle = plt.Circle(
+                            (x[i], y[i]),
+                            unit_sight_range[unit_idx],
+                            color="white",
+                            ls=(0, (1, 10)),
+                            fill=True,
+                            zorder=-1,
+                        )
+                        ax.add_patch(circle)
         return True
     else:
         ax.axis("off")
@@ -249,3 +276,20 @@ def aux_ax_fn(ax, bullets, returns, i, j, actions):
     ax.set_aspect("equal")
     ax.set_xlim(-2, 34)
     ax.set_ylim(-2, 34)
+
+
+
+if __name__ == "__main__":
+    import os
+    import pickle
+    def load_pickle(path):
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                res = pickle.load(f)
+            return res 
+    ROOT_PATH = "/Users/timl/Experiments/c2sim/data/"
+
+    (env, seq0, seq1, path) = load_pickle(ROOT_PATH + "tmp/test_plot.pk")
+    plot_fn(env, seq0, seq1, expand=True, path=path, for_LLM=True)
+
+
