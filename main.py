@@ -28,26 +28,43 @@ with open('grammar.lark', 'r') as f:
     grammar = f.read() 
 
 
+# +
+def batchify_obs(x: dict, agent_list, num_envs, n_trees):
+    x = jnp.stack([x[a] for a in agent_list])
+    return x.reshape((len(agent_list), num_envs*n_trees, -1))
+    
 # trajectory functions
 def step_fn(bts, enemy_btv, old_state_v, steps_rng, obs_v, env, n_envs, n_trees):  # take a step in the env
     times = {}
     times["SMAX_acts"] = time()
     bts_idxs = jnp.arange(n_envs * n_trees) // n_envs
     acts, nodes_id = {}, {}
-    for i, a in enumerate(env.agents):
-        if i < env.num_allies:
-            action, node_id = bts(old_state_v, bts_idxs, obs_v[a], a, env)
-        else:
-            _, action, node_id = enemy_btv(old_state_v, obs_v[a], a, env)
-        acts[a] = action
-        nodes_id[a] = node_id
-        
+    ally_list = [f"ally_{i}" for i in range(env.num_allies)]
+    allies_obs = batchify_obs(obs_v, ally_list, n_envs, n_trees)
+    sight_range = jnp.array([env.unit_type_sight_ranges[old_state_v.unit_types[:, env.agent_ids[agent]]] for agent in ally_list])
+    attack_range = jnp.array([env.unit_type_attack_ranges[old_state_v.unit_types[:, env.agent_ids[agent]]] for agent in ally_list])
+    action, node_id = bts(old_state_v, bts_idxs, allies_obs, sight_range, attack_range, True, env)
+    for i, key in enumerate(ally_list):
+        acts[key] = action[i]
+        nodes_id[key] = node_id[i] 
+                           
+    enemy_list = [f"enemy_{i}" for i in range(env.num_enemies)]
+    enemies_obs = batchify_obs(obs_v, enemy_list, n_envs, n_trees)
+    sight_range = jnp.array([env.unit_type_sight_ranges[old_state_v.unit_types[:, env.agent_ids[agent]]] for agent in enemy_list])
+    attack_range = jnp.array([env.unit_type_attack_ranges[old_state_v.unit_types[:, env.agent_ids[agent]]] for agent in enemy_list])
+    _, action, node_id = enemy_btv(old_state_v, enemies_obs, sight_range, attack_range, False, env)
+    for i, key in enumerate(enemy_list):
+        acts[key] = action[i]
+        nodes_id[key] = node_id[i] 
+    
     times["SMAX_step"] = time()
     steps_rng = jnp.array([steps_rng for _ in range(n_envs * n_trees)])
     obs_v, state_v, reward_v, done, info = vmap(env.step)(steps_rng, old_state_v, acts)
     times["void2"] = time()
     return obs_v, (bts, enemy_btv, state_v), (steps_rng, old_state_v, acts), (reward_v, times, nodes_id)
 
+
+# -
 
 def traj_fn(reset_rng, steps_rng, btv, enemy_btv, env, n_envs, n_trees, n_steps):  # take n_steps in m env
     state_seq, reward_seq, obs_seq = [], [], []
@@ -62,19 +79,19 @@ def traj_fn(reset_rng, steps_rng, btv, enemy_btv, env, n_envs, n_trees, n_steps)
 
 
 def trees_fn(bts, use_jit=True):
-    def bts_fn(env_state, idx, obs, agent, env):
+    def bts_fn(env_state, idx, obs, sight_range, attack_range, is_ally, env):
         state, action, selected_node_id = Status.FAILURE, STAND, -1
         for i, bt in enumerate(bts):
-            tree_state, tree_action, node_id = bt["tree"](env_state, obs, agent, env)
+            tree_state, tree_action, node_id = bt["tree"](env_state, obs, sight_range, attack_range, is_ally, env)
             state = jnp.where(idx == i, tree_state, state)
             action = jnp.where(idx == i, tree_action, action)
             selected_node_id = jnp.where(idx == i, node_id, selected_node_id)
         return action, selected_node_id
 
-    bts_fn = vmap(bts_fn, in_axes=(0, 0, 0, None, None), out_axes=(0, 0))
+    bts_fn = vmap(bts_fn, in_axes=(0, 0, 0, 0, 0, None, None), out_axes=(0, 0))
     if use_jit:
-        bts_fn = jit(bts_fn, static_argnums=(3, 4))
-    return bts_fn
+        bts_fn = jit(bts_fn, static_argnums=(5, 6))
+    return vmap(bts_fn, in_axes=(None, None, 0, 0, 0, None, None))
 
 
 #@partial(jit, static_argnums=(1, 2, 3))
@@ -97,11 +114,13 @@ def main():
         scripts[args.script]()
 
     else:
-        bts = trees_fn(load_trees())
+        use_jit = True
+        bts = trees_fn(load_trees(), use_jit)
         envs = tuple([make("SMAX", scenario=n2s(s)) for s in ["c2sim"]])
         bt = "F(A ( attack closest) :: A (stand))"
-        enemy_bts = [vmap(tree2smaxbt(bt), in_axes=(0, 0, None, None), out_axes=(0, 0, 0)) for _ in range(len(scenarios))]  # you can choose a different ennemy for each scenario
-        enemy_bts = [jit(bt, static_argnums=(2,3)) for bt in enemy_bts]
+        enemy_bts = [vmap(tree2smaxbt(bt), in_axes=(0, 0, 0, 0, None, None), out_axes=(0, 0, 0)) for _ in range(len(scenarios))]
+        foo = lambda x : (jit(x, static_argnums=(4,5)) if use_jit else x)  
+        enemy_bts = [vmap(foo(bt), in_axes=(None, 0, 0, 0, None, None)) for bt in enemy_bts]
         rng = random.PRNGKey(0)
         reset_rng, steps_rng = random.split(rng)
         reset_rng = random.split(reset_rng, n_envs)  # the reset only depends to the number of // evaluations
@@ -111,11 +130,6 @@ def main():
         print(len(seqs))
         # plot_fn(env, seq[0], seq[1], expand=True)
 
-# + active=""
-# if __name__ == "__main__":
-#     main()
-# -
 
-
-
-
+if __name__ == "__main__":
+    main()
