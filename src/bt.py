@@ -25,10 +25,10 @@ PARENT_DIR = os.path.dirname(os.path.dirname(__file__))
 # functions
 def tree_fn(children: List[NF], node_kind: bool) -> NF:  # sequence / fallback
     # run parallel trees
-    def tick(state, obs: jnp.array, agent, env) -> Status:
+    def tick(state, obs: jnp.array, sight_range, attack_range, is_ally, env) -> Status:
         status, action, on, selected_node_id = (S if node_kind else F, STAND, True, -1)  # on=need act?
         for child in children:  # loop through all children
-            ns, na, node_id = child(state, obs, agent, env)  # new state and action
+            ns, na, node_id = child(state, obs, sight_range, attack_range, is_ally, env)  # new state and action
             flag = jnp.logical_and(jnp.where(node_kind, ns != S, ns != F), on)
             on = jnp.where(flag, 0, on)
             status = jnp.where(flag, ns, status)
@@ -40,8 +40,8 @@ def tree_fn(children: List[NF], node_kind: bool) -> NF:  # sequence / fallback
 
 
 def atomic_fn(fn: Callable, node_id, dec_fn: Callable = None) -> NF:
-    def tick(state, obs: jnp.array, agent, env) -> Status:
-        args = (state, obs, agent, env)
+    def tick(state, obs: jnp.array, sight_range, attack_range, is_ally, env) -> Status:
+        args = (state, obs, sight_range, attack_range, is_ally, env)
         fn_res = fn(*args)
         res = dec_fn(*fn_res) if dec_fn is not None else fn_res
         state, action = res if isinstance(res, tuple) else (res, STAND)
