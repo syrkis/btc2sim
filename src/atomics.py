@@ -48,6 +48,15 @@ def process_obs(obs, env):
     others_obs = obs[:-k].reshape(n - 1, -1)
     return self_obs, others_obs
 
+
+@partial(jax.vmap, in_axes=(None, None, 0, 0))
+def inter_fn(pos, new_pos, obs, obs_end):
+    d1 = jnp.cross(obs - pos, new_pos - pos)
+    d2 = jnp.cross(obs_end - pos, new_pos - pos)
+    d3 = jnp.cross(pos - obs, obs_end - obs)
+    d4 = jnp.cross(new_pos - obs, obs_end - obs)
+    return (d1 * d2 <= 0) & (d3 * d4 <= 0)
+
 # + active=""
 # def agent_info_fn(state, _, agent, env):
 #     agent_id = env.agent_ids[agent]
@@ -189,8 +198,22 @@ def move(direction, qualifier=None, target=None, unit="any"):
                 return (RUNNING, action)
 
             return center_fn
-
-        return lambda *_: (RUNNING, dir_to_idx[direction])
+        else:
+            vec_direction = jnp.array({"north": [0,1], "east": [1,0], "south": [0,-1], "west": [-1,0]}[direction])
+            def move_fn(_____, obs, _, __, ___, env):
+                bondaries_coords = jnp.array([[0, 0], [0, 0], [env.map_width, 0], [0, env.map_height]])
+                bondaries_deltas = jnp.array([[env.map_width, 0], [0, env.map_height],  [0, env.map_height], [env.map_width, 0]])
+                obstacle_coords = jnp.concatenate([env.obstacle_coords, bondaries_coords])
+                obstacle_deltas = jnp.concatenate([env.obstacle_deltas, bondaries_deltas])
+                obst_start = obstacle_coords
+                obst_end = obst_start + obstacle_deltas
+                self_obs, _ = process_obs(obs, env)
+                pos = self_obs[1:3] * jnp.array([env.map_width, env.map_height]) 
+                new_pos = pos + jnp.array(vec_direction) * env.unit_type_velocities[jnp.argmax(self_obs[-6:])] * env.time_per_step * env.world_steps_per_env_step
+                inters = jnp.any(inter_fn(pos, new_pos, obst_start, obst_end))
+                flag = jnp.where(inters, FAILURE, RUNNING)
+                return (flag, dir_to_idx[direction])
+            return move_fn
 
 
 # ## Stand
@@ -429,6 +452,26 @@ def is_flock(team, direction):
 
     return is_flock_fn
 
+
+# ## has_obstacle
+
+def has_obstacle(direction):
+    assert( direction in ["north", "east", "south", "west"])
+    
+    vec_direction = jnp.array({"north": [0,1], "east": [1,0], "south": [0,-1], "west": [-1,0]}[direction])
+    def has_obstacle_fn(_____, obs, _, __, ___, env):
+        bondaries_coords = jnp.array([[0, 0], [0, 0], [env.map_width, 0], [0, env.map_height]])
+        bondaries_deltas = jnp.array([[env.map_width, 0], [0, env.map_height],  [0, env.map_height], [env.map_width, 0]])
+        obstacle_coords = jnp.concatenate([env.obstacle_coords, bondaries_coords])
+        obstacle_deltas = jnp.concatenate([env.obstacle_deltas, bondaries_deltas])
+        obst_start = obstacle_coords
+        obst_end = obst_start + obstacle_deltas
+        self_obs, _ = process_obs(obs, env)
+        pos = self_obs[1:3] * jnp.array([env.map_width, env.map_height]) 
+        new_pos = pos + jnp.array(vec_direction) * env.unit_type_velocities[jnp.argmax(self_obs[-6:])] * env.time_per_step * env.world_steps_per_env_step
+        inters = jnp.any(inter_fn(pos, new_pos, obst_start, obst_end))
+        return jnp.where(inters, SUCCESS, FAILURE)
+    return has_obstacle_fn
 
 # # Main
 

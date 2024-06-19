@@ -26,6 +26,7 @@ atomic :
     | is_armed
     | is_flock
     | is_type 
+    | has_obstacle
 
 move      : "move" (direction | sense qualifier (foe | friend) (unit|any)?)
 attack    : "attack" qualifier (unit|any)?
@@ -37,6 +38,7 @@ is_dying  : "is_dying" (self | foe | friend) hp_level
 is_armed  : "is_armed" (self | foe | friend)
 is_flock  : "is_flock" (foe | friend) direction
 is_type   : "is_type" negation unit
+has_obstacle : "has_obstacle" direction
 
 sense     : /toward|away_from/
 direction : /north|east|south|west|center/

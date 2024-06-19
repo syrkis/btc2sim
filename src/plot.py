@@ -84,6 +84,7 @@ def plot_fn(
     ]
     unit_health = [env.unit_type_health[unit_type] for unit_type in unit_types]
     fills = np.where(np.array(state_seq[0][1].unit_teams) == 1, ink, "None")
+    scouted_area = {j: [] for j in range(6)}
     for i, (_, state, actions) in (
         tqdm(enumerate(state_seq), total=len(state_seq))
         if verbose
@@ -105,11 +106,19 @@ def plot_fn(
             episodes_duration,
             for_LLM,
             env.num_allies,
+            scouted_area,
+            env.map_width,
+            env.map_height,
         )
         seq = [(ax, j, *args) for j, ax in enumerate(axes.flatten())]
         active_axis = False
         for ax, j, *args in seq:
             active_axis += axis_fn(ax, j, *args)
+            for pos, length in zip(env.obstacle_coords, env.obstacle_deltas):
+                start = pos
+                end = start + length
+                obstacles = np.concatenate([start, end]).reshape((-1,2))
+                ax.plot(obstacles[:,0], obstacles[:,1], color="black")
         frames.append(frame_fn(n_steps, fig, i // 8 if expand else i, path))
         if not active_axis:
             break
@@ -183,12 +192,14 @@ def axis_fn(
     episodes_duration,
     for_LLM,
     num_allies,
+    scouted_area,
+    width, 
+    height
 ):
     if i <= episodes_duration[j]:
-        aux_ax_fn(ax, bullets, returns, i, j, actions)
+        aux_ax_fn(ax, bullets, returns, i, j, actions, width, height)
         if for_LLM:
             ax.set_facecolor("lightgray")
-            
             all_positions = state.unit_positions[j, :, :2]
             allies_positions = state.unit_positions[j, :num_allies, :2]
             x_expanded = all_positions[:, np.newaxis, :]
@@ -197,6 +208,17 @@ def axis_fn(
             ranges = jnp.array([unit_sight_range[u] for u in state.unit_types[j, :]])
             in_sight = jnp.any(distances < ranges[:, np.newaxis], axis=1)
             team = jnp.arange(len(all_positions)) < num_allies
+            for (x,y,r) in scouted_area[j]:
+                circle = plt.Circle(
+                            (x, y),
+                            r,
+                            color="whitesmoke",
+                            ls=(0, (1, 10)),
+                            fill=True,
+                            zorder=-2,
+                        )
+                ax.add_patch(circle)
+                
         for unit_idx, unit_type in enumerate(unit_types):
             idx = state.unit_types[j, :] == unit_type
             if for_LLM:
@@ -244,6 +266,7 @@ def axis_fn(
                             zorder=-1,
                         )
                         ax.add_patch(circle)
+                        scouted_area[j].append((x[i], y[i], unit_sight_range[unit_idx]))
         return True
     else:
         ax.axis("off")
@@ -253,7 +276,7 @@ def axis_fn(
 # -
 
 
-def aux_ax_fn(ax, bullets, returns, i, j, actions):
+def aux_ax_fn(ax, bullets, returns, i, j, actions, width, height):
     if bullets is not None:
         idx = bullets[:, 0] == j
         alpha = i % 8 / 8
@@ -269,13 +292,14 @@ def aux_ax_fn(ax, bullets, returns, i, j, actions):
         color=ink,
     )
     ax.set_facecolor(bg)
-    ticks = np.arange(2, 31, 4)  # Assuming your grid goes from 0 to 32
+    ticks = np.arange(2, width-1, 4)  # Assuming your grid goes from 0 to 32
     ax.set_xticks(ticks)
+    tcks = np.arange(2, height-1, 4)
     ax.set_yticks(ticks)
     ax.tick_params(**tick_params)
     ax.set_aspect("equal")
-    ax.set_xlim(-2, 34)
-    ax.set_ylim(-2, 34)
+    ax.set_xlim(-2, width+2)
+    ax.set_ylim(-2, height+2)
 
 
 
