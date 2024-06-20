@@ -114,18 +114,19 @@ def plot_fn(
         active_axis = False
         for ax, j, *args in seq:
             active_axis += axis_fn(ax, j, *args)
-            for pos, length in zip(env.obstacle_coords, env.obstacle_deltas):
-                start = pos
-                end = start + length
-                obstacles = np.concatenate([start, end]).reshape((-1,2))
-                ax.plot(obstacles[:,0], obstacles[:,1], color="black")
+            if i <= episodes_duration[j]:
+                for pos, length in zip(env.obstacle_coords, env.obstacle_deltas):
+                    start = pos
+                    end = start + length
+                    obstacles = np.concatenate([start, end]).reshape((-1,2))
+                    ax.plot(obstacles[:,0], obstacles[:,1], color="black")
         frames.append(frame_fn(n_steps, fig, i // 8 if expand else i, path))
         if not active_axis:
             break
     fname = (
         "docs/figs" if path is None else path
     ) + f"/worlds_{bg}{'_laggy' if not expand else ''}.mp4"
-    imageio.mimsave(fname, frames, fps=24 if expand else 3)
+    imageio.mimsave(fname, frames, fps=24 if expand else 10)
 
 
 # -
@@ -205,7 +206,7 @@ def axis_fn(
             x_expanded = all_positions[:, np.newaxis, :]
             y_expanded = allies_positions[np.newaxis, :, :]
             distances = np.linalg.norm(x_expanded - y_expanded, axis=2)
-            ranges = jnp.array([unit_sight_range[u] for u in state.unit_types[j, :]])
+            ranges = jnp.array([unit_sight_range[np.where(unit_types == u)[0][0]] for u in state.unit_types[j, :]])
             in_sight = jnp.any(distances < ranges[:, np.newaxis], axis=1)
             team = jnp.arange(len(all_positions)) < num_allies
             for (x,y,r) in scouted_area[j]:
