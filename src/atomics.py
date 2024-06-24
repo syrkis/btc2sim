@@ -339,8 +339,8 @@ def is_armed(agent):
             jnp.arange(alive.size) < (alive.size - n),
         )
         alive = jnp.logical_and(alive, target_team)
-        other_cooldown = jnp.where(alive, others_obs.T[4], -jnp.inf)
-        other_check = jnp.where(jnp.max(other_cooldown) > 0, SUCCESS, FAILURE)
+        other_cooldown = jnp.where(alive, others_obs.T[6], -jnp.inf)
+        other_check = jnp.where(jnp.max(other_cooldown) <= 0, SUCCESS, FAILURE)
         self_check = jnp.where(self_obs[3] <= 0, SUCCESS, FAILURE)
         return jnp.where(on_self, self_check, other_check)
 
