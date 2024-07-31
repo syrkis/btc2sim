@@ -113,7 +113,7 @@ def attack(qualifier, unit="any"):  # TODO: attack closest if no target
         dist = jnp.where(in_reach, jnp.where(use_health, health, dist), fill)
         targ = jnp.where(use_min, jnp.argmin(dist), jnp.argmax(dist))
         alive_and_not_in_cooldown = jnp.logical_and(in_reach.any(), self_obs[3] <= 0)
-        flag = jnp.where(alive_and_not_in_cooldown, RUNNING, FAILURE) 
+        flag = jnp.where(alive_and_not_in_cooldown, RUNNING, FAILURE)
         action = jnp.where(alive_and_not_in_cooldown, targ + 5 - m, STAND)
         return (flag, action)
 
@@ -149,7 +149,7 @@ def move(direction, qualifier=None, target=None, unit="any"):
             "hydralisk": -1,
             "any": None,
         }[unit]
-        
+
         target_foe = target == "foe"
         move_toward = direction == "toward"
 

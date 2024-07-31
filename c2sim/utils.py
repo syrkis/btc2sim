@@ -15,6 +15,21 @@ import argparse
 from typing import Any, Callable, List, Tuple, Dict
 
 
+def a2i(agent):
+    team, idx = agent.split("_")
+    idx = int(idx) + 1
+    if team == 'ally':
+        return idx
+    else:
+        return - idx
+
+def i2a(idx):
+    if idx > 0:
+        return f"ally_{idx - 1}"
+    else:
+        return f"enemy_{- (idx - 1)}"
+
+
 # scenarios
 scenarios = [
     "3m",
@@ -40,7 +55,7 @@ class Status:  # for behavior tree
 
 
 # default action
-STAND = 4  # do nothing
+STAND = jnp.array(4) # do nothing
 
 
 # types

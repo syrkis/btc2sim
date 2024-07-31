@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "c2sim"
+version = "0.0.0"
+description = ""
+authors = ["Noah Syrkis <noah@syrkis.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+parabellum = "^0.2.20"
+lark = "^1.1.9"
+functional = "^0.4"
+jupyterlab = "^4.2.4"
+notebook = "^7.2.1"
+ipykernel = "^6.29.5"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
