@@ -201,17 +201,11 @@ def move(direction, qualifier=None, target=None, unit="any"):
         else:
             vec_direction = jnp.array({"north": [0,1], "east": [1,0], "south": [0,-1], "west": [-1,0]}[direction])
             def move_fn(_____, obs, _, __, ___, env):
-                bondaries_coords = jnp.array([[0, 0], [0, 0], [env.map_width, 0], [0, env.map_height]])
-                bondaries_deltas = jnp.array([[env.map_width, 0], [0, env.map_height],  [0, env.map_height], [env.map_width, 0]])
-                obstacle_coords = jnp.concatenate([env.obstacle_coords, bondaries_coords])
-                obstacle_deltas = jnp.concatenate([env.obstacle_deltas, bondaries_deltas])
-                obst_start = obstacle_coords
-                obst_end = obst_start + obstacle_deltas
                 self_obs, _ = process_obs(obs, env)
                 pos = self_obs[1:3] * jnp.array([env.map_width, env.map_height]) 
                 new_pos = pos + jnp.array(vec_direction) * env.unit_type_velocities[jnp.argmax(self_obs[-6:])] * env.time_per_step * env.world_steps_per_env_step
-                inters = jnp.any(inter_fn(pos, new_pos, obst_start, obst_end))
-                flag = jnp.where(inters, FAILURE, RUNNING)
+                clash = raster_crossing(pos, new_pos, env)
+                flag = jnp.where(clash, FAILURE, RUNNING)
                 return (flag, dir_to_idx[direction])
             return move_fn
 
@@ -455,22 +449,28 @@ def is_flock(team, direction):
 
 # ## has_obstacle
 
+def raster_crossing(pos, new_pos, env):
+    pos, new_pos = pos.astype(jnp.int32), new_pos.astype(jnp.int32)
+    raster = env.terrain_raster
+    axis = jnp.argmax(jnp.abs(new_pos - pos), axis=-1)
+    minimum = jnp.minimum(pos[axis], new_pos[axis]).squeeze()
+    maximum = jnp.maximum(pos[axis], new_pos[axis]).squeeze()
+    segment = jnp.where(axis == 0, raster[pos[1]], raster.T[pos[0]])
+    segment = jnp.where(jnp.arange(segment.shape[0]) >= minimum, segment, 0)
+    segment = jnp.where(jnp.arange(segment.shape[0]) <= maximum, segment, 0)
+    return jnp.any(segment)
+
+
 def has_obstacle(direction):
     assert( direction in ["north", "east", "south", "west"])
     
     vec_direction = jnp.array({"north": [0,1], "east": [1,0], "south": [0,-1], "west": [-1,0]}[direction])
     def has_obstacle_fn(_____, obs, _, __, ___, env):
-        bondaries_coords = jnp.array([[0, 0], [0, 0], [env.map_width, 0], [0, env.map_height]])
-        bondaries_deltas = jnp.array([[env.map_width, 0], [0, env.map_height],  [0, env.map_height], [env.map_width, 0]])
-        obstacle_coords = jnp.concatenate([env.obstacle_coords, bondaries_coords])
-        obstacle_deltas = jnp.concatenate([env.obstacle_deltas, bondaries_deltas])
-        obst_start = obstacle_coords
-        obst_end = obst_start + obstacle_deltas
         self_obs, _ = process_obs(obs, env)
         pos = self_obs[1:3] * jnp.array([env.map_width, env.map_height]) 
         new_pos = pos + jnp.array(vec_direction) * env.unit_type_velocities[jnp.argmax(self_obs[-6:])] * env.time_per_step * env.world_steps_per_env_step
-        inters = jnp.any(inter_fn(pos, new_pos, obst_start, obst_end))
-        return jnp.where(inters, SUCCESS, FAILURE)
+        clash = raster_crossing(pos, new_pos, env)
+        return jnp.where(clash, SUCCESS, FAILURE)
     return has_obstacle_fn
 
 # # Main
