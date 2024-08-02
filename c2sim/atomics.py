@@ -72,18 +72,18 @@ def attack(qualifier, unit="any"):  # TODO: attack closest if no target
     target_type = target_types[unit]
 
 
-    def attack_fn(obs, info: Info):  # sight_range, attack_range, is_ally, env):
+    def attack_fn(obs, info: Info):  # sight_range, agent.attack_range, agent.is_ally, agent.env.env):
         fill = jnp.where(use_min, jnp.inf, -jnp.inf)
         self_obs, others_obs = process_obs(obs, info)
-        n = jnp.where(info.is_ally, info.num_enemies, info.num_allies)  # number of foes
-        m = jnp.where(info.is_ally, info.num_allies, info.num_enemies) - 1  # number of allies
+        n = jnp.where(info.agent.is_ally, info.env.num_enemies, info.env.num_allies)  # number of foes
+        m = jnp.where(info.agent.is_ally, info.env.num_allies, info.env.num_enemies) - 1  # number of allies
         alive = others_obs.T[0] > 0
         is_enemies = jnp.arange(alive.size) >= (alive.size - n)
         is_unit_types = jnp.where(use_unit_type, others_obs.T[target_type], 1)
         alive = jnp.logical_and(alive, is_enemies)
         #alive = jnp.logical_and(alive, is_unit_types) # was
         dist = jnp.linalg.norm(others_obs.T[1:3], axis=0)
-        in_reach = jnp.logical_and(info.attack_range / info.sight_range > dist, alive)
+        in_reach = jnp.logical_and(info.agent.attack_range / info.agent.sight_range > dist, alive)
 
         health = others_obs.T[0]
         dist = jnp.where(in_reach, jnp.where(use_health, health, dist), fill)
@@ -111,9 +111,9 @@ def move(direction, qualifier=None, target=None, unit="any"):
         target_foe = target == "foe"
         move_toward = direction == "toward"
 
-        def move_fn(obs, info: Info):
+        def move_fn(obs, agent_info, env_info):
             fill = jnp.where(use_min, jnp.inf, -jnp.inf)
-            n = jnp.where(info.is_ally, info.num_enemies, info.num_allies)  # number of foes
+            n = jnp.where(info.agent.is_ally, info.env.num_enemies, info.env.num_allies)  # number of foes
             self_obs, others_obs = process_obs(obs, info)
             alive = (
                 others_obs.T[0] > 0
@@ -161,8 +161,8 @@ def move(direction, qualifier=None, target=None, unit="any"):
             vec_direction = jnp.array({"north": [0,1], "east": [1,0], "south": [0,-1], "west": [-1,0]}[direction])
             def move_fn_alt(obs, info: Info):
                 self_obs, _ = process_obs(obs, info)
-                pos = self_obs[1:3] * jnp.array([info.map_width, info.map_height])
-                new_pos = pos + jnp.array(vec_direction) * info.velocity * info.time_per_step * info.world_steps_per_env_step
+                pos = self_obs[1:3] * jnp.array([info.env.map_width, info.env.map_height])
+                new_pos = pos + jnp.array(vec_direction) * info.agent.velocity * info.env.time_per_step * info.env.world_steps_per_env_step
                 clash = raster_crossing(pos, new_pos, info)
                 flag = jnp.where(clash, FAILURE, SUCCESS)
                 return (flag, dir_to_idx[direction])
@@ -198,7 +198,7 @@ def in_sight(target, unit="any"):  # is unit x in direction y?
     target_foe = target == "foe"
 
     def in_sight_fn(obs, info: Info):
-        n = jnp.where(info.is_ally, info.num_enemies, info.num_allies)  # number of foes
+        n = jnp.where(info.agent.is_ally, info.env.num_enemies, info.env.num_allies)  # number of foes
         self_obs, others_obs = process_obs(obs, info)
         alive = others_obs.T[0] > 0
         target_team = jnp.where(
@@ -222,7 +222,7 @@ def in_reach(other_agent, unit="any"):  # in shooting range
     target_type = target_types[unit]
 
     def in_reach_fn(obs, info: Info):  # if any is in reach
-        n = jnp.where(info.is_ally, info.num_enemies, info.num_allies)  # number of foes
+        n = jnp.where(info.agent.is_ally, info.env.num_enemies, info.env.num_allies)  # number of foes
         self_obs, others_obs = process_obs(obs, info)
         alive = others_obs.T[0] > 0
         target_team = jnp.where(
@@ -233,7 +233,7 @@ def in_reach(other_agent, unit="any"):  # in shooting range
         is_unit_types = jnp.where(use_unit_type, others_obs.T[target_type], 1)
         alive = jnp.logical_and(alive, target_team)
         dist = jnp.linalg.norm(others_obs.T[1:3], axis=0)
-        in_range = info.attack_range / info.sight_range > dist
+        in_range = info.agent.attack_range / info.agent.sight_range > dist
         flag = (jnp.logical_and(in_range, alive)).any()
         return jnp.where(flag, SUCCESS, FAILURE)
 
@@ -248,7 +248,7 @@ def is_armed(agent):
     def is_armed_fn(obs, info: Info):
         self_obs, others_obs = process_obs(obs, info)
         alive = others_obs.T[0] > 0
-        n = jnp.where(info.is_ally, info.num_enemies, info.num_allies)  # number of foes
+        n = jnp.where(info.agent.is_ally, info.env.num_enemies, info.env.num_allies)  # number of foes
         target_team = jnp.where(
             on_foe,
             jnp.arange(alive.size) >= (alive.size - n),
@@ -273,7 +273,7 @@ def is_dying(agent, hp_level):
     def aux(obs, info):
         self_obs, others_obs = process_obs(obs, info)
         alive = others_obs.T[0] > 0
-        n = jnp.where(info.is_ally, info.num_enemies, info.num_allies)  # number of foes
+        n = jnp.where(info.agent.is_ally, info.env.num_enemies, info.env.num_allies)  # number of foes
         target_team = jnp.where(
             on_foe,
             jnp.arange(alive.size) >= (alive.size - n),
@@ -310,7 +310,7 @@ def is_flock(team, direction):
         def is_flock_fn(obs, info):
             self_obs, others_obs = process_obs(obs, info)
             alive = others_obs.T[0] > 0
-            n = jnp.where(info.is_ally, info.num_enemies, info.num_allies)  # number of enemies
+            n = jnp.where(info.agent.is_ally, info.env.num_enemies, info.env.num_allies)  # number of enemies
             target_team = jnp.where(
                 on_foe,
                 jnp.arange(alive.size) >= (alive.size - n),
@@ -340,7 +340,7 @@ def is_flock(team, direction):
         def is_flock_fn_alt(obs, info: Info):
             self_obs, others_obs = process_obs(obs, info)
             alive = others_obs.T[0] > 0
-            n = jnp.where(info.is_ally, info.num_enemies, info.num_allies)  # number of enemies
+            n = jnp.where(info.agent.is_ally, info.env.num_enemies, info.env.num_allies)  # number of enemies
             target_team = jnp.where(
                 on_foe,
                 jnp.arange(alive.size) >= (alive.size - n),
@@ -377,8 +377,8 @@ def has_obstacle(direction):
     vec_direction = jnp.array({"north": [0,1], "east": [1,0], "south": [0,-1], "west": [-1,0]}[direction])
     def has_obstacle_fn(obs, info: Info):
         self_obs, _ = process_obs(obs, info)
-        pos = self_obs[1:3] * jnp.array([info.map_width, info.map_height])
-        new_pos = pos + jnp.array(vec_direction) * info.unit_type_velocities[jnp.argmax(self_obs[-6:])] * info.time_per_step * info.world_steps_per_env_step
+        pos = self_obs[1:3] * jnp.array([info.env.map_width, info.env.map_height])
+        new_pos = pos + jnp.array(vec_direction) * info.agent.velocity * info.env.time_per_step * info.env.world_steps_per_env_step
         clash = raster_crossing(pos, new_pos, info)
         return jnp.where(clash, SUCCESS, FAILURE)
     return has_obstacle_fn

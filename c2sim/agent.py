@@ -8,22 +8,37 @@ import jax.numpy as jnp
 from jax import random, vmap, jit
 import c2sim
 
+
 # functions
-def info_fn(agent, env):
+def info_fn(env):
     return c2sim.types.Info(
-        agent_id=env.agent_ids[agent],
+        env=env_info_fn(env),
+        agent=agent_info_fn(env)
+    )
+
+def env_info_fn(env):
+    return c2sim.types.EnvInfo(
         num_agents=env.num_agents,
         num_allies=env.num_allies,
         num_enemies=env.num_enemies,
-        num_own_features=len(env.own_features),
-        num_types=len(env.unit_type_names),
-        velocity=env.unit_type_velocities[env.agent_ids[agent]],
-        sight_range=env.unit_type_sight_ranges[env.agent_ids[agent]],
-        attack_range=env.unit_type_attack_ranges[env.agent_ids[agent]],
-        is_ally=agent.startswith('ally'),
-        map_width=env.map_width,
-        map_height=env.map_height,
+
+        num_types=jnp.array(len(env.unit_type_names)),
+        num_own_features=jnp.array(len(env.own_features)),
+
         world_steps_per_env_step=env.world_steps_per_env_step,
         time_per_step=env.time_per_step,
-        terrain_raster = env.terrain_raster,
+
+        # map info
+        map_width=env.map_width,
+        map_height=env.map_height,
+        terrain_raster = env.terrain_raster, # 2D array of terrain types
+    )
+
+def agent_info_fn(env):
+    return c2sim.types.AgentInfo(
+        agent_id=jnp.array([env.agent_ids[agent] for agent in env.agent_ids]),
+        velocity=jnp.array([env.unit_type_velocities[env.agent_ids[agent]] for agent in env.agent_ids]),
+        sight_range=jnp.array([env.unit_type_sight_ranges[env.agent_ids[agent]] for agent in env.agent_ids]),
+        attack_range=jnp.array([env.unit_type_attack_ranges[env.agent_ids[agent]] for agent in env.agent_ids]),
+        is_ally=jnp.array([agent.startswith('ally') for agent in env.agent_ids])
     )
