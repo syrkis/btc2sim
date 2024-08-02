@@ -3,72 +3,13 @@
 # by: Noah Syrkis
 
 # imports
-import os
-import jax
 import jax.numpy as jnp
-import chex
-
-import numpy as np
-from PIL import Image
-import yaml
-import argparse
-from typing import Any, Callable, List, Tuple, Dict
-
-
-def a2i(agent):
-    team, idx = agent.split("_")
-    idx = int(idx) + 1
-    if team == 'ally':
-        return idx
-    else:
-        return - idx
-
-def i2a(idx):
-    if idx > 0:
-        return f"ally_{idx - 1}"
-    else:
-        return f"enemy_{- (idx - 1)}"
-
-
-# scenarios
-scenarios = [
-    "3m",
-    "2s3z",
-    "25m",
-    "3s5z",
-    "8m",
-    "5m_vs_6m",
-    "10m_vs_11m",
-    "27m_vs_30m",
-    "3s5z_vs_3s6z",
-    "3s_vs_5z",
-    "6h_vs_8z",
-]
-
-
-# dataclasses
-@chex.dataclass
-class Status:  # for behavior tree
-    SUCCESS: int = 1
-    RUNNING: int = 0  # we might not need running, since we always have a return action
-    FAILURE: int = -1
 
 
 # default action
-STAND = jnp.array(4) # do nothing
+NORTH, EAST, SOUTH, WEST, STAND = jnp.array(0), jnp.array(1), jnp.array(2), jnp.array(3), jnp.array(4)
 
-
-# types
-NodeFunc = Callable[[Any], Status]
 
 # dicts
 dir_to_idx = {"north": 0, "east": 1, "south": 2, "west": 3}
 idx_to_dir = {0: "north", 1: "east", 2: "south", 3: "west"}
-
-
-# functions
-def parse_args():
-    parser = argparse.ArgumentParser(description="c2sim")
-    # specify which script in src to run
-    parser.add_argument("--script", type=str, default="main", help="script to run")
-    return parser.parse_args()

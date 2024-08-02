@@ -2,14 +2,14 @@
 from c2sim import dsl
 from c2sim import bt
 from c2sim import utils
-from .utils import parse_args
-from .atomics import main
-
-# scripts
+from c2sim import types
+from c2sim import agent
 
 # exports
 __all__ = [
     "dsl",
     "bt",
-    'utils'
+    'utils',
+    'types',
+    'agent'
 ]
