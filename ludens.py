@@ -11,8 +11,8 @@ place = 'Vesterbro, København, Denmark'
 n_envs = 10
 
 # %% Environment
-mask = pb.terrain_fn(place, 100)
-scen = pb.make_scenario(place, jnp.zeros_like(mask))
+mask, photo = pb.terrain_fn(place, 100)
+scen = pb.make_scenario(place, mask)
 env = pb.Environment(scen)
 
 # %%
@@ -34,5 +34,5 @@ for i in tqdm(range(100)):
     obs, state, reward, done, info = vmap(env.step)(rngs[1:], state, actions)
 
 # %%
-vis = pb.Visualizer(env, state_seq)
+vis = pb.Visualizer(env, state_seq, skin=pb.Skin(maskmap=mask))
 vis.animate()

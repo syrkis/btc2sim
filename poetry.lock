@@ -256,6 +256,20 @@ files = [
 ]
 
 [[package]]
+name = "branca"
+version = "0.7.2"
+description = "Generate complex HTML+JS pages with Python"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "branca-0.7.2-py3-none-any.whl", hash = "sha256:853a359c34d08fd06498be762d8be9932750db4049cac11e25dd6f23562e25c2"},
+    {file = "branca-0.7.2.tar.gz", hash = "sha256:ca4c94643ef31b819987ca5bd19c6009ea17b440baa3aac04628545f7a4da023"},
+]
+
+[package.dependencies]
+jinja2 = ">=3"
+
+[[package]]
 name = "brax"
 version = "0.10.0"
 description = "A differentiable physics engine written in JAX."
@@ -632,6 +646,27 @@ traitlets = ">=4"
 
 [package.extras]
 test = ["pytest"]
+
+[[package]]
+name = "contextily"
+version = "1.6.0"
+description = "Context geo-tiles in Python"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "contextily-1.6.0-py3-none-any.whl", hash = "sha256:8a0900ac5cfcec0f4ae46b5d83fe176625355dfeff2376a66b6e61694c2fe9cb"},
+    {file = "contextily-1.6.0.tar.gz", hash = "sha256:8ab8ea9ec427c07960fae4964cfa6964b88c87546b97896422dbefc9fa8457f3"},
+]
+
+[package.dependencies]
+geopy = "*"
+joblib = "*"
+matplotlib = "*"
+mercantile = "*"
+pillow = "*"
+rasterio = "*"
+requests = "*"
+xyzservices = "*"
 
 [[package]]
 name = "contextlib2"
@@ -1261,6 +1296,27 @@ all = ["matplotlib"]
 testing = ["black[jupyter] (==23.7.0)", "clu", "einops", "gymnasium[accept-rom-license,atari]", "jaxlib", "jraph (>=0.0.6dev0)", "ml-collections", "mypy", "nbstripout", "opencv-python", "pyink (==23.5.0)", "pytest", "pytest-cov", "pytest-custom-exit-code", "pytest-xdist (==1.34.0)", "pytype", "sentencepiece", "tensorflow", "tensorflow-datasets", "tensorflow-text (>=2.11.0)", "torch"]
 
 [[package]]
+name = "folium"
+version = "0.17.0"
+description = "Make beautiful maps with Leaflet.js & Python"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "folium-0.17.0-py2.py3-none-any.whl", hash = "sha256:14210d054e9afad6ebac037495508297d78805fcfa16f859fdee10bb7f85c2c1"},
+    {file = "folium-0.17.0.tar.gz", hash = "sha256:48385df9a3f6ceca23647c2e8d87850c8a6e05b40db63266e7b8c6d2d734d4c6"},
+]
+
+[package.dependencies]
+branca = ">=0.6.0"
+jinja2 = ">=2.9"
+numpy = "*"
+requests = "*"
+xyzservices = "*"
+
+[package.extras]
+testing = ["pytest"]
+
+[[package]]
 name = "fonttools"
 version = "4.53.1"
 description = "Tools to manipulate font files"
@@ -1392,6 +1448,7 @@ description = "Python AST that abstracts the underlying Python version"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,>=2.7"
 files = [
+    {file = "gast-0.6.0-py3-none-any.whl", hash = "sha256:52b182313f7330389f72b069ba00f174cfe2a06411099547288839c6cbafbd54"},
     {file = "gast-0.6.0.tar.gz", hash = "sha256:88fc5300d32c7ac6ca7b515310862f71e6fdf2c029bbec7c66c0f5dd47b6b1fb"},
 ]
 
@@ -2120,6 +2177,17 @@ MarkupSafe = ">=2.0"
 i18n = ["Babel (>=2.7)"]
 
 [[package]]
+name = "joblib"
+version = "1.4.2"
+description = "Lightweight pipelining with Python functions"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "joblib-1.4.2-py3-none-any.whl", hash = "sha256:06d478d5674cbc267e7496a410ee875abd68e4340feff4490bcb7afb88060ae6"},
+    {file = "joblib-1.4.2.tar.gz", hash = "sha256:2382c5816b2636fbd20a09e0f4e9dad4736765fdfb7dca582943b9c1366b3f0e"},
+]
+
+[[package]]
 name = "json5"
 version = "0.9.25"
 description = "A Python implementation of the JSON5 data format."
@@ -2713,6 +2781,24 @@ files = [
 ]
 
 [[package]]
+name = "mercantile"
+version = "1.2.1"
+description = "Web mercator XYZ tile utilities"
+optional = false
+python-versions = "*"
+files = [
+    {file = "mercantile-1.2.1-py3-none-any.whl", hash = "sha256:30f457a73ee88261aab787b7069d85961a5703bb09dc57a170190bc042cd023f"},
+    {file = "mercantile-1.2.1.tar.gz", hash = "sha256:fa3c6db15daffd58454ac198b31887519a19caccee3f9d63d17ae7ff61b3b56b"},
+]
+
+[package.dependencies]
+click = ">=3.0"
+
+[package.extras]
+dev = ["check-manifest"]
+test = ["hypothesis", "pytest"]
+
+[[package]]
 name = "mistune"
 version = "3.0.2"
 description = "A sane and fast Markdown parser with useful plugins and renderers"
@@ -2767,8 +2853,8 @@ files = [
 
 [package.dependencies]
 numpy = [
-    {version = ">=1.23.3", markers = "python_version >= \"3.11\" and python_version < \"3.12\""},
     {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
+    {version = ">=1.23.3", markers = "python_version >= \"3.11\" and python_version < \"3.12\""},
 ]
 
 [package.extras]
@@ -3146,6 +3232,28 @@ antlr4-python3-runtime = "==4.9.*"
 PyYAML = ">=5.1.0"
 
 [[package]]
+name = "opencv-python"
+version = "4.10.0.84"
+description = "Wrapper package for OpenCV python bindings."
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "opencv-python-4.10.0.84.tar.gz", hash = "sha256:72d234e4582e9658ffea8e9cae5b63d488ad06994ef12d81dc303b17472f3526"},
+    {file = "opencv_python-4.10.0.84-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:fc182f8f4cda51b45f01c64e4cbedfc2f00aff799debebc305d8d0210c43f251"},
+    {file = "opencv_python-4.10.0.84-cp37-abi3-macosx_12_0_x86_64.whl", hash = "sha256:71e575744f1d23f79741450254660442785f45a0797212852ee5199ef12eed98"},
+    {file = "opencv_python-4.10.0.84-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:09a332b50488e2dda866a6c5573ee192fe3583239fb26ff2f7f9ceb0bc119ea6"},
+    {file = "opencv_python-4.10.0.84-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9ace140fc6d647fbe1c692bcb2abce768973491222c067c131d80957c595b71f"},
+    {file = "opencv_python-4.10.0.84-cp37-abi3-win32.whl", hash = "sha256:2db02bb7e50b703f0a2d50c50ced72e95c574e1e5a0bb35a8a86d0b35c98c236"},
+    {file = "opencv_python-4.10.0.84-cp37-abi3-win_amd64.whl", hash = "sha256:32dbbd94c26f611dc5cc6979e6b7aa1f55a64d6b463cc1dcd3c95505a63e48fe"},
+]
+
+[package.dependencies]
+numpy = [
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
+    {version = ">=1.23.5", markers = "python_version >= \"3.11\" and python_version < \"3.12\""},
+]
+
+[[package]]
 name = "opt-einsum"
 version = "3.3.0"
 description = "Optimizing numpys einsum function"
@@ -3301,8 +3409,8 @@ files = [
 
 [package.dependencies]
 numpy = [
-    {version = ">=1.23.2", markers = "python_version == \"3.11\""},
     {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
+    {version = ">=1.23.2", markers = "python_version == \"3.11\""},
 ]
 python-dateutil = ">=2.8.2"
 pytz = ">=2020.1"
@@ -3346,25 +3454,30 @@ files = [
 
 [[package]]
 name = "parabellum"
-version = "0.2.20"
+version = "0.2.21"
 description = "Parabellum environment for parallel warfare simulation"
 optional = false
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "parabellum-0.2.20-py3-none-any.whl", hash = "sha256:8d1a646c0810ad01f5b3d4a06f190a5ae6496968850b97f644daa611a3deedba"},
-    {file = "parabellum-0.2.20.tar.gz", hash = "sha256:fb7e5f50da83dac89acb947a828fab031705ea26acf65c1b8250f86f48468886"},
+    {file = "parabellum-0.2.21-py3-none-any.whl", hash = "sha256:68bcf85ef0206eb7215d907d3d2384d92a895cded7c917d4b0a81fc69c2c87db"},
+    {file = "parabellum-0.2.21.tar.gz", hash = "sha256:bed9de6063378b6bc7f1683b9955d8f7decbdb4b06dfaca2d892335864b0ae19"},
 ]
 
 [package.dependencies]
+contextily = ">=1.6.0,<2.0.0"
 darkdetect = ">=0.8.0,<0.9.0"
+folium = ">=0.17.0,<0.18.0"
 geopandas = ">=1.0.0,<2.0.0"
 geopy = ">=2.4.1,<3.0.0"
+ipykernel = ">=6.29.5,<7.0.0"
 jax = "0.4.17"
 jaxmarl = "0.0.3"
 jupyterlab = ">=4.2.2,<5.0.0"
 moviepy = ">=1.0.3,<2.0.0"
 numpy = "<2"
+opencv-python = ">=4.10.0.84,<5.0.0.0"
 osmnx = ">=1.9.3,<2.0.0"
+pandas = ">=2.2.2,<3.0.0"
 poetry = ">=1.8.3,<2.0.0"
 pygame = ">=2.5.2,<3.0.0"
 rasterio = ">=1.3.10,<2.0.0"
@@ -5625,6 +5738,17 @@ cffi = ">=1.16.0"
 
 [package.extras]
 test = ["pytest"]
+
+[[package]]
+name = "xyzservices"
+version = "2024.6.0"
+description = "Source of XYZ tiles providers"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "xyzservices-2024.6.0-py3-none-any.whl", hash = "sha256:fecb2508f0f2b71c819aecf5df2c03cef001c56a4b49302e640f3b34710d25e4"},
+    {file = "xyzservices-2024.6.0.tar.gz", hash = "sha256:58c1bdab4257d2551b9ef91cd48571f77b7c4d2bc45bf5e3c05ac97b3a4d7282"},
+]
 
 [[package]]
 name = "zipp"
