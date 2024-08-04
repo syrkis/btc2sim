@@ -13,7 +13,9 @@ class Args:  # for behavior tree
     action: Any
     obs: Any
     child: int
-    info: Any
+    env_info: Any
+    agent_info: Any
+
 
 @dataclass
 class Status:  # for behavior tree
@@ -40,11 +42,6 @@ class AgentInfo:
     sight_range: Array
     attack_range: Array
     is_ally: Array
-
-@dataclass
-class Info:
-    env: EnvInfo
-    agent: AgentInfo
 
 # types
 NodeFunc = Callable[[Any], Status]

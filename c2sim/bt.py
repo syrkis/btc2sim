@@ -15,10 +15,8 @@ from functools import partial
 from typing import Any, Callable, List, Tuple, Dict, Optional
 
 from c2sim.types import Status, NodeFunc as NF
-from c2sim.agent import info_fn
 from c2sim.utils import STAND
 import c2sim.atomics as atomics
-from c2sim.atomics import Info
 
 # constants
 ATOMICS = {fn: getattr(atomics, fn) for fn in dir(atomics) if not fn.startswith("_")}
@@ -32,14 +30,15 @@ class Args:
     action: Array
     obs: Array
     child: int
-    info: Info
+    agent_info: Any
+    env_info: Any
 
 # functions
-def forest_fn(trees, env):
+def forest_fn(trees):
     # runs a forest
     pass
 
-def tree_fn(children, env, kind, info: Info):
+def tree_fn(children, kind):
     start_status = jnp.where(kind == 'sequence', SUCCESS, FAILURE)
 
     def cond_fn(args):  # conditions under which we continue
@@ -49,24 +48,23 @@ def tree_fn(children, env, kind, info: Info):
 
     def body_fn(args):
         child_status, child_action = jax.lax.switch(args.child, children, *(args.obs, args.info))  # make info
-        args = Args(status=child_status, action=child_action, obs=args.obs, child=args.child + 1, info=args.info)
+        args = Args(status=child_status, action=child_action, obs=args.obs, child=args.child + 1, env_info=args.env_info, agent_info=args.agent_info)
         return args
 
-    def tick(obs, idx):  # idx is to get info from batch dict
-        agent_info = tree_util.tree_map(lambda x: x[idx], info.agent)  # this might work, but is it slow?
-        args = Args(status=start_status, action=STAND, obs=obs, child=0, info=Info(env=info.env, agent=agent_info))
+    def tick(obs, env_info, agent_info):  # idx is to get info from batch dict
+        args = Args(status=start_status, action=STAND, obs=obs, child=0, env_info=env_info, agent_info=agent_info)
         args = jax.lax.while_loop(cond_fn, body_fn, args)  # While we haven't found action action continue through children'
         return args.status, args.action
 
     return tick
 
 
-def seed_fn(seed: dict, env, info):
+def seed_fn(seed: dict):
     # grows a tree from a seed
     assert seed[0] in ["sequence", "fallback", "condition", "action"]
     if seed[0] in ["sequence", "fallback"]:
-        children = [seed_fn(child, env, info) for child in seed[1]]
-        return tree_fn(children, env, seed[0], info)
+        children = [seed_fn(child) for child in seed[1]]
+        return tree_fn(children, seed[0])
     else:  #  seed[0] in ['condition', 'action']:
         _, func, args = seed[0], seed[1][0], seed[1][1]
         args = [args] if isinstance(args, str) else args
