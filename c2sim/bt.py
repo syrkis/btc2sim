@@ -47,7 +47,7 @@ def tree_fn(children, kind):
         return jnp.logical_and(flag, args.child < len(children))
 
     def body_fn(args):
-        child_status, child_action = jax.lax.switch(args.child, children, *(args.obs, args.info))  # make info
+        child_status, child_action = jax.lax.switch(args.child, children, *(args.obs, args.env_info, args.agent_info))  # make info
         args = Args(status=child_status, action=child_action, obs=args.obs, child=args.child + 1, env_info=args.env_info, agent_info=args.agent_info)
         return args
 
