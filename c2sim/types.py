@@ -8,16 +8,6 @@ from typing import Any, Callable, List, Tuple, Dict, Optional
 
 # dataclasses
 @dataclass
-class Args:  # for behavior tree
-    status: Any
-    action: Any
-    obs: Any
-    child: int
-    env_info: Any
-    agent_info: Any
-
-
-@dataclass
 class Status:  # for behavior tree
     SUCCESS: int = 1
     FAILURE: int = -1
@@ -42,6 +32,11 @@ class AgentInfo:
     sight_range: Array
     attack_range: Array
     is_ally: Array
+
+@dataclass
+class Info:
+    env: EnvInfo
+    agent: AgentInfo
 
 # types
 NodeFunc = Callable[[Any], Status]

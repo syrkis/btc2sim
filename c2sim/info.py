@@ -2,13 +2,19 @@
 #  functions for agents
 # by: Noah Syrkis
 
-# imports
+# %%  imports
 import jax.numpy as jnp
 from jax import random, vmap, jit
 import c2sim
 
 
-# functions
+# %% functions
+def info_fn(env, parallel_envs):
+    env_info = env_info_fn(env)
+    agent_info = agent_info_fn(env)
+
+
+
 def env_info_fn(env):
     return c2sim.types.EnvInfo(
         num_agents=env.num_agents,
@@ -27,12 +33,12 @@ def env_info_fn(env):
         terrain_raster = env.terrain_raster, # 2D array of terrain types
     )
 
-def agent_info_fn(env, agent):  # <- this is the function that is called in ludens.py. It passes agent info to each cope of the agent in the environment
+def agent_info_fn(env):  # <- this is the function that is called in ludens.py. It passes agent info to each cope of the agent in the environment
     agent_info = c2sim.types.AgentInfo(
-        agent_id=jnp.array(env.agent_ids[agent]),
-        velocity=jnp.array(env.agent_ids[agent]),
-        sight_range=jnp.array(env.agent_ids[agent]),
-        attack_range=jnp.array(env.agent_ids[agent]),
-        is_ally=jnp.array(agent.startswith('ally'))
+        agent_id=jnp.array([env.agent_ids[agent] for agent in env.agents]),
+        velocity=jnp.array([env.agent_ids[agent] for agent in env.agents]),
+        sight_range=jnp.array([env.agent_ids[agent] for agent in env.agents]),
+        attack_range=jnp.array([env.agent_ids[agent] for agent in env.agents]),
+        is_ally=jnp.array([agent.startswith('ally') for agent in env.agents])
     )
     return agent_info
