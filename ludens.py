@@ -71,15 +71,20 @@ rngs = repeat(random.split(rng, n_scene * n_seeds * n_steps).reshape(n_scene, n_
 
 
 # %%
+def step_fn(rng, obs, state):
+    batched_acts = jax.lax.map(lambda i: jax.lax.switch(i, bt_fns, tree_util.tree_map(lambda x: x[i], obs), env_info, agent_info), jnp.arange(len(bts)))
+    acts = vmap(unbatchify, in_axes=(0, None, None))(batched_acts, idx, obs)
+    obs, state, *_ = vmap(vmap(env.step))(rng, state, acts)
+    return obs, state
+
+
+# %%
 for rng, env, idx, env_info, agent_info in zip(rngs, envs, idxs, env_infos, agent_infos):  # <- replace with fori_loop
     obs, state = vmap(vmap(env.reset))(rng[0])
 
     state_seq = []
-    for i in range(len(rng[1:])):  # <- replace with scan though rngs
-        batched_acts = jax.lax.map(lambda i: jax.lax.switch(i, bt_fns, tree_util.tree_map(lambda x: x[i], obs), env_info, agent_info), jnp.arange(len(bts)))
-        acts = vmap(unbatchify, in_axes=(0, None, None))(batched_acts, idx, obs)
-        obs, state, *_ = vmap(vmap(env.step))(rng[i], state, acts)
-        break
+    for i in tqdm(range(len(rng[1:]))):  # <- replace with scan though rngs
+        obs, state = step_fn(rng[i], obs, state)
     break
 
 # %%
