@@ -8,7 +8,7 @@ from functools import partial
 import jax
 import jax.numpy as jnp
 from jax import random, vmap, jit, pmap, tree_util
-from einops import rearrange
+from einops import rearrange, repeat
 
 import parabellum as pb
 import c2sim
@@ -21,6 +21,7 @@ n_seeds = 4                # 4 random seeds (parallel starting positions)
 n_scene = len(places)      # run with 2 different places
 n_model = len(bt_strs)     # run with 2 different models
 n_total = n_seeds * n_scene * n_model
+n_steps = 100
 print(f"Total number of runs: {n_total}")
 
 
@@ -60,24 +61,24 @@ def bt_fn(bt, obs, env_info, agent_info):  # take actions for all agents in para
 
 
 # %%
+rng = random.PRNGKey(0)
 envs, bts = envs_fn(places), bts_fn(bt_strs)
+idxs = [jnp.repeat(jnp.arange(env.num_agents), n_seeds) for env in envs]
 bt_fns = [partial(bt_fn, bt) for bt in bts]
-rngs = random.split(random.PRNGKey(0), len(envs) * n_seeds).reshape(len(envs), n_seeds, 2)
+env_infos = [c2sim.info.env_info_fn(env) for env in envs]
+agent_infos = [c2sim.info.agent_info_fn(env) for env in envs]
+rngs = repeat(random.split(rng, n_scene * n_seeds * n_steps).reshape(n_scene, n_steps, n_seeds, 2), 'n s b d -> n s x b d', x=len(bts))
 
 
 # %%
-for rng, env in zip(rngs, envs):  # <- replace with fori_loop and switch
-    # repeat rng len(bts) times (concatenate all rng along axis 0), and unroll idxs
-    rng = jnp.array([rng] * len(bts))
-    idx = jnp.repeat(jnp.arange(env.num_agents), n_seeds)
-    env_info = c2sim.info.env_info_fn(env)
-    agent_info = c2sim.info.agent_info_fn(env)
-    obs, state = vmap(vmap(env.reset))(rng)
-    for i in range(100):  # <- replace with scan though rngs
+for rng, env, idx, env_info, agent_info in zip(rngs, envs, idxs, env_infos, agent_infos):  # <- replace with fori_loop
+    obs, state = vmap(vmap(env.reset))(rng[0])
+
+    state_seq = []
+    for i in range(len(rng[1:])):  # <- replace with scan though rngs
         batched_acts = jax.lax.map(lambda i: jax.lax.switch(i, bt_fns, tree_util.tree_map(lambda x: x[i], obs), env_info, agent_info), jnp.arange(len(bts)))
-        acts = tree_util.tree_map(lambda x: x.flatten(), vmap(unbatchify, in_axes=(0, None, None))(batched_acts, idx, obs))
-        obs, state, *_ = vmap(env.step)(rng.reshape(-1, 2), tree_util.tree_map(lambda x: rearrange(x, 'n s ... -> (n s) ...'), state), acts)
-        exit()
+        acts = vmap(unbatchify, in_axes=(0, None, None))(batched_acts, idx, obs)
+        obs, state, *_ = vmap(vmap(env.step))(rng[i], state, acts)
         break
     break
 
