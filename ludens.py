@@ -67,7 +67,7 @@ def step_fn(idx, env_info, agent_info, env, bt_fns):
         obs, state = carry
         acts = jax.lax.map(lambda i: jax.lax.switch(i, bt_fns, tree_util.tree_map(lambda x: x[i], obs), env_info, agent_info), jnp.arange(n_model))
         obs, state, rewards, dones, infos = vmap(vmap(env.step))(rng, state, acts)
-        return obs, state
+        return (obs, state), acts
 
     return step
 
@@ -76,14 +76,10 @@ def step_fn(idx, env_info, agent_info, env, bt_fns):
 
 # %%
 for rng, env, idx, env_info, agent_info in zip(rngs, envs, idxs, env_infos, agent_infos):  # <- replace with fori_loop
-    step = step_fn(idx, env_info, agent_info, env, bt_fns)
+    step = jit(step_fn(idx, env_info, agent_info, env, bt_fns))
     obs, state = vmap(vmap(env.reset))(rng[0])
     acts = jnp.zeros((n_seeds * n_scene * n_model, env.num_agents), dtype=jnp.int32)
-
-    state_seq = []
-    for i in tqdm(range(len(rng[1:]))):  # <- replace with scan though rngs
-        obs, state = step((obs, state), rng[i])
-    # state_seq = jax.lax.scan(step_fn, (obs, state), rng[1:])
+    state_seq = jax.lax.scan(step, (obs, state), rng[1:])
     break
 
 # %%
