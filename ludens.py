@@ -5,6 +5,7 @@ from functools import partial
 
 # os.environ["XLA_FLAGS"] = '--xla_force_host_platform_device_count=5'  # this for runnning on multiple devices with pmap
 
+# %%
 import jax
 import jax.numpy as jnp
 from jax import random, vmap, jit, pmap, tree_util, lax

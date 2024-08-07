@@ -7,13 +7,13 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-parabellum = "^0.2.20"
 lark = "^1.1.9"
 functional = "^0.4"
 jupyterlab = "^4.2.4"
 notebook = "^7.2.1"
 ipykernel = "^6.29.5"
 einops = "^0.8.0"
+parabellum = "0.2.23"
 
 
 [build-system]
