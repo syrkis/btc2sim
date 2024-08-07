@@ -33,12 +33,11 @@ def env_info_fn(env):
         terrain_raster = env.terrain_raster, # 2D array of terrain types
     )
 
-def agent_info_fn(env):  # <- this is the function that is called in ludens.py. It passes agent info to each cope of the agent in the environment
-    agent_info = c2sim.types.AgentInfo(
-        agent_id=jnp.array([env.agent_ids[agent] for agent in env.agents]),
-        velocity=jnp.array([env.agent_ids[agent] for agent in env.agents]),
-        sight_range=jnp.array([env.agent_ids[agent] for agent in env.agents]),
-        attack_range=jnp.array([env.agent_ids[agent] for agent in env.agents]),
-        is_ally=jnp.array([agent.startswith('ally') for agent in env.agents])
-    )
+def agent_info_fn(env):
+    agent_info = {a: c2sim.types.AgentInfo(
+        agent_id=env.agent_ids[a],
+        velocity=env.unit_type_velocities[env.agent_ids[a]],
+        sight_range=env.unit_type_sight_ranges[env.agent_ids[a]],
+        attack_range=env.unit_type_attack_ranges[env.agent_ids[a]],
+        is_ally=a.startswith('ally')) for a in env.agents}
     return agent_info
