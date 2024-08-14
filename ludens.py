@@ -12,15 +12,15 @@ from jax import random, vmap, jit, pmap, tree_util, lax
 from einops import rearrange, repeat
 
 import parabellum as pb
-import c2sim
+import btc2sim
 
 
 # %% Constants
-places = ['Vesterbro, København, Denmark', 'Nørrebro, København, Denmark']
+places = ["Vesterbro, København, Denmark", "Nørrebro, København, Denmark"]
 bt_strs = ["A ( move north )", "A ( move south )"]
-n_seeds = 4                # 4 random seeds (parallel starting positions)
-n_scene = len(places)      # run with 2 different places
-n_model = len(bt_strs)     # run with 2 different models
+n_seeds = 4  # 4 random seeds (parallel starting positions)
+n_scene = len(places)  # run with 2 different places
+n_model = len(bt_strs)  # run with 2 different models
 n_total = n_seeds * n_scene * n_model
 n_steps = 100
 print(f"Total number of runs: {n_total}")
@@ -36,6 +36,7 @@ scenario_kwargs = {
 
 
 # %% Environment
+
 def envs_fn(places):  # use switch to select place when running (combine with fori_loop on rngs and idxs)
     #maps = list(map(lambda place: pb.map.get_raster(place, 100), places))
     maps = list(map(lambda place: (jnp.zeros((100, 100)), None) , places))
@@ -45,9 +46,14 @@ def envs_fn(places):  # use switch to select place when running (combine with fo
 
 
 # %% Behavior Tree
-def bts_fn(bt_strs):  # <- use switch to select bt when running (combine with fori_loop on rngs and idxs)
-    dsl_trees = [c2sim.dsl.parse(c2sim.dsl.read(bt_str)) for bt_str in bt_strs]
-    bts = [vmap(c2sim.bt.seed_fn(dsl_tree), in_axes=(0, None, None)) for dsl_tree in dsl_trees]
+def bts_fn(
+    bt_strs,
+):  # <- use switch to select bt when running (combine with fori_loop on rngs and idxs)
+    dsl_trees = [btc2sim.dsl.parse(btc2sim.dsl.read(bt_str)) for bt_str in bt_strs]
+    bts = [
+        vmap(btc2sim.bt.seed_fn(dsl_tree), in_axes=(0, None, None))
+        for dsl_tree in dsl_trees
+    ]
     return bts
 
 
@@ -62,9 +68,15 @@ rng = random.PRNGKey(0)
 envs, bts = envs_fn(places), bts_fn(bt_strs)
 idxs = tuple([jnp.repeat(jnp.arange(env.num_agents), n_seeds) for env in envs])
 bt_fns = tuple([partial(bt_fn, bt) for bt in bts])
-env_infos = tuple([c2sim.info.env_info_fn(env) for env in envs])
-agent_infos = tuple([c2sim.info.agent_info_fn(env) for env in envs])
-rngs = repeat(random.split(rng, n_scene * n_seeds * n_steps).reshape(n_scene, n_steps, n_seeds, 2), 'n s b d -> n s x b d', x=len(bts))
+env_infos = tuple([btc2sim.info.env_info_fn(env) for env in envs])
+agent_infos = tuple([btc2sim.info.agent_info_fn(env) for env in envs])
+rngs = repeat(
+    random.split(rng, n_scene * n_seeds * n_steps).reshape(
+        n_scene, n_steps, n_seeds, 2
+    ),
+    "n s b d -> n s x b d",
+    x=len(bts),
+)
 
 
 # %%
@@ -73,14 +85,21 @@ rngs = repeat(random.split(rng, n_scene * n_seeds * n_steps).reshape(n_scene, n_
 def step_fn(idx, env_info, agent_info, env, bt_fns):
     def step(carry, rng):
         obs, state = carry
-        acts = jax.lax.map(lambda i: jax.lax.switch(i, bt_fns, tree_util.tree_map(lambda x: x[i], obs), env_info, agent_info), jnp.arange(n_model))
+        acts = jax.lax.map(
+            lambda i: jax.lax.switch(
+                i, bt_fns, tree_util.tree_map(lambda x: x[i], obs), env_info, agent_info
+            ),
+            jnp.arange(n_model),
+        )
         obs, state, rewards, dones, infos = vmap(vmap(env.step))(rng, state, acts)
         return (obs, state), acts
     return step
 
 
 # %%
-for rng, env, idx, env_info, agent_info in zip(rngs, envs, idxs, env_infos, agent_infos):  # <- replace with fori_loop
+for rng, env, idx, env_info, agent_info in zip(
+    rngs, envs, idxs, env_infos, agent_infos
+):  # <- replace with fori_loop
     step = jit(step_fn(idx, env_info, agent_info, env, bt_fns))
     obs, state = vmap(vmap(env.reset))(rng[0])
     acts = jnp.zeros((n_seeds * n_scene * n_model, env.num_agents), dtype=jnp.int32)
