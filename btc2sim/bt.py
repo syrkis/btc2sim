@@ -15,7 +15,7 @@ from functools import partial
 from typing import Any, Callable, List, Tuple, Dict, Optional
 
 import btc2sim
-from btc2sim.types import Status, NodeFunc as NF
+from btc2sim.classes import Status, NodeFunc as NF
 from btc2sim.utils import STAND
 import btc2sim.atomics as atomics
 
@@ -57,7 +57,7 @@ def tree_fn(children, kind):
         return args
 
     def tick(obs, env_info, agent_info):  # idx is to get info from batch dict
-        info = btc2sim.types.Info(env=env_info, agent=agent_info)
+        info = btc2sim.classes.Info(env=env_info, agent=agent_info)
         args = Args(status=start_status, action=STAND, obs=obs, child=0, info=info)
         args = jax.lax.while_loop(
             cond_fn, body_fn, args
@@ -69,7 +69,7 @@ def tree_fn(children, kind):
 
 def leaf_fn(func):
     def tick(obs, env_info, agent_info):
-        info = btc2sim.types.Info(env=env_info, agent=agent_info)
+        info = btc2sim.classes.Info(env=env_info, agent=agent_info)
         return func(obs, info)
 
     return tick
