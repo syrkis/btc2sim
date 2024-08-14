@@ -25,11 +25,21 @@ n_total = n_seeds * n_scene * n_model
 n_steps = 100
 print(f"Total number of runs: {n_total}")
 
+# %%
+scenario_kwargs = {
+    'unit_starting_sectors': jnp.array([[0.,0.,0.2,0.2], [0.8,0.8,0.2,0.2]]), 
+    'allies_type': 0, 
+    'n_allies': 10, 
+    'enemies_type': 0,
+    'n_enemies': 10,
+}
+
 
 # %% Environment
 def envs_fn(places):  # use switch to select place when running (combine with fori_loop on rngs and idxs)
-    maps = list(map(lambda place: pb.terrain_fn(place, 100), places))
-    scenes = list(map(lambda mask: pb.make_scenario(terrain_raster=mask[0], place='mask'), maps))  # this is wrong but close to right, could fix quickly.
+    #maps = list(map(lambda place: pb.map.get_raster(place, 100), places))
+    maps = list(map(lambda place: (jnp.zeros((100, 100)), None) , places))
+    scenes = list(map(lambda mask: pb.make_scenario(terrain_raster= mask[0], place='mask', **scenario_kwargs), maps))  # this is wrong but close to right, could fix quickly.
     envs = list(map(lambda scene: pb.Environment(scene), scenes))
     return envs
 
@@ -39,8 +49,6 @@ def bts_fn(bt_strs):  # <- use switch to select bt when running (combine with fo
     dsl_trees = [c2sim.dsl.parse(c2sim.dsl.read(bt_str)) for bt_str in bt_strs]
     bts = [vmap(c2sim.bt.seed_fn(dsl_tree), in_axes=(0, None, None)) for dsl_tree in dsl_trees]
     return bts
-
-
 
 
 # %%
@@ -63,16 +71,12 @@ rngs = repeat(random.split(rng, n_scene * n_seeds * n_steps).reshape(n_scene, n_
 # bt_fns and env are static arguments
 # @partial(jit, static_argnums=(5, 6))
 def step_fn(idx, env_info, agent_info, env, bt_fns):
-
     def step(carry, rng):
         obs, state = carry
         acts = jax.lax.map(lambda i: jax.lax.switch(i, bt_fns, tree_util.tree_map(lambda x: x[i], obs), env_info, agent_info), jnp.arange(n_model))
         obs, state, rewards, dones, infos = vmap(vmap(env.step))(rng, state, acts)
         return (obs, state), acts
-
     return step
-
-
 
 
 # %%

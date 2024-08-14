@@ -8,7 +8,7 @@ from functools import partial
 
 # %% Constants
 qualifiers = [ "String", "Direction", "Foe", "Friend", "Qualifier", "Sense", "Hp_Level", "Self", "Unit", "Negation", "Any"]
-grammar = Lark(open("grammar.lark", "r"), start="start")
+grammar = Lark(open("../grammar.lark", "r"), start="start")
 
 
 # %% Functions
