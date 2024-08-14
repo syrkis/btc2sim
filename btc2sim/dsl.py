@@ -85,7 +85,6 @@ grammar = Lark(grammar_txt, start="start")
 def read(string):
     return grammar.parse(string)
 
-
 def parse(lark_tree) -> dict:
     match lark_tree.data.title():
         case title if title in qualifiers:

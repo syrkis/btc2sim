@@ -1,8 +1,9 @@
+# %%
 # agent.py
 #  functions for agents
 # by: Noah Syrkis
 
-# %%  imports
+# %% imports
 import jax.numpy as jnp
 from jax import random, vmap, jit
 import btc2sim
