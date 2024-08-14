@@ -1,4 +1,6 @@
 # %% Imports
+import os
+from tqdm import tqdm
 from functools import partial
 
 # os.environ["XLA_FLAGS"] = '--xla_force_host_platform_device_count=5'  # this for runnning on multiple devices with pmap
@@ -6,8 +8,8 @@ from functools import partial
 # %%
 import jax
 import jax.numpy as jnp
-from jax import random, vmap, jit, tree_util
-from einops import repeat
+from jax import random, vmap, jit, pmap, tree_util, lax
+from einops import rearrange, repeat
 
 import parabellum as pb
 import btc2sim

@@ -1,4 +1,5 @@
 # atomics.py
+#   c2sim bt molecules (complex functions)
 # by: Noah Syrkis
 
 # imports
@@ -7,7 +8,7 @@ import jax.numpy as jnp
 from functools import partial
 
 from .utils import dir_to_idx, STAND
-from .classes import Status
+from .types import Status
 
 
 # constants
