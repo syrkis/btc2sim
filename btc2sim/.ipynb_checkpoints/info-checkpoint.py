@@ -15,7 +15,7 @@ def info_fn(env, parallel_envs):
 
 
 def env_info_fn(env):
-    return btc2sim.classes.EnvInfo(
+    return btc2sim.types.EnvInfo(
         num_agents=env.num_agents,
         num_allies=env.num_allies,
         num_enemies=env.num_enemies,
@@ -32,7 +32,7 @@ def env_info_fn(env):
 
 def agent_info_fn(env):
     agent_info = {
-        a: btc2sim.classes.AgentInfo(
+        a: btc2sim.types.AgentInfo(
             agent_id=env.agent_ids[a],
             velocity=env.unit_type_velocities[env.agent_ids[a]],
             sight_range=env.unit_type_sight_ranges[env.agent_ids[a]],

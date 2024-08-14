@@ -69,9 +69,7 @@ bt_fns = tuple([partial(bt_fn, bt) for bt in bts])
 env_infos = tuple([btc2sim.info.env_info_fn(env) for env in envs])
 agent_infos = tuple([btc2sim.info.agent_info_fn(env) for env in envs])
 rngs = repeat(
-    random.split(rng, n_scene * n_seeds * n_steps).reshape(
-        n_scene, n_steps, n_seeds, 2
-    ),
+    random.split(rng, n_scene * n_seeds * n_steps).reshape(),
     "n s b d -> n s x b d",
     x=len(bts),
 )
