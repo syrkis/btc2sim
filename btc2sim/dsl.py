@@ -6,7 +6,7 @@ import jax
 from functools import partial
 
 
-# %% Constants
+# %%
 qualifiers = [
     "String",
     "Direction",
@@ -20,8 +20,65 @@ qualifiers = [
     "Negation",
     "Any",
 ]
-grammar = Lark(open("grammar.lark", "r"), start="start")
 
+# %% Constants
+grammar_txt = """
+?start: node
+
+%import common.WS
+%ignore WS
+
+nodes : node ("::" node | "|>" node)*
+node  :
+    | sequence
+    | fallback
+    | action
+    | condition
+
+sequence  : "S" "(" nodes ")"
+fallback  : "F" "(" nodes ")"
+action    : "A" "(" atomic ")"
+condition : "C" "(" atomic ")"
+
+atomic :
+    | move
+    | attack
+    | stand
+    | in_sight
+    | in_reach
+    | in_region
+    | is_dying
+    | is_armed
+    | is_flock
+    | is_type 
+    | has_obstacle
+
+move      : "move" (direction | sense qualifier (foe | friend) (unit|any)?)
+attack    : "attack" qualifier (unit|any)?
+stand     : "stand"
+in_sight  : "in_sight" (foe | friend) (unit|any)?
+in_reach  : "in_reach" (foe | friend) (unit|any)?
+in_region : "in_region" direction direction?
+is_dying  : "is_dying" (self | foe | friend) hp_level
+is_armed  : "is_armed" (self | foe | friend)
+is_flock  : "is_flock" (foe | friend) direction
+is_type   : "is_type" negation unit
+has_obstacle : "has_obstacle" direction
+
+sense     : /toward|away_from/
+direction : /north|east|south|west|center/
+foe       : /foe/
+friend    : /friend/
+qualifier : /strongest|weakest|closest|furthest/
+hp_level  : /low|middle|high/
+self      : /self/
+unit      : /marine|marauder|stalker|zealot|zergling|hydralisk/
+any       : /any/
+negation  : /a|not_a/
+
+"""
+
+grammar = Lark(grammar_txt, start="start")
 
 
 # %% Functions
