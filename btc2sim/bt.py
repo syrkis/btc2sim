@@ -14,10 +14,10 @@ import os
 from functools import partial
 from typing import Any, Callable, List, Tuple, Dict, Optional
 
-import c2sim
-from c2sim.types import Status, NodeFunc as NF
-from c2sim.utils import STAND
-import c2sim.atomics as atomics
+import btc2sim
+from btc2sim.types import Status, NodeFunc as NF
+from btc2sim.utils import STAND
+import btc2sim.atomics as atomics
 
 # constants
 ATOMICS = {fn: getattr(atomics, fn) for fn in dir(atomics) if not fn.startswith("_")}
@@ -33,33 +33,43 @@ class Args:
     child: int
     info: Any
 
+
 # functions
 def tree_fn(children, kind):
-    start_status = jnp.where(kind == 'sequence', SUCCESS, FAILURE)
+    start_status = jnp.where(kind == "sequence", SUCCESS, FAILURE)
 
     def cond_fn(args):  # conditions under which we continue
-        cond = jnp.where(kind == 'sequence', SUCCESS, FAILURE)
+        cond = jnp.where(kind == "sequence", SUCCESS, FAILURE)
         flag = jnp.logical_and(args.status == cond, args.action == STAND)
         return jnp.logical_and(flag, args.child < len(children))
 
     def body_fn(args):
-        child_status, child_action = jax.lax.switch(args.child, children, *(args.obs, args.info))  # make info
-        args = Args(status=child_status, action=child_action, obs=args.obs, child=args.child + 1, info=args.info)
+        child_status, child_action = jax.lax.switch(
+            args.child, children, *(args.obs, args.info)
+        )  # make info
+        args = Args(
+            status=child_status,
+            action=child_action,
+            obs=args.obs,
+            child=args.child + 1,
+            info=args.info,
+        )
         return args
 
     def tick(obs, env_info, agent_info):  # idx is to get info from batch dict
-        info = c2sim.types.Info(env=env_info, agent=agent_info)
+        info = btc2sim.types.Info(env=env_info, agent=agent_info)
         args = Args(status=start_status, action=STAND, obs=obs, child=0, info=info)
-        args = jax.lax.while_loop(cond_fn, body_fn, args)  # While we haven't found action action continue through children'
+        args = jax.lax.while_loop(
+            cond_fn, body_fn, args
+        )  # While we haven't found action action continue through children'
         return args.status, args.action
 
     return tick
 
 
 def leaf_fn(func):
-
     def tick(obs, env_info, agent_info):
-        info = c2sim.types.Info(env=env_info, agent=agent_info)
+        info = btc2sim.types.Info(env=env_info, agent=agent_info)
         return func(obs, info)
 
     return tick
