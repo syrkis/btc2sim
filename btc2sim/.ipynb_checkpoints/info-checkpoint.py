@@ -32,12 +32,13 @@ def env_info_fn(env):
 
 
 def agent_info_fn(env):
+    env
     agent_info = {
         a: btc2sim.classes.AgentInfo(
             agent_id=env.agent_ids[a],
-            velocity=env.unit_type_velocities[env.agent_ids[a]],
-            sight_range=env.unit_type_sight_ranges[env.agent_ids[a]],
-            attack_range=env.unit_type_attack_ranges[env.agent_ids[a]],
+            velocity=env.unit_type_velocities[env.scenario.unit_types[env.agent_ids[a]]],
+            sight_range=env.unit_type_sight_ranges[env.scenario.unit_types[env.agent_ids[a]]],
+            attack_range=env.unit_type_attack_ranges[env.scenario.unit_types[env.agent_ids[a]]],
             is_ally=a.startswith("ally"),
         )
         for a in env.agents

@@ -1,5 +1,4 @@
 # atomics.py
-#   c2sim bt molecules (complex functions)
 # by: Noah Syrkis
 
 # imports
@@ -8,7 +7,7 @@ import jax.numpy as jnp
 from functools import partial
 
 from .utils import dir_to_idx, STAND
-from .types import Status
+from .classes import Status
 
 
 # constants
@@ -55,18 +54,18 @@ def self_type_fn(obs, info):
     return jnp.argmax(self_obs_fn(obs, info)[-info.env.num_types :])
 
 
+# +
 def self_obs_fn(obs, info):
     return obs[-10:]
-
-
+    
 def other_obs_fn(obs, info):
     return obs[:-10].reshape(-1, 13)
 
-
-# helpers
 def process_obs(obs, info):
     return self_obs_fn(obs, info), other_obs_fn(obs, info)
 
+
+# -
 
 @partial(jax.vmap, in_axes=(None, None, 0, 0))
 def inter_fn(pos, new_pos, obs, obs_end):
@@ -220,7 +219,7 @@ def in_region(x, y=None):  # only applies to self
         col = jnp.where(self_pos[0] > 2 / 3, 1, jnp.where(self_pos[0] < 1 / 3, -1, 0))
         row = jnp.where(self_pos[1] > 2 / 3, 1, jnp.where(self_pos[1] < 1 / 3, -1, 0))
         flag = jnp.logical_and(row == target_row, col == target_col)
-        return jnp.where(flag, SUCCESS, FAILURE), STAND
+        return jnp.where(flag, SUCCESS, FAILURE)
 
     return in_region_fn
 
@@ -246,7 +245,7 @@ def in_sight(target, unit="any"):  # is unit x in direction y?
         is_unit_types = jnp.where(use_unit_type, others_obs.T[target_type], 1)
         alive = jnp.logical_and(alive, target_team)
         enemies_flag = alive.any()
-        return jnp.where(enemies_flag, SUCCESS, FAILURE), STAND
+        return jnp.where(enemies_flag, SUCCESS, FAILURE)
 
     return in_sight_fn
 
@@ -407,17 +406,18 @@ def is_flock(team, direction):
         return is_flock_fn_alt
 
 
-# ## has_obstacle
+# ## has_obstacle or out of bound
 def raster_crossing(pos, new_pos, info):
     pos, new_pos = pos.astype(jnp.int32), new_pos.astype(jnp.int32)
     raster = info.env.terrain_raster
     axis = jnp.argmax(jnp.abs(new_pos - pos), axis=-1)
+    out_of_map = jnp.logical_or(jnp.min(new_pos) < 0,  jnp.max(new_pos) >= raster.shape[0])
     minimum = jnp.minimum(pos[axis], new_pos[axis]).squeeze()
     maximum = jnp.maximum(pos[axis], new_pos[axis]).squeeze()
     segment = jnp.where(axis == 0, raster[pos[1]], raster.T[pos[0]])
     segment = jnp.where(jnp.arange(segment.shape[0]) >= minimum, segment, 0)
     segment = jnp.where(jnp.arange(segment.shape[0]) <= maximum, segment, 0)
-    return jnp.any(segment)
+    return jnp.logical_or(jnp.any(segment), out_of_map)
 
 
 def has_obstacle(direction):
