@@ -31,8 +31,7 @@ def env_info_fn(env):
     )
 
 
-def agent_info_fn(env):
-    env
+def agent_info_fn(env, direction_maps={}):
     agent_info = {
         a: btc2sim.classes.AgentInfo(
             agent_id=env.agent_ids[a],
@@ -40,6 +39,7 @@ def agent_info_fn(env):
             sight_range=env.unit_type_sight_ranges[env.scenario.unit_types[env.agent_ids[a]]],
             attack_range=env.unit_type_attack_ranges[env.scenario.unit_types[env.agent_ids[a]]],
             is_ally=a.startswith("ally"),
+            direction_map=jnp.ones(env.terrain_raster.shape, dtype=jnp.int32) * 4 if a not in direction_maps else direction_maps[a],  # 4 is for the standing action
         )
         for a in env.agents
     }

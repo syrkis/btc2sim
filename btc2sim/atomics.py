@@ -203,8 +203,14 @@ def move(direction, qualifier=None, target=None, unit="any"):
             return move_fn_alt
 
 
+def follow_map(obs, info):
+    self_obs, _ = process_obs(obs, info)
+    pos = jnp.clip(jnp.array(self_obs[1:3] * jnp.array([info.env.map_width, info.env.map_height]), dtype=jnp.int32), 0, jnp.array([info.env.map_width-1, info.env.map_height-1])) 
+    return (SUCCESS, info.agent.direction_map[pos[0], pos[1]])
+
+
 # ## Stand
-def stand(*_):
+def stand(obs, info):
     return (SUCCESS, STAND)
 
 

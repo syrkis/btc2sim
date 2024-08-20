@@ -89,6 +89,6 @@ def seed_fn(seed: dict):
         args = [args] if isinstance(args, str) else args
         
         if len(args) == 0:
-            return ATOMICS[func] if seed[0] == "action" else (lambda *args: ATOMICS[func](*args), STAND)
+            return leaf_fn(ATOMICS[func], seed[0])
         else:   
             return leaf_fn(ATOMICS[func](*args), seed[0]) 

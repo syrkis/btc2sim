@@ -32,6 +32,7 @@ class AgentInfo:
     sight_range: Array
     attack_range: Array
     is_ally: Array
+    direction_map: Array
 
 @dataclass
 class Info:
