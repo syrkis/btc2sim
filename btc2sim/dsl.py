@@ -54,11 +54,11 @@ atomic :
     | is_type 
     | has_obstacle
 
-move      : "move" (direction | sense qualifier (foe | friend) (unit|any)?)
-attack    : "attack" qualifier (unit|any)?
+move      : "move" (direction | sense qualifier (foe | friend) (unit ("or" unit)* |any)?)
+attack    : "attack" qualifier (unit ("or" unit)* |any)?
 stand     : "stand"
-in_sight  : "in_sight" (foe | friend) (unit|any)?
-in_reach  : "in_reach" (foe | friend) (unit|any)?
+in_sight  : "in_sight" (foe | friend) (unit ("or" unit)* |any)?
+in_reach  : "in_reach" (foe | friend) (unit ("or" unit)* |any)?
 in_region : "in_region" direction direction?
 is_dying  : "is_dying" (self | foe | friend) hp_level
 is_armed  : "is_armed" (self | foe | friend)
@@ -74,7 +74,7 @@ friend    : /friend/
 qualifier : /strongest|weakest|closest|furthest/
 hp_level  : /low|middle|high/
 self      : /self/
-unit      : /marine|marauder|stalker|zealot|zergling|hydralisk/
+unit      : /soldier|sniper|tank|turret|drone|civilian/
 any       : /any/
 negation  : /a|not_a/
 

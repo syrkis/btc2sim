@@ -11,15 +11,15 @@ from .classes import Status
 
 
 # constants
-unit_types = ["any", "marine", "marauder", "stalker", "zealot", "zergling", "hydralisk"]
+unit_types = ["any", "soldier", "sniper", "turret", "tank", "drone", "civilian"]
 directions = ["north", "west", "center", "east", "south"]
 target_types = {
-    "marine": -6,
-    "marauder": -5,
-    "stalker": -4,
-    "zealot": -3,
-    "zergling": -2,
-    "hydralisk": -1,
+    "soldier": -6,
+    "sniper": -5,
+    "turret": -4,
+    "tank": -3,
+    "drone": -2,
+    "civilian": -1,
     "any": None,
 }
 
@@ -77,14 +77,20 @@ def inter_fn(pos, new_pos, obs, obs_end):
 
 
 # Attacks
-def attack(qualifier, unit="any"):  # TODO: attack closest if no target
-    assert qualifier in ["closest", "furthest", "strongest", "weakest"]
-    assert unit in unit_types
+def attack(qualifier, *units):  # TODO: attack closest if no target
+    assert qualifier in ["closest", "furthest", "strongest", "weakest"]    
     use_health = qualifier in ["strongest", "weakest"]
-    use_min = qualifier in ["closest", "weakest"]
-    use_unit_type = unit != "any"
-    target_type = target_types[unit]
-
+    use_min = qualifier in ["closest", "weakest"]   
+    if len(units) == 0 or units[0] == "any":
+        targeted_types = [1] * 6
+    else:
+        targeted_types = [0] * 6
+        for unit in units:
+            assert unit in unit_types
+            for unit in units:
+                targeted_types[target_types[unit]] = 1
+    targeted_types = jnp.array(targeted_types)
+    
     def attack_fn(obs, info):
         fill = jnp.where(use_min, jnp.inf, -jnp.inf)
         self_obs, others_obs = process_obs(obs, info)
@@ -96,9 +102,9 @@ def attack(qualifier, unit="any"):  # TODO: attack closest if no target
         )  # number of allies
         alive = others_obs.T[0] > 0
         is_enemies = jnp.arange(alive.size) >= (alive.size - n)
-        is_unit_types = jnp.where(use_unit_type, others_obs.T[target_type], 1)
         alive = jnp.logical_and(alive, is_enemies)
-        # alive = jnp.logical_and(alive, is_unit_types) # was
+        is_unit_types = others_obs.T[-6:].T.dot(targeted_types)
+        alive = jnp.logical_and(alive, is_unit_types) # was
         dist = jnp.linalg.norm(others_obs.T[1:3], axis=0)
         in_reach = jnp.logical_and(
             info.agent.attack_range / info.agent.sight_range > dist, alive
@@ -116,16 +122,23 @@ def attack(qualifier, unit="any"):  # TODO: attack closest if no target
 
 
 # ## Move
-def move(direction, qualifier=None, target=None, unit="any"):
+def move(direction, qualifier=None, target=None, *units):
     if direction in ["toward", "away_from"]:  # target = another agent
         assert target in ["foe", "friend"]
         assert qualifier in ["closest", "furthest", "strongest", "weakest"]
-        assert unit in unit_types
+
 
         use_health = qualifier in ["strongest", "weakest"]
         use_min = qualifier in ["closest", "weakest"]
-        use_unit_type = unit != "any"
-        target_type = target_types[unit]
+        if len(units) == 0 or units[0] == "any":
+            targeted_types = [1] * 6
+        else:
+            targeted_types = [0] * 6
+            for unit in units:
+                assert unit in unit_types
+                for unit in units:
+                    targeted_types[target_types[unit]] = 1
+        targeted_types = jnp.array(targeted_types)
 
         target_foe = target == "foe"
         move_toward = direction == "toward"
@@ -145,6 +158,8 @@ def move(direction, qualifier=None, target=None, unit="any"):
                 jnp.arange(alive.size) < (alive.size - n),
             )
             alive = jnp.logical_and(alive, target_team)
+            is_unit_types = others_obs.T[-6:].T.dot(targeted_types)
+            alive = jnp.logical_and(alive, is_unit_types)
             dists = jnp.linalg.norm(others_obs.T[1:3], axis=0)
             health = others_obs.T[0]
             dists = jnp.where(alive, jnp.where(use_health, health, dists), fill)
@@ -231,12 +246,19 @@ def in_region(x, y=None):  # only applies to self
 
 
 # In sight
-def in_sight(target, unit="any"):  # is unit x in direction y?
+def in_sight(target, *units):  # is unit x in direction y?
     assert target in ["foe", "friend"]
-    use_unit_type = unit != "any"
-    target_type = target_types[unit]
     target_foe = target == "foe"
-
+    if len(units) == 0 or units[0] == "any":
+        targeted_types = [1] * 6
+    else:
+        targeted_types = [0] * 6
+        for unit in units:
+            assert unit in unit_types
+            for unit in units:
+                targeted_types[target_types[unit]] = 1
+    targeted_types = jnp.array(targeted_types)
+    
     def in_sight_fn(obs, info):
         n = jnp.where(
             info.agent.is_ally, info.env.num_enemies, info.env.num_allies
@@ -248,8 +270,9 @@ def in_sight(target, unit="any"):  # is unit x in direction y?
             jnp.arange(alive.size) >= (alive.size - n),
             jnp.arange(alive.size) < (alive.size - n),
         )
-        is_unit_types = jnp.where(use_unit_type, others_obs.T[target_type], 1)
         alive = jnp.logical_and(alive, target_team)
+        is_unit_types = others_obs.T[-6:].T.dot(targeted_types)
+        alive = jnp.logical_and(alive, is_unit_types)
         enemies_flag = alive.any()
         return jnp.where(enemies_flag, SUCCESS, FAILURE)
 
@@ -257,11 +280,18 @@ def in_sight(target, unit="any"):  # is unit x in direction y?
 
 
 # ## In reach
-def in_reach(other_agent, unit="any"):  # in shooting range
+def in_reach(other_agent, *units):  # in shooting range
     assert other_agent in ["foe", "friend"]
     on_foe = other_agent == "foe"
-    use_unit_type = unit != "any"
-    target_type = target_types[unit]
+    if len(units) == 0 or units[0] == "any":
+        targeted_types = [1] * 6
+    else:
+        targeted_types = [0] * 6
+        for unit in units:
+            assert unit in unit_types
+            for unit in units:
+                targeted_types[target_types[unit]] = 1
+    targeted_types = jnp.array(targeted_types)
 
     def in_reach_fn(obs, info):
         n = jnp.where(
@@ -274,8 +304,9 @@ def in_reach(other_agent, unit="any"):  # in shooting range
             jnp.arange(alive.size) >= (alive.size - n),
             jnp.arange(alive.size) < (alive.size - n),
         )
-        is_unit_types = jnp.where(use_unit_type, others_obs.T[target_type], 1)
         alive = jnp.logical_and(alive, target_team)
+        is_unit_types = others_obs.T[-6:].T.dot(targeted_types)
+        alive = jnp.logical_and(alive, is_unit_types)
         dist = jnp.linalg.norm(others_obs.T[1:3], axis=0)
         in_range = info.agent.attack_range / info.agent.sight_range > dist
         flag = (jnp.logical_and(in_range, alive)).any()
