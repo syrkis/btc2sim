@@ -17,7 +17,7 @@ from typing import Any, Callable, List, Tuple, Dict, Optional
 
 import btc2sim
 from btc2sim.classes import Status, NodeFunc as NF
-from btc2sim.utils import STAND
+from btc2sim.utils import STAND, NONE
 import btc2sim.atomics as atomics
 
 # constants
@@ -41,7 +41,7 @@ def tree_fn(children, kind):
 
     def cond_fn(args):  # conditions under which we continue
         cond = jnp.where(kind == "sequence", SUCCESS, FAILURE)
-        flag = jnp.logical_and(args.status == cond, args.action == STAND)
+        flag = jnp.logical_and(args.status == cond, args.action == NONE)
         return jnp.logical_and(flag, args.child < len(children))
 
     def body_fn(args):
@@ -59,7 +59,7 @@ def tree_fn(children, kind):
 
     def tick(obs, env_info, agent_info):  # idx is to get info from batch dict
         info = btc2sim.classes.Info(env=env_info, agent=agent_info)
-        args = Args(status=start_status, action=STAND, obs=obs, child=0, info=info)
+        args = Args(status=start_status, action=NONE, obs=obs, child=0, info=info)
         args = jax.lax.while_loop(
             cond_fn, body_fn, args
         )  # While we haven't found action action continue through children'
@@ -74,7 +74,7 @@ def leaf_fn(func, kind):
     if kind == "action":
         return tick
     else:
-        return lambda *args: (tick(*args), STAND)
+        return lambda *args: (tick(*args), NONE)
 
 
 

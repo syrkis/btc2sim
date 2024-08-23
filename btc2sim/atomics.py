@@ -6,7 +6,7 @@ import jax
 import jax.numpy as jnp
 from functools import partial
 
-from .utils import dir_to_idx, STAND
+from .utils import dir_to_idx, STAND, NONE
 from .classes import Status
 
 
@@ -115,7 +115,7 @@ def attack(qualifier, *units):  # TODO: attack closest if no target
         targ = jax.lax.cond(use_min, jnp.argmin, jnp.argmax, dist)
         alive_and_not_in_cooldown = jnp.logical_and(in_reach.any(), self_obs[3] <= 0)
         flag = jnp.where(alive_and_not_in_cooldown, SUCCESS, FAILURE)
-        action = jnp.where(alive_and_not_in_cooldown, targ + 5 - m, STAND)
+        action = jnp.where(alive_and_not_in_cooldown, targ + 5 - m, NONE)
         return (flag, action)
 
     return attack_fn
@@ -171,7 +171,7 @@ def move(direction, qualifier=None, target=None, *units):
             action = jnp.where(SE, jnp.where(NE, 1, 2), jnp.where(NE, 0, 3))
             action = jnp.where(move_toward, action, (action + 2) % 4)
             flag = jnp.where(alive.any(), SUCCESS, FAILURE)
-            action = jnp.where(alive.any(), action, STAND)
+            action = jnp.where(alive.any(), action, NONE)
             return (flag, action)
 
         return move_fn
@@ -213,7 +213,8 @@ def move(direction, qualifier=None, target=None, *units):
                 )
                 clash = raster_crossing(pos, new_pos, info)
                 flag = jnp.where(clash, FAILURE, SUCCESS)
-                return (flag, dir_to_idx[direction])
+                motion = jnp.where(clash, NONE, dir_to_idx[direction])
+                return (flag, motion)
 
             return move_fn_alt
 
@@ -445,10 +446,10 @@ def is_flock(team, direction):
 
 # ## has_obstacle or out of bound
 def raster_crossing(pos, new_pos, info):
-    pos, new_pos = pos.astype(jnp.int32), new_pos.astype(jnp.int32)
     raster = info.env.terrain_raster
-    axis = jnp.argmax(jnp.abs(new_pos - pos), axis=-1)
     out_of_map = jnp.logical_or(jnp.min(new_pos) < 0,  jnp.max(new_pos) >= raster.shape[0])
+    pos, new_pos = pos.astype(jnp.int32), new_pos.astype(jnp.int32)
+    axis = jnp.argmax(jnp.abs(new_pos - pos), axis=-1)
     minimum = jnp.minimum(pos[axis], new_pos[axis]).squeeze()
     maximum = jnp.maximum(pos[axis], new_pos[axis]).squeeze()
     segment = jnp.where(axis == 0, raster[pos[1]], raster.T[pos[0]])

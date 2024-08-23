@@ -7,7 +7,7 @@ import jax.numpy as jnp
 
 
 # default action
-NORTH, EAST, SOUTH, WEST, STAND = jnp.array(0), jnp.array(1), jnp.array(2), jnp.array(3), jnp.array(4)
+NORTH, EAST, SOUTH, WEST, STAND, NONE = jnp.array(0), jnp.array(1), jnp.array(2), jnp.array(3), jnp.array(4), jnp.array(-1)
 
 
 # dicts
