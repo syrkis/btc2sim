@@ -172,6 +172,20 @@ def move(direction, qualifier=None, target=None, *units):
             action = jnp.where(move_toward, action, (action + 2) % 4)
             flag = jnp.where(alive.any(), SUCCESS, FAILURE)
             action = jnp.where(alive.any(), action, NONE)
+            pos = self_obs[1:3] * jnp.array(
+                [info.env.map_width, info.env.map_height]
+            )
+            vec_direction = jnp.array([[0, 1], [1, 0], [0, -1], [-1, 0]])[action]
+            new_pos = (
+                pos
+                + jnp.array(vec_direction)
+                * info.agent.velocity
+                * info.env.time_per_step
+                * info.env.world_steps_per_env_step
+            )
+            clash = raster_crossing(pos, new_pos, info)
+            flag = jnp.where(clash, FAILURE, flag)
+            action = jnp.where(clash, NONE, action)
             return (flag, action)
 
         return move_fn
