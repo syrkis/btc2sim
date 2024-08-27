@@ -3,6 +3,7 @@
 
 # imports
 import jax
+from jax import random
 import jax.numpy as jnp
 from functools import partial
 
@@ -91,7 +92,7 @@ def attack(qualifier, *units):  # TODO: attack closest if no target
                 targeted_types[target_types[unit]] = 1
     targeted_types = jnp.array(targeted_types)
     
-    def attack_fn(obs, info):
+    def attack_fn(obs, info, rng):
         fill = jnp.where(use_min, jnp.inf, -jnp.inf)
         self_obs, others_obs = process_obs(obs, info)
         n = jnp.where(
@@ -143,7 +144,7 @@ def move(direction, qualifier=None, target=None, *units):
         target_foe = target == "foe"
         move_toward = direction == "toward"
 
-        def move_fn(obs, info):
+        def move_fn(obs, info, rng):
             fill = jnp.where(use_min, jnp.inf, -jnp.inf)
             n = jnp.where(
                 info.agent.is_ally, info.env.num_enemies, info.env.num_allies
@@ -193,7 +194,7 @@ def move(direction, qualifier=None, target=None, *units):
         if direction == "center":
             mat_to_dir = jnp.array([[1, 3], [0, 2]])
 
-            def center_fn(obs, info):
+            def center_fn(obs, info, rng):
                 self_obs, others_obs = process_obs(obs, info)
                 self_pos = self_obs[1:3] * 32 - 16
                 dimension = jnp.argmax(jnp.abs(self_pos))
@@ -213,7 +214,7 @@ def move(direction, qualifier=None, target=None, *units):
                 ]
             )
 
-            def move_fn_alt(obs, info):
+            def move_fn_alt(obs, info, rng):
                 self_obs, _ = process_obs(obs, info)
                 pos = self_obs[1:3] * jnp.array(
                     [info.env.map_width, info.env.map_height]
@@ -233,14 +234,27 @@ def move(direction, qualifier=None, target=None, *units):
             return move_fn_alt
 
 
-def follow_map(obs, info):
+# + active=""
+# def follow_map(obs, info, rng):  # given an already computed gradient
+#     self_obs, _ = process_obs(obs, info)
+#     pos = jnp.clip(jnp.array(self_obs[1:3] * jnp.array([info.env.map_width, info.env.map_height]), dtype=jnp.int32), 0, jnp.array([info.env.map_width-1, info.env.map_height-1])) 
+#     return (SUCCESS, info.agent.direction_map[pos[0], pos[1]])
+# -
+
+def follow_map(obs, info, rng):  # given the distances to the goal
     self_obs, _ = process_obs(obs, info)
     pos = jnp.clip(jnp.array(self_obs[1:3] * jnp.array([info.env.map_width, info.env.map_height]), dtype=jnp.int32), 0, jnp.array([info.env.map_width-1, info.env.map_height-1])) 
-    return (SUCCESS, info.agent.direction_map[pos[0], pos[1]])
+    current_distance = info.agent.direction_map[pos[0], pos[1]]
+    north_distance = jnp.where(pos[1]+1<info.env.map_height, info.agent.direction_map[pos[0], pos[1]+1], jnp.inf)
+    south_distance = jnp.where(pos[1]-1>=0, info.agent.direction_map[pos[0], pos[1]-1], jnp.inf)
+    east_distance = jnp.where(pos[0]+1<info.env.map_width, info.agent.direction_map[pos[0]+1, pos[1]], jnp.inf)
+    west_distance = jnp.where(pos[0]-1>=0, info.agent.direction_map[pos[0]-1, pos[1]], jnp.inf)
+    distances = jnp.array([north_distance, east_distance, south_distance, west_distance, current_distance]) + random.uniform(rng, (5,), minval=0.0, maxval=0.5)
+    return (SUCCESS, jnp.arange(5)[jnp.argmin(distances)])  # actions [0,1,2,3,4] == [↑, →, ↓, ←, ∅]
 
 
 # ## Stand
-def stand(obs, info):
+def stand(obs, info, rng):
     return (SUCCESS, STAND)
 
 
@@ -250,7 +264,7 @@ def in_region(x, y=None):  # only applies to self
     y = x if y is None else y  # in_region center instead of in_region center center
     target_row, target_col = d2i[(x, y)]
 
-    def in_region_fn(obs, info):
+    def in_region_fn(obs, info, rng):
         self_pos = obs[-info.env.num_own_features :][1:3]
         col = jnp.where(self_pos[0] > 2 / 3, 1, jnp.where(self_pos[0] < 1 / 3, -1, 0))
         row = jnp.where(self_pos[1] > 2 / 3, 1, jnp.where(self_pos[1] < 1 / 3, -1, 0))
@@ -274,7 +288,7 @@ def in_sight(target, *units):  # is unit x in direction y?
                 targeted_types[target_types[unit]] = 1
     targeted_types = jnp.array(targeted_types)
     
-    def in_sight_fn(obs, info):
+    def in_sight_fn(obs, info, rng):
         n = jnp.where(
             info.agent.is_ally, info.env.num_enemies, info.env.num_allies
         )  # number of foes
@@ -308,7 +322,7 @@ def in_reach(other_agent, *units):  # in shooting range
                 targeted_types[target_types[unit]] = 1
     targeted_types = jnp.array(targeted_types)
 
-    def in_reach_fn(obs, info):
+    def in_reach_fn(obs, info, rng):
         n = jnp.where(
             info.agent.is_ally, info.env.num_enemies, info.env.num_allies
         )  # number of foes
@@ -335,7 +349,7 @@ def is_armed(agent):
     on_self = agent == "self"
     on_foe = agent == "foe"  # used only if not on_self
 
-    def is_armed_fn(obs, info):
+    def is_armed_fn(obs, info, rng):
         self_obs, others_obs = process_obs(obs, info)
         alive = others_obs.T[0] > 0
         n = jnp.where(
@@ -362,7 +376,7 @@ def is_dying(agent, hp_level):
     on_foe = agent == "foe"  # used only if not on_self
     threshold = {"low": 0.25, "middle": 0.5, "high": 0.75}[hp_level]
 
-    def aux(obs, info):
+    def aux(obs, info, rng):
         self_obs, others_obs = process_obs(obs, info)
         alive = others_obs.T[0] > 0
         n = jnp.where(
@@ -390,7 +404,7 @@ def is_type(negation, unit):
     true_condition = SUCCESS if negation == "a" else FAILURE
     false_condition = FAILURE if negation == "a" else SUCCESS
 
-    def aux(obs, info):
+    def aux(obs, info, rng):
         return jnp.where(obs[target_type] == 1, true_condition, false_condition)
 
     return aux
@@ -401,7 +415,7 @@ def is_flock(team, direction):
     on_foe = team == "foe"
     if direction == "center":
 
-        def is_flock_fn(obs, info):
+        def is_flock_fn(obs, info, rng):
             self_obs, others_obs = process_obs(obs, info)
             alive = others_obs.T[0] > 0
             n = jnp.where(
@@ -434,7 +448,7 @@ def is_flock(team, direction):
         is_east = SUCCESS if direction == "east" else FAILURE
         is_south = SUCCESS if direction == "south" else FAILURE
 
-        def is_flock_fn_alt(obs, info):
+        def is_flock_fn_alt(obs, info, rng):
             self_obs, others_obs = process_obs(obs, info)
             alive = others_obs.T[0] > 0
             n = jnp.where(
@@ -479,7 +493,7 @@ def has_obstacle(direction):
         {"north": [0, 1], "east": [1, 0], "south": [0, -1], "west": [-1, 0]}[direction]
     )
 
-    def has_obstacle_fn(obs, info):
+    def has_obstacle_fn(obs, info, rng):
         self_obs, _ = process_obs(obs, info)
         pos = self_obs[1:3] * jnp.array([info.env.map_width, info.env.map_height])
         new_pos = (

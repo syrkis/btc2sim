@@ -33,6 +33,7 @@ class Args:
     obs: Array
     child: int
     info: Any
+    rng: Array
 
 
 # functions
@@ -46,7 +47,7 @@ def tree_fn(children, kind):
 
     def body_fn(args):
         child_status, child_action = jax.lax.switch(
-            args.child, children, *(args.obs, args.info.env, args.info.agent)
+            args.child, children, *(args.obs, args.info.env, args.info.agent, args.rng)
         )  # make info
         args = Args(
             status=child_status,
@@ -54,12 +55,13 @@ def tree_fn(children, kind):
             obs=args.obs,
             child=args.child + 1,
             info=args.info,
+            rng=args.rng,
         )
         return args
 
-    def tick(obs, env_info, agent_info):  # idx is to get info from batch dict
+    def tick(obs, env_info, agent_info, rng):  # idx is to get info from batch dict
         info = btc2sim.classes.Info(env=env_info, agent=agent_info)
-        args = Args(status=start_status, action=NONE, obs=obs, child=0, info=info)
+        args = Args(status=start_status, action=NONE, obs=obs, child=0, info=info, rng=rng)
         args = jax.lax.while_loop(
             cond_fn, body_fn, args
         )  # While we haven't found action action continue through children'
@@ -68,9 +70,9 @@ def tree_fn(children, kind):
 
 
 def leaf_fn(func, kind):
-    def tick(obs, env_info, agent_info):
+    def tick(obs, env_info, agent_info, rng):
         info = btc2sim.classes.Info(env=env_info, agent=agent_info)
-        return func(obs, info)
+        return func(obs, info, rng)
     if kind == "action":
         return tick
     else:
