@@ -34,11 +34,10 @@ scenario_kwargs = {
 
 
 # %% Environment
-
 def envs_fn(places):  # use switch to select place when running (combine with fori_loop on rngs and idxs)
     #maps = list(map(lambda place: pb.map.get_raster(place, 100), places))
     maps = list(map(lambda place: (jnp.zeros((100, 100)), None) , places))
-    scenes = list(map(lambda mask: pb.make_scenario(terrain_raster= mask[0], place='mask', **scenario_kwargs), maps))  # this is wrong but close to right, could fix quickly.
+    scenes = list(map(lambda mask: pb.make_scenario(place='Vesterbro, København, Denmark', size=100, **scenario_kwargs), maps))  # this is wrong but close to right, could fix quickly.
     envs = list(map(lambda scene: pb.Environment(scene), scenes))
     return envs
 
@@ -57,7 +56,7 @@ def bts_fn(
 
 # %%
 def bt_fn(bt, obs, env_info, agent_info):  # take actions for all agents in parallel
-    acts = tree_util.tree_map(lambda x, i: bt(x, env_info, i)[1], obs, agent_info)
+    acts = tree_util.tree_map(lambda x, i: bt(x, env_info, i)[1], obs, agent_info)  # not working as the bt need the rng now
     return acts
 
 

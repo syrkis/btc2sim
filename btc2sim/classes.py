@@ -4,6 +4,7 @@ import chex
 from jax import jit, vmap, Array
 import jax.numpy as jnp
 from typing import Any, Callable, List, Tuple, Dict, Optional
+from parabellum import tps
 
 
 # dataclasses
@@ -23,7 +24,7 @@ class EnvInfo:  # for atomics (who am i, what is this world?)
     map_height: Array
     time_per_step: Array
     world_steps_per_env_step: Array
-    terrain_raster: Array
+    terrain: tps.Terrain
 
 @dataclass
 class AgentInfo:
@@ -41,3 +42,5 @@ class Info:
 
 # types
 NodeFunc = Callable[[Any], Status]
+
+

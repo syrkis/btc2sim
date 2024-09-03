@@ -27,7 +27,7 @@ def env_info_fn(env):
         # map info
         map_width=env.map_width,
         map_height=env.map_height,
-        terrain_raster=env.terrain_raster,  # 2D array of terrain types
+        terrain=env.terrain,  # 2D array of terrain types
     )
 
 
@@ -39,7 +39,7 @@ def agent_info_fn(env, direction_maps={}):
             sight_range=env.unit_type_sight_ranges[env.scenario.unit_types[env.agent_ids[a]]],
             attack_range=env.unit_type_attack_ranges[env.scenario.unit_types[env.agent_ids[a]]],
             is_ally=a.startswith("ally"),
-            direction_map=jnp.ones(env.terrain_raster.shape, dtype=jnp.int32) * 4 if a not in direction_maps else direction_maps[a],  # 4 is for the standing action
+            direction_map=jnp.ones(env.terrain.building.shape, dtype=jnp.int32) * 4 if a not in direction_maps else direction_maps[a],  # 4 is for the standing action
         )
         for a in env.agents
     }

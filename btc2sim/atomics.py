@@ -475,16 +475,16 @@ def is_flock(team, direction):
 
 # ## has_obstacle or out of bound
 def raster_crossing(pos, new_pos, info):
-    raster = info.env.terrain_raster
-    out_of_map = jnp.logical_or(jnp.min(new_pos) < 0,  jnp.max(new_pos) >= raster.shape[0])
+    mask = info.env.terrain.building + info.env.terrain.water
+    out_of_map = jnp.logical_or(jnp.min(new_pos) < 0,  jnp.max(new_pos) >= mask.shape[0])
     pos, new_pos = pos.astype(jnp.int32), new_pos.astype(jnp.int32)
-    axis = jnp.argmax(jnp.abs(new_pos - pos), axis=-1)
-    minimum = jnp.minimum(pos[axis], new_pos[axis]).squeeze()
-    maximum = jnp.maximum(pos[axis], new_pos[axis]).squeeze()
-    segment = jnp.where(axis == 0, raster[pos[1]], raster.T[pos[0]])
-    segment = jnp.where(jnp.arange(segment.shape[0]) >= minimum, segment, 0)
-    segment = jnp.where(jnp.arange(segment.shape[0]) <= maximum, segment, 0)
-    return jnp.logical_or(jnp.any(segment), out_of_map)
+    minimum = jnp.minimum(pos, new_pos)
+    maximum = jnp.maximum(pos, new_pos)
+    mask = jnp.where(jnp.arange(mask.shape[0]) >= minimum[0], mask, 0)
+    mask = jnp.where(jnp.arange(mask.shape[0]) <= maximum[0], mask, 0)
+    mask = jnp.where(jnp.arange(mask.shape[1]) >= minimum[1], mask.T, 0).T
+    mask = jnp.where(jnp.arange(mask.shape[1]) <= maximum[1], mask.T, 0).T
+    return jnp.logical_or(jnp.any(mask), out_of_map)
 
 
 def has_obstacle(direction):
