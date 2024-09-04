@@ -251,7 +251,8 @@ def follow_map(obs, info, rng):  # given the distances to the goal
     west_distance = jnp.where(pos[0]-1>=0, info.agent.direction_map[pos[0]-1, pos[1]], jnp.inf)
     distances = jnp.array([north_distance, east_distance, south_distance, west_distance, current_distance]) 
     action = jnp.where(jnp.min(distances) == jnp.max(distances), 4, jnp.arange(5)[jnp.argmin(distances + random.uniform(rng, (5,), minval=0.0, maxval=0.5))])  # stand if the map is uniform 
-    return (SUCCESS, action)  # actions [0,1,2,3,4] == [↑, →, ↓, ←, ∅]
+    flag = jnp.where(jnp.min(distances) == jnp.max(distances), FAILURE, SUCCESS)
+    return (flag, action)  # actions [0,1,2,3,4] == [↑, →, ↓, ←, ∅]
 
 
 # ## Stand
