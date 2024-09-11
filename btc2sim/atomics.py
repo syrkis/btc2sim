@@ -481,10 +481,10 @@ def raster_crossing(pos, new_pos, info):
     pos, new_pos = pos.astype(jnp.int32), new_pos.astype(jnp.int32)
     minimum = jnp.minimum(pos, new_pos)
     maximum = jnp.maximum(pos, new_pos)
-    mask = jnp.where(jnp.arange(mask.shape[0]) >= minimum[0], mask, 0)
-    mask = jnp.where(jnp.arange(mask.shape[0]) <= maximum[0], mask, 0)
-    mask = jnp.where(jnp.arange(mask.shape[1]) >= minimum[1], mask.T, 0).T
-    mask = jnp.where(jnp.arange(mask.shape[1]) <= maximum[1], mask.T, 0).T
+    mask = jnp.where(jnp.arange(mask.shape[0]) >= minimum[0], mask.T, 0).T
+    mask = jnp.where(jnp.arange(mask.shape[0]) <= maximum[0], mask.T, 0).T
+    mask = jnp.where(jnp.arange(mask.shape[1]) >= minimum[1], mask, 0)
+    mask = jnp.where(jnp.arange(mask.shape[1]) <= maximum[1], mask, 0)
     return jnp.logical_or(jnp.any(mask), out_of_map)
 
 
