@@ -12,13 +12,13 @@ from .classes import Status
 
 
 # constants
-unit_types = ["any", "soldier", "sniper", "turret", "tank", "drone", "civilian"]
+unit_types = ["any", "soldier", "sniper", "swat", "tank", "turret", "drone", "civilian"]
 directions = ["north", "west", "center", "east", "south"]
 target_types = {
     "soldier": -6,
     "sniper": -5,
-    "turret": -4,
-    "tank": -3,
+    "swat": -4,
+    "turret": -3,
     "drone": -2,
     "civilian": -1,
     "any": None,
