@@ -53,6 +53,7 @@ atomic :
     | is_flock
     | is_type 
     | has_obstacle
+    | is_in_forest
 
 move      : "move" (direction | sense qualifier (foe | friend) (unit ("or" unit)* |any)?)
 attack    : "attack" qualifier (unit ("or" unit)* |any)?
@@ -66,6 +67,7 @@ is_flock  : "is_flock" (foe | friend) direction
 is_type   : "is_type" negation unit
 has_obstacle : "has_obstacle" direction
 follow_map : "follow_map"
+is_in_forest : "is_in_forest"
 
 sense     : /toward|away_from/
 direction : /north|east|south|west|center/

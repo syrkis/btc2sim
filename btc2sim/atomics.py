@@ -509,3 +509,10 @@ def has_obstacle(direction):
         return jnp.where(clash, SUCCESS, FAILURE)
 
     return has_obstacle_fn
+
+
+def is_in_forest(obs, info, rng):
+    self_obs, _ = process_obs(obs, info)
+    pos = self_obs[1:3] * jnp.array([info.env.map_width, info.env.map_height])
+    pos = pos.astype(jnp.int32)
+    return jnp.where(info.env.terrain.forest[pos[0], pos[1]], SUCCESS, FAILURE)
