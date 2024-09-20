@@ -169,10 +169,16 @@ def move(direction, qualifier=None, target=None, *units):
             y = others_obs[targ][2]
             SE = x > y
             NE = x > -y
+            E = x > 0
+            N = y > 0
             action = jnp.where(SE, jnp.where(NE, 1, 2), jnp.where(NE, 0, 3))
             action = jnp.where(move_toward, action, (action + 2) % 4)
+
+            sub_action = jnp.where(N, jnp.where(E, jnp.where(action == 1, 0, 1), jnp.where(action == 3, 0, 3)), jnp.where(E, jnp.where(action == 1, 2, 1), jnp.where(action == 3, 2, 3)))
+            sub_action = jnp.where(move_toward, sub_action, (sub_action + 2) % 4)
+            
             flag = jnp.where(alive.any(), SUCCESS, FAILURE)
-            action = jnp.where(alive.any(), action, NONE)
+            
             pos = self_obs[1:3] * jnp.array(
                 [info.env.map_width, info.env.map_height]
             )
@@ -185,8 +191,21 @@ def move(direction, qualifier=None, target=None, *units):
                 * info.env.world_steps_per_env_step
             )
             clash = raster_crossing(pos, new_pos, info)
+            
+            action = jnp.where(clash, sub_action, action)  # test suboptimal action if there is collision with the environment
+
+            vec_direction = jnp.array([[0, 1], [1, 0], [0, -1], [-1, 0]])[action]
+            new_pos = (
+                pos
+                + jnp.array(vec_direction)
+                * info.agent.velocity
+                * info.env.time_per_step
+                * info.env.world_steps_per_env_step
+            )
+            clash = raster_crossing(pos, new_pos, info)
             flag = jnp.where(clash, FAILURE, flag)
             action = jnp.where(clash, NONE, action)
+            action = jnp.where(alive.any(), action, NONE)
             return (flag, action)
 
         return move_fn
