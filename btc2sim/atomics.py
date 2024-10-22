@@ -12,7 +12,7 @@ from .classes import Status
 
 
 # constants
-unit_types = ["any", "soldier", "sniper", "swat", "tank", "turret", "drone", "civilian"]
+unit_types = ["any", "soldier", "sniper", "swat", "turret", "drone", "civilian"]
 directions = ["north", "west", "center", "east", "south"]
 target_types = {
     "soldier": -6,
@@ -419,7 +419,7 @@ def is_dying(agent, hp_level):
 
 # ## is type
 def is_type(negation, unit):
-    assert unit in ["marine", "marauder", "stalker", "zealot", "zergling", "hydralisk"]
+    assert unit in unit_types
     assert negation in ["a", "not_a"]
     target_type = target_types[unit]
     true_condition = SUCCESS if negation == "a" else FAILURE
