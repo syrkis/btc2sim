@@ -66,8 +66,8 @@ is_armed  : "is_armed" (self | foe | friend)
 is_flock  : "is_flock" (foe | friend) direction
 is_type   : "is_type" negation unit
 has_obstacle : "has_obstacle" direction
-follow_map : "follow_map"
-is_in_forest : "is_in_forest"
+follow_map : "follow_map" sense
+is_in_forest : "is_in_forest" 
 
 sense     : /toward|away_from/
 direction : /north|east|south|west|center/

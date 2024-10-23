@@ -260,18 +260,36 @@ def move(direction, qualifier=None, target=None, *units):
 #     return (SUCCESS, info.agent.direction_map[pos[0], pos[1]])
 # -
 
-def follow_map(obs, info, rng):  # given the distances to the goal
-    self_obs, _ = process_obs(obs, info)
-    pos = jnp.clip(jnp.array(self_obs[1:3] * jnp.array([info.env.map_width, info.env.map_height]), dtype=jnp.int32), 0, jnp.array([info.env.map_width-1, info.env.map_height-1])) 
-    current_distance = info.agent.direction_map[pos[0], pos[1]]
-    north_distance = jnp.where(pos[1]+1<info.env.map_height, info.agent.direction_map[pos[0], pos[1]+1], jnp.inf)
-    south_distance = jnp.where(pos[1]-1>=0, info.agent.direction_map[pos[0], pos[1]-1], jnp.inf)
-    east_distance = jnp.where(pos[0]+1<info.env.map_width, info.agent.direction_map[pos[0]+1, pos[1]], jnp.inf)
-    west_distance = jnp.where(pos[0]-1>=0, info.agent.direction_map[pos[0]-1, pos[1]], jnp.inf)
-    distances = jnp.array([north_distance, east_distance, south_distance, west_distance, current_distance]) 
-    action = jnp.where(jnp.min(distances) == jnp.max(distances), 4, jnp.arange(5)[jnp.argmin(distances + random.uniform(rng, (5,), minval=0.0, maxval=0.5))])  # stand if the map is uniform 
-    flag = jnp.where(jnp.min(distances) == jnp.max(distances), FAILURE, SUCCESS)
-    return (flag, action)  # actions [0,1,2,3,4] == [↑, →, ↓, ←, ∅]
+def follow_map(sense):
+    assert sense in ["toward", "away_from"]
+    if sense == "toward":
+        def aux(obs, info, rng):  # given the distances to the goal
+            self_obs, _ = process_obs(obs, info)
+            pos = jnp.clip(jnp.array(self_obs[1:3] * jnp.array([info.env.map_width, info.env.map_height]), dtype=jnp.int32), 0, jnp.array([info.env.map_width-1, info.env.map_height-1])) 
+            current_distance = info.agent.direction_map[pos[0], pos[1]]
+            north_distance = jnp.where(pos[1]+1<info.env.map_height, info.agent.direction_map[pos[0], pos[1]+1], jnp.inf)
+            south_distance = jnp.where(pos[1]-1>=0, info.agent.direction_map[pos[0], pos[1]-1], jnp.inf)
+            east_distance = jnp.where(pos[0]+1<info.env.map_width, info.agent.direction_map[pos[0]+1, pos[1]], jnp.inf)
+            west_distance = jnp.where(pos[0]-1>=0, info.agent.direction_map[pos[0]-1, pos[1]], jnp.inf)
+            distances = jnp.array([north_distance, east_distance, south_distance, west_distance, current_distance]) 
+            action = jnp.where(jnp.min(distances) == jnp.max(distances), 4, jnp.arange(5)[jnp.argmin(distances + random.uniform(rng, (5,), minval=0.0, maxval=0.5))])  # stand if the map is uniform 
+            flag = jnp.where(jnp.min(distances) == jnp.max(distances), FAILURE, SUCCESS)
+            return (flag, action)  # actions [0,1,2,3,4] == [↑, →, ↓, ←, ∅]
+        return aux 
+    else:  # away from
+        def aux(obs, info, rng):  # given the distances to the goal
+            self_obs, _ = process_obs(obs, info)
+            pos = jnp.clip(jnp.array(self_obs[1:3] * jnp.array([info.env.map_width, info.env.map_height]), dtype=jnp.int32), 0, jnp.array([info.env.map_width-1, info.env.map_height-1])) 
+            current_distance = info.agent.direction_map[pos[0], pos[1]]
+            north_distance = jnp.where(pos[1]+1<info.env.map_height, info.agent.direction_map[pos[0], pos[1]+1], jnp.inf)
+            south_distance = jnp.where(pos[1]-1>=0, info.agent.direction_map[pos[0], pos[1]-1], jnp.inf)
+            east_distance = jnp.where(pos[0]+1<info.env.map_width, info.agent.direction_map[pos[0]+1, pos[1]], jnp.inf)
+            west_distance = jnp.where(pos[0]-1>=0, info.agent.direction_map[pos[0]-1, pos[1]], jnp.inf)
+            distances = jnp.array([north_distance, east_distance, south_distance, west_distance, current_distance]) 
+            action = jnp.where(jnp.min(distances) == jnp.max(distances), 4, jnp.arange(5)[jnp.argmax(distances + random.uniform(rng, (5,), minval=0.0, maxval=0.5))])  # stand if the map is uniform 
+            flag = jnp.where(jnp.min(distances) == jnp.max(distances), FAILURE, SUCCESS)
+            return (flag, action)  # actions [0,1,2,3,4] == [↑, →, ↓, ←, ∅]
+        return aux
 
 
 # ## Stand
