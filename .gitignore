@@ -6,3 +6,5 @@ cache
 output/
 .ipynb_checkpoints
 */.ipynb_checkpoints/
+dist
+
