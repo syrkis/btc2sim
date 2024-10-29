@@ -83,15 +83,19 @@ def seed_fn(seed: dict):
     assert seed[0] in ["sequence", "fallback", "condition", "action"]
     if seed[0] in ["sequence", "fallback"]:
         children = [seed_fn(child) for child in seed[1]]
-        return tree_fn(children, seed[0])
+        tree = tree_fn(children, seed[0])
     else:  #  seed[0] in ['condition', 'action']:
         _, func, args = seed[0], seed[1][0], seed[1][1]
         args = [args] if isinstance(args, str) else args
         
         if len(args) == 0:
-            return leaf_fn(ATOMICS[func], seed[0])
+            tree = leaf_fn(ATOMICS[func], seed[0])
         else:   
-            return leaf_fn(ATOMICS[func](*args), seed[0]) 
+            tree = leaf_fn(ATOMICS[func](*args), seed[0]) 
+    def catch_none_action(*args):
+        status, action = tree(children, seed[0])(*args)
+        return  status, jnp.where(action==None, STAND, action)
+    return catch_none_action
 
 
 # %% [markdown]
@@ -120,8 +124,12 @@ def seed_fn_dp(atomics_bank, seed: dict):
     assert seed[0] in ["sequence", "fallback", "condition", "action"]
     if seed[0] in ["sequence", "fallback"]:
         children = [seed_fn_dp(atomics_bank, child) for child in seed[1]]
-        return tree_fn(children, seed[0])
+        tree = tree_fn(children, seed[0])
     else:  #  seed[0] in ['condition', 'action']:
         _, func, args = seed[0], seed[1][0], seed[1][1]
         args = [args] if isinstance(args, str) else args
-        return leaf_fn_dp(atomics_bank, func, args, seed[0])
+        tree = leaf_fn_dp(atomics_bank, func, args, seed[0])
+    def catch_none_action(*args):
+        status, action = tree(*args)
+        return  status, jnp.where(action == NONE, STAND, action)
+    return catch_none_action
