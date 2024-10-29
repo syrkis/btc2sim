@@ -78,11 +78,11 @@ def leaf_fn(func, kind):
     else:
         return lambda *args: (tick(*args), NONE)
 
-def seed_fn(seed: dict):
+def seed_fn(seed: dict, final=True):
     # grows a tree from a seed
     assert seed[0] in ["sequence", "fallback", "condition", "action"]
     if seed[0] in ["sequence", "fallback"]:
-        children = [seed_fn(child) for child in seed[1]]
+        children = [seed_fn(child, False) for child in seed[1]]
         tree = tree_fn(children, seed[0])
     else:  #  seed[0] in ['condition', 'action']:
         _, func, args = seed[0], seed[1][0], seed[1][1]
@@ -92,10 +92,13 @@ def seed_fn(seed: dict):
             tree = leaf_fn(ATOMICS[func], seed[0])
         else:   
             tree = leaf_fn(ATOMICS[func](*args), seed[0]) 
-    def catch_none_action(*args):
-        status, action = tree(children, seed[0])(*args)
-        return  status, jnp.where(action==None, STAND, action)
-    return catch_none_action
+    if final:
+        def catch_none_action(*args):
+            status, action = tree(*args)
+            return  status, jnp.where(action == NONE, STAND, action)
+        return catch_none_action
+    else:
+        return tree
 
 
 # %% [markdown]
@@ -119,7 +122,7 @@ def leaf_fn_dp(atomics_bank, func_name, args, kind):
     return atomics_bank[key]
 
 
-def seed_fn_dp(atomics_bank, seed: dict):
+def seed_fn_dp(atomics_bank, seed: dict, final=False):
     # grows a tree from a seed
     assert seed[0] in ["sequence", "fallback", "condition", "action"]
     if seed[0] in ["sequence", "fallback"]:
@@ -129,7 +132,10 @@ def seed_fn_dp(atomics_bank, seed: dict):
         _, func, args = seed[0], seed[1][0], seed[1][1]
         args = [args] if isinstance(args, str) else args
         tree = leaf_fn_dp(atomics_bank, func, args, seed[0])
-    def catch_none_action(*args):
-        status, action = tree(*args)
-        return  status, jnp.where(action == NONE, STAND, action)
-    return catch_none_action
+    if final:
+        def catch_none_action(*args):
+            status, action = tree(*args)
+            return  status, jnp.where(action == NONE, STAND, action)
+        return catch_none_action
+    else:
+        return tree
