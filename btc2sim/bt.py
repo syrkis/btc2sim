@@ -78,19 +78,64 @@ def leaf_fn(func, kind):
     else:
         return lambda *args: (tick(*args), NONE)
 
-
-
-def seed_fn(seed: dict):
+def seed_fn(seed: dict, final=True):
     # grows a tree from a seed
     assert seed[0] in ["sequence", "fallback", "condition", "action"]
     if seed[0] in ["sequence", "fallback"]:
-        children = [seed_fn(child) for child in seed[1]]
-        return tree_fn(children, seed[0])
+        children = [seed_fn(child, False) for child in seed[1]]
+        tree = tree_fn(children, seed[0])
     else:  #  seed[0] in ['condition', 'action']:
         _, func, args = seed[0], seed[1][0], seed[1][1]
         args = [args] if isinstance(args, str) else args
         
         if len(args) == 0:
-            return leaf_fn(ATOMICS[func], seed[0])
+            tree = leaf_fn(ATOMICS[func], seed[0])
         else:   
-            return leaf_fn(ATOMICS[func](*args), seed[0]) 
+            tree = leaf_fn(ATOMICS[func](*args), seed[0]) 
+    if final:
+        def catch_none_action(*args):
+            status, action = tree(*args)
+            return  status, jnp.where(action == NONE, STAND, action)
+        return catch_none_action
+    else:
+        return tree
+
+
+# %% [markdown]
+# # Dynamic programming computation of the atomics 
+
+# %%
+def leaf_fn_dp(atomics_bank, func_name, args, kind):
+    key = (func_name,) + tuple(args) 
+    if key not in atomics_bank:
+        func = ATOMICS[func_name] if len(args) == 0 else ATOMICS[func_name](*args)
+        if kind == "action":
+            def tick(obs, env_info, agent_info, rng):
+                info = btc2sim.classes.Info(env=env_info, agent=agent_info)
+                return func(obs, info, rng)
+            atomics_bank[key] = tick 
+        else:
+            def tick(obs, env_info, agent_info, rng):
+                info = btc2sim.classes.Info(env=env_info, agent=agent_info)
+                return func(obs, info, rng)
+            atomics_bank[key] = lambda *args: (tick(*args), NONE)
+    return atomics_bank[key]
+
+
+def seed_fn_dp(atomics_bank, seed: dict, final=False):
+    # grows a tree from a seed
+    assert seed[0] in ["sequence", "fallback", "condition", "action"]
+    if seed[0] in ["sequence", "fallback"]:
+        children = [seed_fn_dp(atomics_bank, child) for child in seed[1]]
+        tree = tree_fn(children, seed[0])
+    else:  #  seed[0] in ['condition', 'action']:
+        _, func, args = seed[0], seed[1][0], seed[1][1]
+        args = [args] if isinstance(args, str) else args
+        tree = leaf_fn_dp(atomics_bank, func, args, seed[0])
+    if final:
+        def catch_none_action(*args):
+            status, action = tree(*args)
+            return  status, jnp.where(action == NONE, STAND, action)
+        return catch_none_action
+    else:
+        return tree
