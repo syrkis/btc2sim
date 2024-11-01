@@ -4,12 +4,44 @@
 
 # imports
 import jax.numpy as jnp
+from flax.struct import dataclass
+import chex
 
 
-# default action
-NORTH, EAST, SOUTH, WEST, STAND, NONE = jnp.array(0), jnp.array(1), jnp.array(2), jnp.array(3), jnp.array(4), jnp.array(-1)
+@dataclass
+class Action:
+    kind: chex.Array
+    value: chex.Array
+    
+    def __getitem__(self, index):  # to allow slicing operations
+        return Action(
+            kind=self.kind[index],
+            value=self.value[index],
+        )
+        
+    def set_item(self, index, new_value):
+        # Perform an in-place update to kind and value at the specified index
+        return Action( 
+            kind = self.kind.at[index].set(new_value.kind),
+            value = self.value.at[index].set(new_value.value)
+        )
+
+    @classmethod
+    def from_shape(cls, shape, dtype=jnp.float32):
+        # Create an instance with empty arrays of the specified shape
+        return cls(
+            kind=jnp.empty(shape, dtype=dtype),
+            value=jnp.empty(shape+(2,), dtype=dtype)
+        )
+
+    def conditional_action(condition, action_if_true, action_if_false):
+        return Action(
+            kind=jnp.where(condition, action_if_true.kind, action_if_false.kind),
+            value=jnp.where(condition, action_if_true.value, action_if_false.value)
+        )
 
 
-# dicts
-dir_to_idx = {"north": 0, "east": 1, "south": 2, "west": 3}
-idx_to_dir = {0: "north", 1: "east", 2: "south", 3: "west"}
+NONE, STAND, MOVE, ATTACK = jnp.array(-1), jnp.array(0), jnp.array(1), jnp.array(2)
+
+None_action = Action(NONE, jnp.zeros((2,)))
+Stand_action = Action(STAND, jnp.zeros((2,)))

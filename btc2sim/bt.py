@@ -3,11 +3,11 @@
 #   behavior tree code
 # by: Noah Syrkis
 
-# %% imports
+# %%
 import jax
 import jax.numpy as jnp
-from jax import jit, vmap, Array, tree_util
-from chex import dataclass
+from jax import jit, vmap, tree_util
+from flax.struct import dataclass
 import chex
 from jaxmarl import make
 
@@ -17,66 +17,75 @@ from typing import Any, Callable, List, Tuple, Dict, Optional
 
 import btc2sim
 from btc2sim.classes import Status, NodeFunc as NF
-from btc2sim.utils import STAND, NONE
+from btc2sim.utils import STAND, NONE, Action, None_action, Stand_action
 import btc2sim.atomics as atomics
 
-# constants
+# %% [markdown]
+# # constants
+
+# %%
 ATOMICS = {fn: getattr(atomics, fn) for fn in dir(atomics) if not fn.startswith("_")}
 SUCCESS, FAILURE = Status.SUCCESS, Status.FAILURE
 
 
-# dataclasses
+# %% [markdown]
+# # dataclasses
+
+# %%
 @dataclass
 class Args:
-    status: Array
-    action: Array
-    obs: Array
+    status: chex.Array
+    action: Action
     child: int
-    info: Any
-    rng: Array
+    env: Any
+    scenario: Any
+    state: Any
+    rng: chex.Array
+    agent_id: int
 
 
-# functions
+# %% [markdown]
+# # functions
+
+# %% imports
 def tree_fn(children, kind):
     start_status = jnp.where(kind == "sequence", SUCCESS, FAILURE)
 
     def cond_fn(args):  # conditions under which we continue
         cond = jnp.where(kind == "sequence", SUCCESS, FAILURE)
-        flag = jnp.logical_and(args.status == cond, args.action == NONE)
+        flag = jnp.logical_and(args.status == cond, args.action.kind == NONE)
         return jnp.logical_and(flag, args.child < len(children))
 
     def body_fn(args):
         child_status, child_action = jax.lax.switch(
-            args.child, children, *(args.obs, args.info.env, args.info.agent, args.rng)
+            args.child, children, *(args.envs, args.scenario, args.state, args.rng, args.agent_id)
         )  # make info
         args = Args(
             status=child_status,
             action=child_action,
-            obs=args.obs,
             child=args.child + 1,
-            info=args.info,
+            env=args.env,
+            scenario=args.scenario,
+            state=args.state,
             rng=args.rng,
+            agent_id=args.agent_id,
         )
         return args
 
-    def tick(obs, env_info, agent_info, rng):  # idx is to get info from batch dict
+    def tick(env, scenario, state, rng, agent_id):  # idx is to get info from batch dict
         info = btc2sim.classes.Info(env=env_info, agent=agent_info)
-        args = Args(status=start_status, action=NONE, obs=obs, child=0, info=info, rng=rng)
+        args = Args(status=start_status, action=None_action, child=0, env=env, scenario=scenario, state=state, rng=rng, agent_id=agent_id)
         args = jax.lax.while_loop(
             cond_fn, body_fn, args
         )  # While we haven't found action action continue through children'
         return args.status, args.action
     return tick
 
-
 def leaf_fn(func, kind):
-    def tick(obs, env_info, agent_info, rng):
-        info = btc2sim.classes.Info(env=env_info, agent=agent_info)
-        return func(obs, info, rng)
     if kind == "action":
-        return tick
+        return func
     else:
-        return lambda *args: (tick(*args), NONE)
+        return lambda *args: (func(*args), None_action)
 
 def seed_fn(seed: dict, final=True):
     # grows a tree from a seed
@@ -95,7 +104,7 @@ def seed_fn(seed: dict, final=True):
     if final:
         def catch_none_action(*args):
             status, action = tree(*args)
-            return  status, jnp.where(action == NONE, STAND, action)
+            return  status, Action.conditional_action(action.kind == NONE, Stand_action, action)
         return catch_none_action
     else:
         return tree
@@ -110,15 +119,9 @@ def leaf_fn_dp(atomics_bank, func_name, args, kind):
     if key not in atomics_bank:
         func = ATOMICS[func_name] if len(args) == 0 else ATOMICS[func_name](*args)
         if kind == "action":
-            def tick(obs, env_info, agent_info, rng):
-                info = btc2sim.classes.Info(env=env_info, agent=agent_info)
-                return func(obs, info, rng)
-            atomics_bank[key] = tick 
+            atomics_bank[key] = func
         else:
-            def tick(obs, env_info, agent_info, rng):
-                info = btc2sim.classes.Info(env=env_info, agent=agent_info)
-                return func(obs, info, rng)
-            atomics_bank[key] = lambda *args: (tick(*args), NONE)
+            atomics_bank[key] = lambda *args: (func(*args), None_action)
     return atomics_bank[key]
 
 
@@ -135,7 +138,9 @@ def seed_fn_dp(atomics_bank, seed: dict, final=False):
     if final:
         def catch_none_action(*args):
             status, action = tree(*args)
-            return  status, jnp.where(action == NONE, STAND, action)
+            return  status, Action.conditional_action(action.kind == NONE, Stand_action, action)
         return catch_none_action
     else:
         return tree
+
+# %%
