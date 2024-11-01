@@ -58,7 +58,7 @@ def tree_fn(children, kind):
 
     def body_fn(args):
         child_status, child_action = jax.lax.switch(
-            args.child, children, *(args.envs, args.scenario, args.state, args.rng, args.agent_id)
+            args.child, children, *(args.env, args.scenario, args.state, args.rng, args.agent_id)
         )  # make info
         args = Args(
             status=child_status,
@@ -73,7 +73,6 @@ def tree_fn(children, kind):
         return args
 
     def tick(env, scenario, state, rng, agent_id):  # idx is to get info from batch dict
-        info = btc2sim.classes.Info(env=env_info, agent=agent_info)
         args = Args(status=start_status, action=None_action, child=0, env=env, scenario=scenario, state=state, rng=rng, agent_id=agent_id)
         args = jax.lax.while_loop(
             cond_fn, body_fn, args
