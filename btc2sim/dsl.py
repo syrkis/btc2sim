@@ -47,20 +47,21 @@ atomic :
     | follow_map
     | in_sight
     | in_reach
-    | in_region
     | is_dying
     | is_armed
     | is_flock
     | is_type 
     | has_obstacle
     | is_in_forest
+    | success_action
+    | failure_action
+    
 
 move      : "move" (direction | sense qualifier (foe | friend) (unit ("or" unit)* |any)?)
 attack    : "attack" qualifier (unit ("or" unit)* |any)?
 stand     : "stand"
 in_sight  : "in_sight" (foe | friend) (unit ("or" unit)* |any)?
 in_reach  : "in_reach" (foe | friend) (unit ("or" unit)* |any)?
-in_region : "in_region" direction direction?
 is_dying  : "is_dying" (self | foe | friend) hp_level
 is_armed  : "is_armed" (self | foe | friend)
 is_flock  : "is_flock" (foe | friend) direction
@@ -68,6 +69,8 @@ is_type   : "is_type" negation unit
 has_obstacle : "has_obstacle" direction
 follow_map : "follow_map" sense
 is_in_forest : "is_in_forest" 
+success_action : "success_action" 
+failure_action: "failure_action"
 
 sense     : /toward|away_from/
 direction : /north|east|south|west|center/
