@@ -116,6 +116,29 @@ def move(direction, qualifier, target, *units):  # TODO the units types
     return atomic_fn
 
 
+# ## Follow map
+
+def follow_map(sense):
+    assert sense in ["toward", "away_from"]
+    toward = sense == "toward"
+    n_direction = 8  # number of direction arround the unit (2pi/n_direction)
+    n_step_size = 3  # number of steps in the direction up to the unit's velocity
+    def aux(env, scenario, state, rng, agent_id):  
+        candidates = jnp.array([[0,0]] + [ [step_size/n_step_size*jnp.cos(2*jnp.pi*theta/n_direction), step_size/n_step_size*jnp.sin(2*jnp.pi*theta/n_direction)] for theta in jnp.arange(n_direction) for step_size in jnp.arange(1, n_step_size+1)])
+        candidates *= env.unit_type_velocities[scenario.unit_type[agent_id]]
+        candidates_idx = jnp.array(state.unit_positions[agent_id] + candidates, dtype=jnp.uint32)
+        candidates_idx = jnp.clip(candidates_idx, 0, env.size-1)
+        distances = scenario.distance_map[scenario.unit_target_position_id[agent_id]][candidates_idx[:,0], candidates_idx[:,1]]
+        distances += random.uniform(rng, distances.shape, minval=0.0, maxval=0.5)  # to resolve tighs and give a more organic vibe 
+        in_sight = vmap(has_line_of_sight, in_axes=(None, 0, None, None))(state.unit_positions[agent_id], state.unit_positions[agent_id] + candidates, env, scenario)
+        distances = jnp.where(in_sight, distances, env.size**2)  # in sight positions
+        return SUCCESS, Action(kind=MOVE, value=candidates[jnp.where(toward, jnp.argmin(distances), jnp.argmax(distances))])
+    return aux 
+
+
+
+# ## Debug actions
+
 def success_action(env, scenario, state, rng, agent_id):
     unit_type = scenario.unit_type[agent_id]
     velocity = env.unit_type_velocities[unit_type]
