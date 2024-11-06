@@ -79,7 +79,7 @@ friend    : /friend/
 qualifier : /strongest|weakest|closest|furthest/
 hp_level  : /low|middle|high/
 self      : /self/
-unit      : /soldier|sniper|swat|turret|drone|civilian/
+unit      : /knight|archer|cavalry|balista|dragon|civilian/
 any       : /any/
 negation  : /a|not_a/
 

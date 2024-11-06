@@ -12,13 +12,13 @@ from jax import vmap
 
 # ## Constants
 
-unit_types = ["any", "soldier", "sniper", "swat", "turret", "drone", "civilian"]
+unit_types = ["any", "knight", "archer", "cavalry", "balista", "dragon", "civilian"]
 target_types = {
-    "soldier": 0,
-    "sniper": 1,
-    "swat": 2,
-    "turret": 3,
-    "drone": 4,
+    "knight": 0,
+    "archer": 1,
+    "cavalry": 2,
+    "balista": 3,
+    "dragon": 4,
     "civilian": 5,
     "any": None,
 }
@@ -32,7 +32,7 @@ SUCCESS, FAILURE = Status.SUCCESS, Status.FAILURE
 #     | move  # DONE
 #     | attack
 #     | stand  # DONE 
-#     | follow_map
+#     | follow_map # DONE 
 #     | in_sight  # DONE 
 #     | in_reach  # DONE 
 #     | is_dying
