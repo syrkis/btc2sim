@@ -29,18 +29,17 @@ SUCCESS, FAILURE = Status.SUCCESS, Status.FAILURE
 
 # + active=""
 # atomic :
-#     | move  # DONE (need health)
-#     | attack # DONE (need health)
+#     | move  # DONE 
+#     | attack # DONE
 #     | stand  # DONE 
 #     | follow_map # DONE 
 #     | in_sight  # DONE 
 #     | in_reach  # DONE 
 #     | is_dying
-#     | is_armed
+#     | is_armed # need to test
 #     | is_flock
-#     | is_type 
-#     | has_obstacle
-#     | is_in_forest
+#     | is_type # DONE 
+#     | is_in_forest # DONE 
 # -
 
 # ## auxiliary functions
@@ -87,7 +86,9 @@ def attack(qualifier, *units):  # TODO: attack closest if no target
 
     def aux(env, scenario, state, rng, agent_id):
         dist_matrix = in_reach_units(env, scenario, state, rng, agent_id, True, targeted_types, rejected_units_value)
-        target_id = jnp.where(use_min, jnp.argmin(dist_matrix), jnp.argmax(dist_matrix))
+        health = jnp.where(dist_matrix != rejected_units_value, state.unit_health, rejected_units_value)
+        values = jnp.where(use_health, health, dist_matrix)
+        target_id = jnp.where(use_min, jnp.argmin(values), jnp.argmax(values))
         flag = jnp.where(dist_matrix[target_id] != rejected_units_value, SUCCESS, FAILURE)
         flag = jnp.where(state.unit_cooldowns[agent_id] <= 0, flag, FAILURE)  # only attack if not in cooldown 
         return flag, Action(kind=jnp.where(flag == SUCCESS, ATTACK, NONE), value=jnp.array([target_id, 0], dtype=jnp.float32))  # the second paramter is not used at the moment
@@ -104,6 +105,7 @@ def move(direction, qualifier, target, *units):  # TODO the units types
     use_health = qualifier in ["strongest", "weakest"]
     use_min = qualifier in ["closest", "weakest"]
     rejected_units_value = jnp.inf if use_min else -jnp.inf
+    
     if len(units) == 0 or units[0] == "any":
         targeted_types = [1] * 6
     else:
@@ -113,13 +115,15 @@ def move(direction, qualifier, target, *units):  # TODO the units types
             for unit in units:
                 targeted_types[target_types[unit]] = 1
     targeted_types = jnp.array(targeted_types)
-
+    
     target_foe = target == "foe"
     move_toward = direction == "toward"
 
     def atomic_fn(env, scenario, state, rng, agent_id):
         dist_matrix = in_sight_units(env, scenario, state, rng, agent_id, target_foe, targeted_types, rejected_units_value)
-        target_id = jnp.where(use_min, jnp.argmin(dist_matrix), jnp.argmax(dist_matrix))
+        health = jnp.where(dist_matrix != rejected_units_value, state.unit_health, rejected_units_value)
+        values = jnp.where(use_health, health, dist_matrix)
+        target_id = jnp.where(use_min, jnp.argmin(values), jnp.argmax(values))
         flag = jnp.where(dist_matrix[target_id] != rejected_units_value, SUCCESS, FAILURE)
         delta = state.unit_positions[target_id] - state.unit_positions[agent_id]
         delta = jnp.where(move_toward, delta, -delta)
@@ -242,3 +246,58 @@ def in_reach(target, *units):  # is unit x in direction y?
         return flag
 
     return in_reach_fn
+
+
+# -
+
+# ## is type
+
+# ## is type
+def is_type(negation, unit):
+    assert unit in unit_types
+    assert negation in ["a", "not_a"]
+    target_type = target_types[unit]
+    true_condition = SUCCESS if negation == "a" else FAILURE
+    false_condition = FAILURE if negation == "a" else SUCCESS
+
+    def aux(env, scenario, state, rng, agent_id):
+        return jnp.where(scenario.unit_type[agent_id] == target_type, true_condition, false_condition)
+
+    return aux
+
+
+# ## is in forest
+
+def is_in_forest(env, scenario, state, rng, agent_id):
+    pos = state.unit_positions[agent_id].astype(jnp.uint32)
+    return jnp.where(scenario.terrain.forest[pos[0], pos[1]], SUCCESS, FAILURE)
+
+
+# ## is armed
+
+# ## is armed
+def is_armed(agent, *units):
+    on_self = agent == "self"
+    target_foe = agent == "foe"  # used only if not on_self
+    rejected_units_value = jnp.inf
+    if len(units) == 0 or units[0] == "any":
+        targeted_types = [1] * 6
+    else:
+        targeted_types = [0] * 6
+        for unit in units:
+            assert unit in unit_types
+            for unit in units:
+                targeted_types[target_types[unit]] = 1
+    if on_self:
+        def aux(env, scenario, state, rng, agent_id):
+            return jnp.where(state.unit_cooldowns[agent_id] <= 0, SUCCESS, FAILURE)
+        return aux 
+    else:
+        def is_armed_fn(env, scenario, state, rng, agent_id):
+            dist_matrix = in_sight_units(env, scenario, state, rng, agent_id, target_foe, targeted_types, rejected_units_value)
+            cooldown = jnp.where(dist_matrix != rejected_units_value, state.unit_cooldowns, 1)
+            return jnp.where(jnp.max(other_cooldown) <= 0, SUCCESS, FAILURE)
+    
+        return is_armed_fn
+
+# ## is dying
