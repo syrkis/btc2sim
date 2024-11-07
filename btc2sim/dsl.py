@@ -76,7 +76,7 @@ sense     : /toward|away_from/
 direction : /north|east|south|west|center/
 foe       : /foe/
 friend    : /friend/
-qualifier : /strongest|weakest|closest|furthest/
+qualifier : /strongest|weakest|closest|farthest/
 hp_level  : /low|middle|high/
 self      : /self/
 unit      : /knight|archer|cavalry|balista|dragon|civilian/
