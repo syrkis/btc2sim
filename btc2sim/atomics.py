@@ -30,20 +30,21 @@ SUCCESS, FAILURE = Status.SUCCESS, Status.FAILURE
 # + active=""
 # atomic :
 #     | move  # DONE 
-#     | attack # DONE
+#     | attack  # DONE
 #     | stand  # DONE 
 #     | follow_map # DONE 
 #     | in_sight  # DONE 
 #     | in_reach  # DONE 
-#     | is_dying
-#     | is_armed # need to test
+#     | is_dying # DONE
+#     | is_armed  # DONE
 #     | is_flock
-#     | is_type # DONE 
-#     | is_in_forest # DONE 
+#     | is_type  # DONE 
+#     | is_in_forest  # DONE 
 # -
 
 # ## auxiliary functions
 
+# +
 def has_line_of_sight(source, target, env, scenario):  
     # suppose that the target position is in sight_range of source, otherwise the line of sight might miss some cells
     obstacles = (scenario.terrain.building + scenario.terrain.water)
@@ -52,12 +53,13 @@ def has_line_of_sight(source, target, env, scenario):
     in_sight = obstacles[cells[0], cells[1]].sum() == 0
     return in_sight
 
-
 def compute_distance(agent_id, state, rejected_units_value=jnp.inf):
     dist_matrix = jnp.linalg.norm(state.unit_positions[agent_id]-state.unit_positions, axis=-1)
     dist_matrix = dist_matrix.at[agent_id].set(rejected_units_value)
     return dist_matrix
 
+
+# -
 
 # # Actions
 
@@ -87,7 +89,7 @@ def attack(qualifier, *units):  # TODO: attack closest if no target
     def aux(env, scenario, state, rng, agent_id):
         dist_matrix = in_reach_units(env, scenario, state, rng, agent_id, True, targeted_types, rejected_units_value)
         health = jnp.where(dist_matrix != rejected_units_value, state.unit_health, rejected_units_value)
-        values = jnp.where(use_health, health, dist_matrix)
+        values = jnp.where(use_health, health+random.uniform(rng, (env.num_agents,))*0.5, dist_matrix)  # the rng allow to solve tighs where they all focus on the same unit 
         target_id = jnp.where(use_min, jnp.argmin(values), jnp.argmax(values))
         flag = jnp.where(dist_matrix[target_id] != rejected_units_value, SUCCESS, FAILURE)
         flag = jnp.where(state.unit_cooldowns[agent_id] <= 0, flag, FAILURE)  # only attack if not in cooldown 
@@ -288,6 +290,7 @@ def is_armed(agent, *units):
             assert unit in unit_types
             for unit in units:
                 targeted_types[target_types[unit]] = 1
+    targeted_types = jnp.array(targeted_types)
     if on_self:
         def aux(env, scenario, state, rng, agent_id):
             return jnp.where(state.unit_cooldowns[agent_id] <= 0, SUCCESS, FAILURE)
@@ -295,9 +298,39 @@ def is_armed(agent, *units):
     else:
         def is_armed_fn(env, scenario, state, rng, agent_id):
             dist_matrix = in_sight_units(env, scenario, state, rng, agent_id, target_foe, targeted_types, rejected_units_value)
-            cooldown = jnp.where(dist_matrix != rejected_units_value, state.unit_cooldowns, 1)
-            return jnp.where(jnp.max(other_cooldown) <= 0, SUCCESS, FAILURE)
+            cooldown = jnp.where(dist_matrix != rejected_units_value, state.unit_cooldowns, 0)
+            return jnp.where(jnp.logical_and(jnp.any(dist_matrix < rejected_units_value), jnp.max(cooldown) <= 0), SUCCESS, FAILURE)
     
         return is_armed_fn
 
+
 # ## is dying
+
+# ## Is dying
+def is_dying(agent, hp_level, *units):
+    assert hp_level in ["low", "middle", "high"]
+    on_self = agent == "self"
+    target_foe = agent == "foe"  # used only if not on_self
+    threshold = {"low": 0.25, "middle": 0.5, "high": 0.75}[hp_level]
+    if len(units) == 0 or units[0] == "any":
+        targeted_types = [1] * 6
+    else:
+        targeted_types = [0] * 6
+        for unit in units:
+            assert unit in unit_types
+            for unit in units:
+                targeted_types[target_types[unit]] = 1
+    targeted_types = jnp.array(targeted_types)
+    rejected_units_value = jnp.inf
+    if on_self:
+        def aux(env, scenario, state, rng, agent_id):
+            return jnp.where(state.unit_health[agent_id]/env.unit_type_health[scenario.unit_type[agent_id]] <= threshold, SUCCESS, FAILURE)
+        return aux 
+    else:
+        def aux(env, scenario, state, rng, agent_id):
+            dist_matrix = in_sight_units(env, scenario, state, rng, agent_id, target_foe, targeted_types, rejected_units_value)
+            health = jnp.where(dist_matrix != rejected_units_value, state.unit_health/env.unit_type_health[scenario.unit_type], 1)
+            return jnp.where(jnp.logical_and(jnp.any(dist_matrix < rejected_units_value), jnp.min(health) <= threshold), SUCCESS, FAILURE)
+        return aux
+
+    return aux
