@@ -12,9 +12,9 @@ from jax import vmap
 
 # ## Constants
 
-unit_types = ["any", "knight", "archer", "cavalry", "balista", "dragon", "civilian"]
+unit_types = ["any", "spearmen", "archer", "cavalry", "balista", "dragon", "civilian"]
 target_types = {
-    "knight": 0,
+    "spearmen": 0,
     "archer": 1,
     "cavalry": 2,
     "balista": 3,
@@ -89,7 +89,7 @@ def attack(qualifier, *units):  # TODO: attack closest if no target
     def aux(env, scenario, state, rng, agent_id):
         dist_matrix = in_reach_units(env, scenario, state, rng, agent_id, True, targeted_types, rejected_units_value)
         health = jnp.where(dist_matrix != rejected_units_value, state.unit_health, rejected_units_value)
-        values = jnp.where(use_health, health+random.uniform(rng, (env.num_agents,))*0.5, dist_matrix)  # the rng allow to solve tighs where they all focus on the same unit 
+        values = jnp.where(use_health, health+random.uniform(rng, health.shape)*0.5, dist_matrix)  # the rng allow to solve tighs where they all focus on the same unit 
         target_id = jnp.where(use_min, jnp.argmin(values), jnp.argmax(values))
         flag = jnp.where(dist_matrix[target_id] != rejected_units_value, SUCCESS, FAILURE)
         flag = jnp.where(state.unit_cooldowns[agent_id] <= 0, flag, FAILURE)  # only attack if not in cooldown 
@@ -130,7 +130,7 @@ def move(direction, qualifier, target, *units):  # TODO the units types
         delta = state.unit_positions[target_id] - state.unit_positions[agent_id]
         delta = jnp.where(move_toward, delta, -delta)
         distance = jnp.linalg.norm(delta)
-        velocity = env.unit_type_velocities[scenario.unit_type[agent_id]]
+        velocity = env.unit_type_velocities[scenario.unit_types[agent_id]]
         return flag, Action(kind=jnp.where(flag == SUCCESS, MOVE, NONE), value=jnp.where(distance<=velocity, delta, velocity*delta/distance))
         
     return atomic_fn
@@ -145,7 +145,7 @@ def follow_map(sense):
     n_step_size = 4  # number of steps in the direction up to the unit's velocity (should be at least equal to the max velocity so that it check every cells 
     def aux(env, scenario, state, rng, agent_id):  
         candidates = jnp.array([[0,0]] + [ [step_size/n_step_size*jnp.cos(2*jnp.pi*theta/n_direction), step_size/n_step_size*jnp.sin(2*jnp.pi*theta/n_direction)] for theta in jnp.arange(n_direction) for step_size in jnp.arange(1, n_step_size+1)])
-        candidates *= env.unit_type_velocities[scenario.unit_type[agent_id]]
+        candidates *= env.unit_type_velocities[scenario.unit_types[agent_id]]
         candidates_idx = jnp.array(state.unit_positions[agent_id] + candidates, dtype=jnp.uint32)
         candidates_idx = jnp.clip(candidates_idx, 0, env.size-1)
         distances = scenario.distance_map[scenario.unit_target_position_id[agent_id]][candidates_idx[:,0], candidates_idx[:,1]]
@@ -159,14 +159,14 @@ def follow_map(sense):
 # ## Debug actions
 
 def success_action(env, scenario, state, rng, agent_id):
-    unit_type = scenario.unit_type[agent_id]
-    velocity = env.unit_type_velocities[unit_type]
+    unit_types = scenario.unit_types[agent_id]
+    velocity = env.unit_type_velocities[unit_types]
     return SUCCESS, Action(kind=MOVE, value=jnp.array([0., velocity]))
 
 
 def failure_action(env, scenario, state, rng, agent_id):
-    unit_type = scenario.unit_type[agent_id]
-    velocity = env.unit_type_velocities[unit_type]
+    unit_types = scenario.unit_types[agent_id]
+    velocity = env.unit_type_velocities[unit_types]
     return FAILURE, Action(kind=NONE, value=jnp.array([0., -velocity]))
 
 
@@ -176,13 +176,13 @@ def failure_action(env, scenario, state, rng, agent_id):
 
 # +
 def in_sight_units(env, scenario, state, rng, agent_id, target_foe, targeted_types, rejected_units_value):
-    unit_type = scenario.unit_type[agent_id]
+    unit_types = scenario.unit_types[agent_id]
     unit_team = scenario.unit_team[agent_id]
     dist_matrix = compute_distance(agent_id, state, rejected_units_value)  # distance on the whole map
     concerned_units = jnp.where(target_foe, scenario.unit_team != unit_team, scenario.unit_team == unit_team)
     dist_matrix = jnp.where(concerned_units, dist_matrix, rejected_units_value)  # concerned team
-    dist_matrix = jnp.where(targeted_types[scenario.unit_type], dist_matrix, rejected_units_value)  # concerned type
-    dist_matrix = jnp.where(dist_matrix <= env.unit_type_sight_ranges[unit_type], dist_matrix, rejected_units_value)  # in sight distance
+    dist_matrix = jnp.where(targeted_types[scenario.unit_types], dist_matrix, rejected_units_value)  # concerned type
+    dist_matrix = jnp.where(dist_matrix <= env.unit_type_sight_ranges[unit_types], dist_matrix, rejected_units_value)  # in sight distance
     dist_matrix = jnp.where(state.unit_health > 0, dist_matrix, rejected_units_value)  # alive units
     in_sight = vmap(has_line_of_sight, in_axes=(None, 0, None, None))(state.unit_positions[agent_id], state.unit_positions, env, scenario)
     dist_matrix = jnp.where(in_sight, dist_matrix, rejected_units_value)  # in line of sight (no obstacle)
@@ -216,13 +216,13 @@ def in_sight(target, *units):  # is unit x in direction y?
 
 # +
 def in_reach_units(env, scenario, state, rng, agent_id, target_foe, targeted_types, rejected_units_value):
-    unit_type = scenario.unit_type[agent_id]
+    unit_types = scenario.unit_types[agent_id]
     unit_team = scenario.unit_team[agent_id]
     dist_matrix = compute_distance(agent_id, state, rejected_units_value)  # distance on the whole map
     concerned_units = jnp.where(target_foe, scenario.unit_team != unit_team, scenario.unit_team == unit_team)
     dist_matrix = jnp.where(concerned_units, dist_matrix, rejected_units_value)  # concerned team
-    dist_matrix = jnp.where(targeted_types[scenario.unit_type], dist_matrix, rejected_units_value)  # concerned type
-    dist_matrix = jnp.where(dist_matrix <= env.unit_type_attack_ranges[unit_type], dist_matrix, rejected_units_value)  # in sight distance
+    dist_matrix = jnp.where(targeted_types[scenario.unit_types], dist_matrix, rejected_units_value)  # concerned type
+    dist_matrix = jnp.where(dist_matrix <= env.unit_type_attack_ranges[unit_types], dist_matrix, rejected_units_value)  # in sight distance
     dist_matrix = jnp.where(state.unit_health > 0, dist_matrix, rejected_units_value)  # alive units
     in_sight = vmap(has_line_of_sight, in_axes=(None, 0, None, None))(state.unit_positions[agent_id], state.unit_positions, env, scenario)
     dist_matrix = jnp.where(in_sight, dist_matrix, rejected_units_value)  # in line of sight (no obstacle)
@@ -263,7 +263,7 @@ def is_type(negation, unit):
     false_condition = FAILURE if negation == "a" else SUCCESS
 
     def aux(env, scenario, state, rng, agent_id):
-        return jnp.where(scenario.unit_type[agent_id] == target_type, true_condition, false_condition)
+        return jnp.where(scenario.unit_types[agent_id] == target_type, true_condition, false_condition)
 
     return aux
 
@@ -324,12 +324,12 @@ def is_dying(agent, hp_level, *units):
     rejected_units_value = jnp.inf
     if on_self:
         def aux(env, scenario, state, rng, agent_id):
-            return jnp.where(state.unit_health[agent_id]/env.unit_type_health[scenario.unit_type[agent_id]] <= threshold, SUCCESS, FAILURE)
+            return jnp.where(state.unit_health[agent_id]/env.unit_type_health[scenario.unit_types[agent_id]] <= threshold, SUCCESS, FAILURE)
         return aux 
     else:
         def aux(env, scenario, state, rng, agent_id):
             dist_matrix = in_sight_units(env, scenario, state, rng, agent_id, target_foe, targeted_types, rejected_units_value)
-            health = jnp.where(dist_matrix != rejected_units_value, state.unit_health/env.unit_type_health[scenario.unit_type], 1)
+            health = jnp.where(dist_matrix != rejected_units_value, state.unit_health/env.unit_type_health[scenario.unit_types], 1)
             return jnp.where(jnp.logical_and(jnp.any(dist_matrix < rejected_units_value), jnp.min(health) <= threshold), SUCCESS, FAILURE)
         return aux
 
