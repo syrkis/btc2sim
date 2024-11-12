@@ -19,6 +19,8 @@ qualifiers = [
     "Unit",
     "Negation",
     "Any",
+    "Source",
+    "Time",
 ]
 
 # %% Constants
@@ -60,7 +62,7 @@ move      : "move" (direction | sense qualifier (foe | friend) (unit ("or" unit)
 attack    : "attack" qualifier (unit ("or" unit)* |any)?
 stand     : "stand"
 in_sight  : "in_sight" (foe | friend) (unit ("or" unit)* |any)?
-in_reach  : "in_reach" (foe | friend) (unit ("or" unit)* |any)?
+in_reach  : "in_reach" (foe | friend) source time (unit ("or" unit)* |any)?
 is_dying  : "is_dying" (self | foe | friend) hp_level
 is_armed  : "is_armed" (self | foe | friend)
 is_flock  : "is_flock" (foe | friend) direction
@@ -74,13 +76,14 @@ sense     : /toward|away_from/
 direction : /north|east|south|west|center/
 foe       : /foe/
 friend    : /friend/
-qualifier : /strongest|weakest|closest|farthest/
+qualifier : /strongest|weakest|closest|farthest|random/
 hp_level  : /low|middle|high/
 self      : /self/
 unit      : /spearmen|archer|cavalry|balista|dragon|civilian/
 any       : /any/
 negation  : /a|not_a/
-
+source    : /them_from_me|me_from_them/
+time      : /now|low|middle|high/
 """
 
 grammar = Lark(grammar_txt, start="start")
