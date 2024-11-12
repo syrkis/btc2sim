@@ -45,9 +45,8 @@ SUCCESS, FAILURE = Status.SUCCESS, Status.FAILURE
 # ## auxiliary functions
 
 # +
-def has_line_of_sight(source, target, env, scenario):  
+def has_line_of_sight(obstacles, source, target, env):  
     # suppose that the target position is in sight_range of source, otherwise the line of sight might miss some cells
-    obstacles = (scenario.terrain.building + scenario.terrain.water)
     current_line_of_sight = source[:, jnp.newaxis] * (1-env.line_of_sight) + env.line_of_sight * target[:, jnp.newaxis]
     cells = jnp.array(current_line_of_sight, dtype=jnp.int32)
     in_sight = obstacles[cells[0], cells[1]].sum() == 0
@@ -101,7 +100,7 @@ def attack(qualifier, *units):  # TODO: attack closest if no target
             target_id = jnp.argmin(dist_matrix) if use_min else jnp.argmax(dist_matrix)
         flag = jnp.where(dist_matrix[target_id] != rejected_units_value, SUCCESS, FAILURE)
         flag = jnp.where(state.unit_cooldowns[agent_id] <= 0, flag, FAILURE)  # only attack if not in cooldown 
-        return flag, Action(kind=jnp.where(flag == SUCCESS, ATTACK, NONE), value=jnp.array([target_id, 0], dtype=jnp.float32))  # the second paramter is not used at the moment
+        return flag, Action(kind=jnp.where(flag == SUCCESS, ATTACK, NONE), value=jnp.array([target_id, 0], dtype=jnp.float32))  # the second paramter of the value is not used at the moment
 
     return aux 
 
@@ -166,7 +165,8 @@ def follow_map(sense):
         candidates_idx = jnp.clip(candidates_idx, 0, env.size-1)
         distances = scenario.distance_map[scenario.unit_target_position_id[agent_id]][candidates_idx[:,0], candidates_idx[:,1]]
         distances += random.uniform(rng, distances.shape, minval=0.0, maxval=0.5)  # to resolve tighs and give a more organic vibe 
-        in_sight = vmap(has_line_of_sight, in_axes=(None, 0, None, None))(state.unit_positions[agent_id], state.unit_positions[agent_id] + candidates, env, scenario)
+        obstacles = (scenario.terrain.building + scenario.terrain.water)  # cannot walk through building and water
+        in_sight = vmap(has_line_of_sight, in_axes=(None, None, 0, None))(obstacles, state.unit_positions[agent_id], state.unit_positions[agent_id] + candidates, env)
         distances = jnp.where(in_sight, distances, env.size**2)  # in sight positions
         return SUCCESS, Action(kind=MOVE, value=candidates[jnp.where(toward, jnp.argmin(distances), jnp.argmax(distances))])
     return aux 
@@ -200,7 +200,8 @@ def in_sight_units(env, scenario, state, rng, agent_id, target_foe, targeted_typ
     dist_matrix = jnp.where(targeted_types[scenario.unit_types], dist_matrix, rejected_units_value)  # concerned type
     dist_matrix = jnp.where(dist_matrix <= env.unit_type_sight_ranges[unit_types], dist_matrix, rejected_units_value)  # in sight distance
     dist_matrix = jnp.where(state.unit_health > 0, dist_matrix, rejected_units_value)  # alive units
-    in_sight = vmap(has_line_of_sight, in_axes=(None, 0, None, None))(state.unit_positions[agent_id], state.unit_positions, env, scenario)
+    obstacles = (scenario.terrain.building + scenario.terrain.forest)  # cannot see through building and forest
+    in_sight = vmap(has_line_of_sight, in_axes=(None, None, 0, None))(obstacles, state.unit_positions[agent_id], state.unit_positions, env)
     dist_matrix = jnp.where(in_sight, dist_matrix, rejected_units_value)  # in line of sight (no obstacle)
     return dist_matrix
 
@@ -244,7 +245,8 @@ def in_reach_units_factory(source, time_delay=0):
         else:
             dist_matrix = jnp.where(dist_matrix <= (env.unit_type_attack_ranges[scenario.unit_types] + env.unit_type_velocities[scenario.unit_types]*time_delay), dist_matrix, rejected_units_value)  # in attack range
         dist_matrix = jnp.where(state.unit_health > 0, dist_matrix, rejected_units_value)  # alive units
-        in_sight = vmap(has_line_of_sight, in_axes=(None, 0, None, None))(state.unit_positions[agent_id], state.unit_positions, env, scenario)
+        obstacles = (scenario.terrain.building + scenario.terrain.forest)  # cannot see through buildings and forest
+        in_sight = vmap(has_line_of_sight, in_axes=(None, None, 0, None))(obstacles, state.unit_positions[agent_id], state.unit_positions, env)
         dist_matrix = jnp.where(in_sight, dist_matrix, rejected_units_value)  # in line of sight (no obstacle)
         return dist_matrix
     return in_reach_units
