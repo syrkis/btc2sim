@@ -164,11 +164,13 @@ def follow_map(sense):
         candidates_idx = jnp.array(state.unit_positions[agent_id] + candidates, dtype=jnp.uint32)
         candidates_idx = jnp.clip(candidates_idx, 0, env.size-1)
         distances = scenario.distance_map[scenario.unit_target_position_id[agent_id]][candidates_idx[:,0], candidates_idx[:,1]]
-        distances += random.uniform(rng, distances.shape, minval=0.0, maxval=0.5)  # to resolve tighs and give a more organic vibe 
+        distances += random.uniform(rng, distances.shape, minval=0.0, maxval=scenario.movement_randomness)  # to resolve tighs and give a more organic vibe 
         obstacles = (scenario.terrain.building + scenario.terrain.water)  # cannot walk through building and water
         in_sight = vmap(has_line_of_sight, in_axes=(None, None, 0, None))(obstacles, state.unit_positions[agent_id], state.unit_positions[agent_id] + candidates, env)
         distances = jnp.where(in_sight, distances, env.size**2)  # in sight positions
-        return SUCCESS, Action(kind=MOVE, value=candidates[jnp.where(toward, jnp.argmin(distances), jnp.argmax(distances))])
+        if not toward:
+            distances = jnp.where(distances >= env.size**2, -1, distances)
+        return SUCCESS, Action(kind=MOVE, value=candidates[jnp.argmin(distances) if toward else jnp.argmax(distances)])
     return aux 
 
 
@@ -220,7 +222,7 @@ def in_sight(target, *units):  # is unit x in direction y?
     rejected_units_value = jnp.inf
     
     def in_sight_fn(env, scenario, state, rng, agent_id):
-        dist_matrix = in_sight_units(env, scenario, state, rng, agent_id, target_foe, targeted_types, rejected_units_value)
+        dist_matrix = in_sight_units(obstacles, env, scenario, state, rng, agent_id, target_foe, targeted_types, rejected_units_value)
         flag = jnp.where(jnp.any(dist_matrix < rejected_units_value), SUCCESS, FAILURE)
         return flag
 
