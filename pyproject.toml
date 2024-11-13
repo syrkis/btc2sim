@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "btc2sim"
-version = "0.0.4"
+version = "0.0.6"
 description = ""
 authors = ["Noah Syrkis <noah@syrkis.com>"]
 readme = "README.md"
@@ -13,8 +13,9 @@ jupyterlab = "^4.2.4"
 notebook = "^7.2.1"
 ipykernel = "^6.29.5"
 einops = "^0.8.0"
-parabellum = "0.3.3"
 tqdm = "^4.66.5"
+jax = "^0.4.35"
+chex = "^0.1.87"
 
 
 [build-system]

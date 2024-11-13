@@ -58,15 +58,18 @@ def self_type_fn(obs, info):
 # +
 def self_obs_fn(obs, info):
     return obs[-10:]
-    
+
+
 def other_obs_fn(obs, info):
     return obs[:-10].reshape(-1, 13)
+
 
 def process_obs(obs, info):
     return self_obs_fn(obs, info), other_obs_fn(obs, info)
 
 
 # -
+
 
 @partial(jax.vmap, in_axes=(None, None, 0, 0))
 def inter_fn(pos, new_pos, obs, obs_end):
@@ -79,9 +82,9 @@ def inter_fn(pos, new_pos, obs, obs_end):
 
 # Attacks
 def attack(qualifier, *units):  # TODO: attack closest if no target
-    assert qualifier in ["closest", "furthest", "strongest", "weakest"]    
+    assert qualifier in ["closest", "furthest", "strongest", "weakest"]
     use_health = qualifier in ["strongest", "weakest"]
-    use_min = qualifier in ["closest", "weakest"]   
+    use_min = qualifier in ["closest", "weakest"]
     if len(units) == 0 or units[0] == "any":
         targeted_types = [1] * 6
     else:
@@ -91,7 +94,7 @@ def attack(qualifier, *units):  # TODO: attack closest if no target
             for unit in units:
                 targeted_types[target_types[unit]] = 1
     targeted_types = jnp.array(targeted_types)
-    
+
     def attack_fn(obs, info, rng):
         fill = jnp.where(use_min, jnp.inf, -jnp.inf)
         self_obs, others_obs = process_obs(obs, info)
@@ -105,7 +108,7 @@ def attack(qualifier, *units):  # TODO: attack closest if no target
         is_enemies = jnp.arange(alive.size) >= (alive.size - n)
         alive = jnp.logical_and(alive, is_enemies)
         is_unit_types = others_obs.T[-6:].T.dot(targeted_types)
-        alive = jnp.logical_and(alive, is_unit_types) # was
+        alive = jnp.logical_and(alive, is_unit_types)  # was
         dist = jnp.linalg.norm(others_obs.T[1:3], axis=0)
         in_reach = jnp.logical_and(
             info.agent.attack_range / info.agent.sight_range > dist, alive
@@ -127,7 +130,6 @@ def move(direction, qualifier=None, target=None, *units):
     if direction in ["toward", "away_from"]:  # target = another agent
         assert target in ["foe", "friend"]
         assert qualifier in ["closest", "furthest", "strongest", "weakest"]
-
 
         use_health = qualifier in ["strongest", "weakest"]
         use_min = qualifier in ["closest", "weakest"]
@@ -174,14 +176,20 @@ def move(direction, qualifier=None, target=None, *units):
             action = jnp.where(SE, jnp.where(NE, 1, 2), jnp.where(NE, 0, 3))
             action = jnp.where(move_toward, action, (action + 2) % 4)
 
-            sub_action = jnp.where(N, jnp.where(E, jnp.where(action == 1, 0, 1), jnp.where(action == 3, 0, 3)), jnp.where(E, jnp.where(action == 1, 2, 1), jnp.where(action == 3, 2, 3)))
-            sub_action = jnp.where(move_toward, sub_action, (sub_action + 2) % 4)
-            
-            flag = jnp.where(alive.any(), SUCCESS, FAILURE)
-            
-            pos = self_obs[1:3] * jnp.array(
-                [info.env.map_width, info.env.map_height]
+            sub_action = jnp.where(
+                N,
+                jnp.where(
+                    E, jnp.where(action == 1, 0, 1), jnp.where(action == 3, 0, 3)
+                ),
+                jnp.where(
+                    E, jnp.where(action == 1, 2, 1), jnp.where(action == 3, 2, 3)
+                ),
             )
+            sub_action = jnp.where(move_toward, sub_action, (sub_action + 2) % 4)
+
+            flag = jnp.where(alive.any(), SUCCESS, FAILURE)
+
+            pos = self_obs[1:3] * jnp.array([info.env.map_width, info.env.map_height])
             vec_direction = jnp.array([[0, 1], [1, 0], [0, -1], [-1, 0]])[action]
             new_pos = (
                 pos
@@ -191,8 +199,10 @@ def move(direction, qualifier=None, target=None, *units):
                 * info.env.world_steps_per_env_step
             )
             clash = raster_crossing(pos, new_pos, info)
-            
-            action = jnp.where(clash, sub_action, action)  # test suboptimal action if there is collision with the environment
+
+            action = jnp.where(
+                clash, sub_action, action
+            )  # test suboptimal action if there is collision with the environment
 
             vec_direction = jnp.array([[0, 1], [1, 0], [0, -1], [-1, 0]])[action]
             new_pos = (
@@ -256,39 +266,116 @@ def move(direction, qualifier=None, target=None, *units):
 # + active=""
 # def follow_map(obs, info, rng):  # given an already computed gradient
 #     self_obs, _ = process_obs(obs, info)
-#     pos = jnp.clip(jnp.array(self_obs[1:3] * jnp.array([info.env.map_width, info.env.map_height]), dtype=jnp.int32), 0, jnp.array([info.env.map_width-1, info.env.map_height-1])) 
+#     pos = jnp.clip(jnp.array(self_obs[1:3] * jnp.array([info.env.map_width, info.env.map_height]), dtype=jnp.int32), 0, jnp.array([info.env.map_width-1, info.env.map_height-1]))
 #     return (SUCCESS, info.agent.direction_map[pos[0], pos[1]])
 # -
+
 
 def follow_map(sense):
     assert sense in ["toward", "away_from"]
     if sense == "toward":
+
         def aux(obs, info, rng):  # given the distances to the goal
             self_obs, _ = process_obs(obs, info)
-            pos = jnp.clip(jnp.array(self_obs[1:3] * jnp.array([info.env.map_width, info.env.map_height]), dtype=jnp.int32), 0, jnp.array([info.env.map_width-1, info.env.map_height-1])) 
+            pos = jnp.clip(
+                jnp.array(
+                    self_obs[1:3]
+                    * jnp.array([info.env.map_width, info.env.map_height]),
+                    dtype=jnp.int32,
+                ),
+                0,
+                jnp.array([info.env.map_width - 1, info.env.map_height - 1]),
+            )
             current_distance = info.agent.direction_map[pos[0], pos[1]]
-            north_distance = jnp.where(pos[1]+1<info.env.map_height, info.agent.direction_map[pos[0], pos[1]+1], jnp.inf)
-            south_distance = jnp.where(pos[1]-1>=0, info.agent.direction_map[pos[0], pos[1]-1], jnp.inf)
-            east_distance = jnp.where(pos[0]+1<info.env.map_width, info.agent.direction_map[pos[0]+1, pos[1]], jnp.inf)
-            west_distance = jnp.where(pos[0]-1>=0, info.agent.direction_map[pos[0]-1, pos[1]], jnp.inf)
-            distances = jnp.array([north_distance, east_distance, south_distance, west_distance, current_distance]) 
-            action = jnp.where(jnp.min(distances) == jnp.max(distances), 4, jnp.arange(5)[jnp.argmin(distances + random.uniform(rng, (5,), minval=0.0, maxval=0.5))])  # stand if the map is uniform 
+            north_distance = jnp.where(
+                pos[1] + 1 < info.env.map_height,
+                info.agent.direction_map[pos[0], pos[1] + 1],
+                jnp.inf,
+            )
+            south_distance = jnp.where(
+                pos[1] - 1 >= 0, info.agent.direction_map[pos[0], pos[1] - 1], jnp.inf
+            )
+            east_distance = jnp.where(
+                pos[0] + 1 < info.env.map_width,
+                info.agent.direction_map[pos[0] + 1, pos[1]],
+                jnp.inf,
+            )
+            west_distance = jnp.where(
+                pos[0] - 1 >= 0, info.agent.direction_map[pos[0] - 1, pos[1]], jnp.inf
+            )
+            distances = jnp.array(
+                [
+                    north_distance,
+                    east_distance,
+                    south_distance,
+                    west_distance,
+                    current_distance,
+                ]
+            )
+            action = jnp.where(
+                jnp.min(distances) == jnp.max(distances),
+                4,
+                jnp.arange(5)[
+                    jnp.argmin(
+                        distances + random.uniform(rng, (5,), minval=0.0, maxval=0.5)
+                    )
+                ],
+            )  # stand if the map is uniform
             flag = jnp.where(jnp.min(distances) == jnp.max(distances), FAILURE, SUCCESS)
             return (flag, action)  # actions [0,1,2,3,4] == [↑, →, ↓, ←, ∅]
-        return aux 
+
+        return aux
     else:  # away from
+
         def aux(obs, info, rng):  # given the distances to the goal
             self_obs, _ = process_obs(obs, info)
-            pos = jnp.clip(jnp.array(self_obs[1:3] * jnp.array([info.env.map_width, info.env.map_height]), dtype=jnp.int32), 0, jnp.array([info.env.map_width-1, info.env.map_height-1])) 
+            pos = jnp.clip(
+                jnp.array(
+                    self_obs[1:3]
+                    * jnp.array([info.env.map_width, info.env.map_height]),
+                    dtype=jnp.int32,
+                ),
+                0,
+                jnp.array([info.env.map_width - 1, info.env.map_height - 1]),
+            )
             current_distance = info.agent.direction_map[pos[0], pos[1]]
-            north_distance = jnp.where(pos[1]+1<info.env.map_height, info.agent.direction_map[pos[0], pos[1]+1], jnp.inf)
-            south_distance = jnp.where(pos[1]-1>=0, info.agent.direction_map[pos[0], pos[1]-1], jnp.inf)
-            east_distance = jnp.where(pos[0]+1<info.env.map_width, info.agent.direction_map[pos[0]+1, pos[1]], jnp.inf)
-            west_distance = jnp.where(pos[0]-1>=0, info.agent.direction_map[pos[0]-1, pos[1]], jnp.inf)
-            distances = jnp.array([north_distance, east_distance, south_distance, west_distance, current_distance]) 
-            action = jnp.where(jnp.min(distances) == jnp.max(distances), 4, jnp.arange(5)[jnp.argmax(distances + random.uniform(rng, (5,), minval=0.0, maxval=0.5))])  # stand if the map is uniform 
+            north_distance = jnp.where(
+                pos[1] + 1 < info.env.map_height,
+                info.agent.direction_map[pos[0], pos[1] + 1],
+                jnp.inf,
+            )
+            south_distance = jnp.where(
+                pos[1] - 1 >= 0, info.agent.direction_map[pos[0], pos[1] - 1], jnp.inf
+            )
+            east_distance = jnp.where(
+                pos[0] + 1 < info.env.map_width,
+                info.agent.direction_map[pos[0] + 1, pos[1]],
+                jnp.inf,
+            )
+            west_distance = jnp.where(
+                pos[0] - 1 >= 0, info.agent.direction_map[pos[0] - 1, pos[1]], jnp.inf
+            )
+            distances = jnp.array(
+                [
+                    north_distance,
+                    east_distance,
+                    south_distance,
+                    west_distance,
+                    current_distance,
+                ]
+            )
+            action = jnp.where(
+                jnp.min(distances) == jnp.max(distances),
+                4,
+                jnp.arange(5)[
+                    jnp.argmax(
+                        distances + random.uniform(rng, (5,), minval=0.0, maxval=0.5)
+                    )
+                ],
+            )  # stand if the map is uniform
             flag = jnp.where(jnp.min(distances) == jnp.max(distances), FAILURE, SUCCESS)
             return (flag, action)  # actions [0,1,2,3,4] == [↑, →, ↓, ←, ∅]
+
         return aux
 
 
@@ -326,7 +413,7 @@ def in_sight(target, *units):  # is unit x in direction y?
             for unit in units:
                 targeted_types[target_types[unit]] = 1
     targeted_types = jnp.array(targeted_types)
-    
+
     def in_sight_fn(obs, info, rng):
         n = jnp.where(
             info.agent.is_ally, info.env.num_enemies, info.env.num_allies
@@ -401,7 +488,7 @@ def is_armed(agent):
         )
         alive = jnp.logical_and(alive, target_team)
         other_cooldown = jnp.where(alive, others_obs.T[6], -jnp.inf)
-        other_check = jnp.where(jnp.max(other_cooldown) <= 0, SUCCESS, FAILURE)
+        other_check = jnp.where(jnp.max(other_cooldown) <= 0, SUCCESS, FAILURE)  # type: ignore
         self_check = jnp.where(self_obs[3] <= 0, SUCCESS, FAILURE)
         return jnp.where(on_self, self_check, other_check)
 
@@ -428,7 +515,7 @@ def is_dying(agent, hp_level):
         )
         alive = jnp.logical_and(alive, target_team)
         other_health = jnp.where(alive, others_obs.T[0], jnp.inf)
-        other_check = jnp.where(jnp.min(other_health) < threshold, SUCCESS, FAILURE)
+        other_check = jnp.where(jnp.min(other_health) < threshold, SUCCESS, FAILURE)  # type: ignore
         self_check = jnp.where(self_obs[0] < threshold, SUCCESS, FAILURE)
         return jnp.where(on_self, self_check, other_check)
 
@@ -499,8 +586,8 @@ def is_flock(team, direction):
                 jnp.arange(alive.size) < (alive.size - n),
             )
             alive = jnp.logical_and(alive, target_team)
-            x = jnp.mean(jnp.where(alive, others_obs.T[1], 0))
-            y = jnp.mean(jnp.where(alive, others_obs.T[2], 0))
+            x = jnp.mean(jnp.where(alive, others_obs.T[1], 0))  # type: ignore
+            y = jnp.mean(jnp.where(alive, others_obs.T[2], 0))  # type: ignore
             SE = x > y
             NE = x > -y
             status = jnp.where(
@@ -514,11 +601,11 @@ def is_flock(team, direction):
 # ## has_obstacle or out of bound
 def raster_crossing(pos, new_pos, info):
     mask = info.env.terrain.building + info.env.terrain.water
-    out_of_map = jnp.logical_or(jnp.min(new_pos) < 0,  jnp.max(new_pos) >= mask.shape[0])
+    out_of_map = jnp.logical_or(jnp.min(new_pos) < 0, jnp.max(new_pos) >= mask.shape[0])
     pos, new_pos = pos.astype(jnp.int32), new_pos.astype(jnp.int32)
     minimum = jnp.minimum(pos, new_pos)
     maximum = jnp.maximum(pos, new_pos)
-    mask = jnp.where(jnp.arange(mask.shape[0]) >= minimum[0], mask.T, 0).T
+    mask = jnp.where(jnp.arange(mask.shape[0]) >= minimum[0], mask.T, 0).T  # type: ignore
     mask = jnp.where(jnp.arange(mask.shape[0]) <= maximum[0], mask.T, 0).T
     mask = jnp.where(jnp.arange(mask.shape[1]) >= minimum[1], mask, 0)
     mask = jnp.where(jnp.arange(mask.shape[1]) <= maximum[1], mask, 0)

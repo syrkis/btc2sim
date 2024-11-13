@@ -6,17 +6,13 @@
 # %% imports
 import jax
 import jax.numpy as jnp
-from jax import jit, vmap, Array, tree_util
+from jax import Array
 from chex import dataclass
-import chex
-from jaxmarl import make
 
-import os
-from functools import partial
-from typing import Any, Callable, List, Tuple, Dict, Optional
+from typing import Any
 
 import btc2sim
-from btc2sim.classes import Status, NodeFunc as NF
+from btc2sim.classes import Status
 from btc2sim.utils import STAND, NONE
 import btc2sim.atomics as atomics
 
@@ -61,11 +57,14 @@ def tree_fn(children, kind):
 
     def tick(obs, env_info, agent_info, rng):  # idx is to get info from batch dict
         info = btc2sim.classes.Info(env=env_info, agent=agent_info)
-        args = Args(status=start_status, action=NONE, obs=obs, child=0, info=info, rng=rng)
+        args = Args(
+            status=start_status, action=NONE, obs=obs, child=0, info=info, rng=rng
+        )
         args = jax.lax.while_loop(
             cond_fn, body_fn, args
         )  # While we haven't found action action continue through children'
         return args.status, args.action
+
     return tick
 
 
@@ -73,10 +72,12 @@ def leaf_fn(func, kind):
     def tick(obs, env_info, agent_info, rng):
         info = btc2sim.classes.Info(env=env_info, agent=agent_info)
         return func(obs, info, rng)
+
     if kind == "action":
         return tick
     else:
         return lambda *args: (tick(*args), NONE)
+
 
 def seed_fn(seed: dict, final=True):
     # grows a tree from a seed
@@ -87,37 +88,44 @@ def seed_fn(seed: dict, final=True):
     else:  #  seed[0] in ['condition', 'action']:
         _, func, args = seed[0], seed[1][0], seed[1][1]
         args = [args] if isinstance(args, str) else args
-        
+
         if len(args) == 0:
             tree = leaf_fn(ATOMICS[func], seed[0])
-        else:   
-            tree = leaf_fn(ATOMICS[func](*args), seed[0]) 
+        else:
+            tree = leaf_fn(ATOMICS[func](*args), seed[0])
     if final:
+
         def catch_none_action(*args):
             status, action = tree(*args)
-            return  status, jnp.where(action == NONE, STAND, action)
+            return status, jnp.where(action == NONE, STAND, action)
+
         return catch_none_action
     else:
         return tree
 
 
 # %% [markdown]
-# # Dynamic programming computation of the atomics 
+# # Dynamic programming computation of the atomics
+
 
 # %%
 def leaf_fn_dp(atomics_bank, func_name, args, kind):
-    key = (func_name,) + tuple(args) 
+    key = (func_name,) + tuple(args)
     if key not in atomics_bank:
         func = ATOMICS[func_name] if len(args) == 0 else ATOMICS[func_name](*args)
         if kind == "action":
+
             def tick(obs, env_info, agent_info, rng):
                 info = btc2sim.classes.Info(env=env_info, agent=agent_info)
                 return func(obs, info, rng)
-            atomics_bank[key] = tick 
+
+            atomics_bank[key] = tick
         else:
+
             def tick(obs, env_info, agent_info, rng):
                 info = btc2sim.classes.Info(env=env_info, agent=agent_info)
                 return func(obs, info, rng)
+
             atomics_bank[key] = lambda *args: (tick(*args), NONE)
     return atomics_bank[key]
 
@@ -133,9 +141,11 @@ def seed_fn_dp(atomics_bank, seed: dict, final=False):
         args = [args] if isinstance(args, str) else args
         tree = leaf_fn_dp(atomics_bank, func, args, seed[0])
     if final:
+
         def catch_none_action(*args):
             status, action = tree(*args)
-            return  status, jnp.where(action == NONE, STAND, action)
+            return status, jnp.where(action == NONE, STAND, action)
+
         return catch_none_action
     else:
         return tree
