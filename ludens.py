@@ -43,9 +43,7 @@ def envs_fn(places):  # use switch to select place when running (combine with fo
 
 
 # %% Behavior Tree
-def bts_fn(
-    bt_strs,
-):  # <- use switch to select bt when running (combine with fori_loop on rngs and idxs)
+def bts_fn(bt_strs):  # <- use switch to select bt when running (combine with fori_loop on rngs and idxs)
     dsl_trees = [btc2sim.dsl.parse(btc2sim.dsl.read(bt_str)) for bt_str in bt_strs]
     bts = [
         vmap(btc2sim.bt.seed_fn(dsl_tree), in_axes=(0, None, None))

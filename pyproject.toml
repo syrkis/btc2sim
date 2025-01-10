@@ -15,11 +15,9 @@ ipykernel = "^6.29.5"
 einops = "^0.8.0"
 tqdm = "^4.66.5"
 
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
-
 
 [tool.pyright]
 venvPath = "."

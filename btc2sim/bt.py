@@ -9,7 +9,6 @@ import jax.numpy as jnp
 from jax import jit, vmap, tree_util
 from flax.struct import dataclass
 import chex
-from jaxmarl import make
 
 import os
 from functools import partial

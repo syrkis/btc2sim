@@ -4,6 +4,7 @@ import chex
 from jax import jit, vmap, Array
 import jax.numpy as jnp
 from typing import Any, Callable, List, Tuple, Dict, Optional
+
 #from parabellum import tps
 from flax.struct import dataclass
 
@@ -26,12 +27,12 @@ class Terrain:
             basemap=self.basemap[index],
         )
 
-
 # dataclasses
 @dataclass
 class Status:  # for behavior tree
     SUCCESS: int = 1
     FAILURE: int = -1
+
 
 @dataclass
 class EnvInfo:  # for atomics (who am i, what is this world?)
