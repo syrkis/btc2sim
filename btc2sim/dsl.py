@@ -1,31 +1,74 @@
-# %% Imports
+# ---
+# jupyter:
+#   jupytext:
+#     formats: py:percent
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.16.6
+#   kernelspec:
+#     display_name: Python 3 (ipykernel)
+#     language: python
+#     name: python3
+# ---
+
+# %% [markdown]
+# # Import
+
+# %%
 from lark import Lark
-import os, sys
-import btc2sim
-import jax
-from functools import partial
+from itertools import product
+
+
+# %% [markdown]
+# # The Grammar
 
 
 # %%
-qualifiers = [
-    "String",
-    "Direction",
-    "Foe",
-    "Friend",
-    "Qualifier",
-    "Sense",
-    "Self",
-    "Unit",
-    "Negation",
-    "Any",
-    "Source",
-    "Time",
-    "Intensity",
-]
+def set_product(sets):
+    return [" ".join(a) for a in product(*tuple(vals for vals in sets))]
 
-# %% Constants
-grammar_txt = """
-?start: node
+
+# %%
+qualifiers = ["closest", "farthest", "weakest", "strongest", "random"]
+senses = ["toward", "away_from"]
+directions = ["north", "south", "east", "west"]
+unit_types = ["spearmen", "archer", "cavalry", "healer", "grenadier"]
+source = ["me_from_them", "them_from_me"]
+steps = ["0", "1", "2", "3"]
+any_ = ["any"]
+thresholds = ["25%", "50%", "75%"]
+margins = ["0%", "25%", "50%", "100%"]
+unit_any = unit_types + any_
+
+actions = {
+    "attack": set_product([["attack"], qualifiers, unit_any]),
+    "move": set_product([["move"], senses, qualifiers, ["foe", "friend"], unit_any]),
+    "stand": ["stand"],
+    "follow_map": set_product([["follow_map"], senses, margins]),
+    "heal": set_product([["heal"], qualifiers, unit_any]),
+    # "debug": set_product([["debug"], directions]),
+}
+
+conditions = {
+    "in_sight": set_product([["in_sight"], ["foe", "friend"], unit_any]),
+    "in_reach": set_product([["in_reach"], ["foe", "friend"], source, steps, unit_any]),
+    "is_type": set_product([["is_type"], unit_types]),
+    "is_dying": set_product([["is_dying"], ["self", "foe", "friend"], thresholds]),
+    "is_in_forest": ["is_in_forest"],
+}
+
+atomics = {"A": actions, "C": conditions}
+
+# %%
+all_variants = []
+for atomic in atomics.values():
+    for variants in atomic.values():
+        all_variants += variants
+
+# %%
+bt_grammar = Lark(f"""?start: node
 
 %import common.WS
 %ignore WS
@@ -47,64 +90,69 @@ atomic :
     | attack
     | stand
     | follow_map
+    | heal
+    | debug
     | in_sight
     | in_reach
+    | is_type
     | is_dying
-    | is_armed
-    | is_flock
-    | is_type 
     | is_in_forest
-    | success_action
-    | failure_action
-    
 
-move      : "move" (direction | sense qualifier (foe | friend) (unit ("or" unit)* |any)?)
-attack    : "attack" qualifier (unit ("or" unit)* |any)?
-stand     : "stand"
-in_sight  : "in_sight" (foe | friend) (unit ("or" unit)* |any)?
-in_reach  : "in_reach" (foe | friend) source time (unit ("or" unit)* |any)?
-is_dying  : "is_dying" (self | foe | friend) intensity
-is_armed  : "is_armed" (self | foe | friend)
-is_flock  : "is_flock" (foe | friend) direction
-is_type   : "is_type" negation unit
-follow_map : "follow_map" sense intensity?
-is_in_forest : "is_in_forest" 
-success_action : "success_action" 
-failure_action: "failure_action"
 
-sense     : /toward|away_from/
-direction : /north|east|south|west|center/
+move       : "move" sense qualifier (foe | friend) (unit | any)
+attack     : "attack" qualifier (unit |any)
+stand      : "stand"
+follow_map : "follow_map" sense margin
+heal       : "heal" qualifier (unit |any)
+debug      : "debug" direction
+in_sight  : "in_sight" (foe | friend) (unit | any)
+in_reach  : "in_reach" (foe | friend) source steps (unit | any)
+is_type   : "is_type" unit
+is_dying  : "is_dying" (self | foe | friend) threshold
+is_in_forest : "is_in_forest"
+qualifier : /{"|".join(qualifiers)}/
+margin  : /{"|".join(margins)}/
+unit      : /{"|".join(unit_types)}/
+sense     : /{"|".join(senses)}/
 foe       : /foe/
 friend    : /friend/
-qualifier : /strongest|weakest|closest|farthest|random/
-intensity : /low|middle|high/
 self      : /self/
-unit      : /spearmen|archer|cavalry|balista|dragon|civilian/
 any       : /any/
-negation  : /a|not_a/
-source    : /them_from_me|me_from_them/
-time      : /now|low|middle|high/
-"""
+direction : /{"|".join(directions)}/
+source    : /{"|".join(source)}/
+steps     : /{"|".join(steps)}/
+threshold : /{"|".join(thresholds)}/
+""")
 
-grammar = Lark(grammar_txt, start="start")
+
+# %%
+def txt2expr(txt):
+    return bt_grammar.parse(txt)
 
 
-# %% Functions
-def read(string):
-    return grammar.parse(string)
+# %% [markdown]
+# # compute variants from unit_types
 
-def parse(lark_tree) -> dict:
-    match lark_tree.data.title():
-        case title if title in qualifiers:
-            return lark_tree.children[0].lower()
-        case "Node" | "Atomic":
-            return parse(lark_tree.children[0])
-        case "Nodes":
-            return [parse(child) for child in lark_tree.children]  # type: ignore
-        case "Action" | "Condition":
-            return (lark_tree.data.title().lower(), parse(lark_tree.children[0]))  # type: ignore
-        case _:  # Sequence or Fallback or Decorator
-            value = [parse(child) for child in lark_tree.children]
-            return lark_tree.data.title().lower(), value[0] if len(
-                value
-            ) == 1 else value  # type: ignore
+
+# %%
+def choose_targets(bt_txt, targets):
+    targets_txt = "any" if len(targets) == 0 else " or ".join([t for t in targets])
+    return bt_txt.replace("any", targets_txt)
+
+
+def compute_all_variants(bt_txt, unit_types):
+    if "any" in bt_txt:
+        subsets = [{}] + [set([unit_type]) for unit_type in unit_types]
+        variants = [choose_targets(bt_txt, subset) for subset in subsets]
+        return subsets, variants
+    else:
+        return [None], [bt_txt]
+
+
+def find_bt_variant(x, subsets, variants):
+    assert x in subsets
+    return variants[subsets.index(x)]
+
+
+def set_default(bt_txt, default):
+    return f"F ( S( C (in_sight foe any) :: {bt_txt}) :: {default})"

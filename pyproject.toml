@@ -17,6 +17,7 @@ tqdm = "^4.66.5"
 jax = "^0.5.1"
 chex = "^0.1.89"
 equinox = "^0.11.12"
+flax = "^0.10.4"
 
 [tool.poetry.group.dev.dependencies]
 parabellum = { path = "../parabellum" }
@@ -28,3 +29,6 @@ build-backend = "poetry.core.masonry.api"
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
+
+[tool.ruff]
+line-length = 120

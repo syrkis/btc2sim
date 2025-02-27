@@ -1,4 +1,5 @@
 **/__pycache__
+**/*.gif
 .DS_Store
 .vscode
 .venv
@@ -7,4 +8,3 @@ output/
 .ipynb_checkpoints
 */.ipynb_checkpoints/
 dist
-
