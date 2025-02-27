@@ -62,10 +62,10 @@ conditions = {
 atomics = {"A": actions, "C": conditions}
 
 # %%
-all_variants = []
+all_vars = []
 for atomic in atomics.values():
     for variants in atomic.values():
-        all_variants += variants
+        all_vars += variants
 
 # %%
 bt_grammar = Lark(f"""?start: node

@@ -252,8 +252,8 @@ def attack_factory(all_variants):
 
 # %%
 def move_factory(all_variants):
-    def move(env, scenario, state, rng, agent_id, variants_status, variants_action):
-        close_dist_matrix = state.unit_in_sight_distance[agent_id]
+    def move(env, scenario, state, obs, rng, agent_id, variants_status, variants_action):
+        close_dist_matrix = obs.dist
         far_dist_matrix = jnp.where(close_dist_matrix == jnp.inf, -jnp.inf, close_dist_matrix)  # we want to use argmax
         foes = scenario.unit_team != scenario.unit_team[agent_id]
         friends = scenario.unit_team == scenario.unit_team[agent_id]
@@ -265,17 +265,17 @@ def move_factory(all_variants):
                 all_variants.index("move toward " + variant),
                 all_variants.index("move away_from " + variant),
             )
-            delta = state.unit_positions[target_id] - state.unit_positions[agent_id]
+            delta = state.unit_position[target_id] - state.unit_position[agent_id]
             norm = jnp.linalg.norm(delta)
-            velocity = env.unit_type_velocities[scenario.unit_types[agent_id]]
+            velocity = env.cfg.unit_type_velocities[scenario.unit_types[agent_id]]
             delta = jnp.where(norm <= velocity, delta, velocity * delta / norm)
             obstacles = scenario.terrain.building + scenario.terrain.water  # cannot cross building and water
 
             can_move_toward_target = has_line_of_sight(
-                obstacles, state.unit_positions[agent_id], state.unit_positions[agent_id] + delta, env
+                obstacles, state.unit_position[agent_id], state.unit_position[agent_id] + delta, env
             )
             can_move_away_from_target = has_line_of_sight(
-                obstacles, state.unit_positions[agent_id], state.unit_positions[agent_id] - delta, env
+                obstacles, state.unit_position[agent_id], state.unit_position[agent_id] - delta, env
             )
 
             flag_toward = jnp.where(
@@ -410,7 +410,7 @@ def follow_map_factory(all_variants):
             ]
         )
         candidates *= env.unit_type_velocities[scenario.unit_types[agent_id]]
-        candidates_idx = jnp.array(state.unit_positions[agent_id] + candidates, dtype=jnp.uint32)
+        candidates_idx = jnp.array(state.unit_position[agent_id] + candidates, dtype=jnp.uint32)
         candidates_idx = jnp.clip(candidates_idx, 0, env.size - 1)
 
         distances = scenario.distance_map[scenario.unit_target_position_id[agent_id]][
@@ -421,7 +421,7 @@ def follow_map_factory(all_variants):
         )  # to resolve tighs and give a more organic vibe
         obstacles = scenario.terrain.building + scenario.terrain.water  # cannot walk through building and water
         in_sight = vmap(has_line_of_sight, in_axes=(None, None, 0, None))(
-            obstacles, state.unit_positions[agent_id], state.unit_positions[agent_id] + candidates, env
+            obstacles, state.unit_position[agent_id], state.unit_position[agent_id] + candidates, env
         )
         distances_toward = jnp.where(in_sight, distances, env.size**2)  # in sight positions
         distances_away = jnp.where(distances_toward >= env.size**2, -1, distances_toward)
@@ -708,7 +708,7 @@ def is_dying_factory(all_variants):
 # %%
 def is_in_forest_factory(all_variants):
     def is_in_forest(env, scenario, state, agent_id, variants_status):
-        pos = state.unit_positions[agent_id].astype(jnp.uint32)
+        pos = state.unit_position[agent_id].astype(jnp.uint32)
         variants_status = variants_status.at[all_variants.index(f"is_in_forest")].set(
             jnp.where(scenario.terrain.forest[pos[0], pos[1]], Status.SUCCESS, Status.FAILURE)
         )
@@ -735,11 +735,11 @@ def compute_variants_factory(all_variants, n_agents):
     is_dying_eval = is_dying_factory(all_variants)
     is_in_forest_eval = is_in_forest_factory(all_variants)
 
-    def compute_variants(env, scenario, state, rng, agent_id, variants_status, variants_action):
+    def compute_variants(env, scenario, state, obs, rng, agent_id, variants_status, variants_action):
         move_rng, attack_rng, follow_map_rng, heal_rng = random.split(rng, 4)
         variants_status, variants_action = stand_eval(env, scenario, state, agent_id, variants_status, variants_action)
         variants_status, variants_action = move_eval(
-            env, scenario, state, move_rng, agent_id, variants_status, variants_action
+            env, scenario, state, obs, move_rng, agent_id, variants_status, variants_action
         )
         variants_status, variants_action = attack_eval(
             env, scenario, state, attack_rng, agent_id, variants_status, variants_action
@@ -799,13 +799,13 @@ def eval_bt(predecessors, parents, passing_nodes, variant_ids, variants_status, 
 
 
 # %%
-def get_action_factory(all_variants, n_agents, bt_max_size):
+def make_action_fn(all_variants, n_agents, bt_max_size):
     n_variants = len(all_variants)
     compute_variants = compute_variants_factory(all_variants, n_agents)
 
-    def get_action(env, scenario, rng, state, behavior, agent_id):  # for one agent
+    def get_action(env, scenario, rng, state, obs, behavior, agent_id):  # for one agent
         variants_status, variants_action = compute_variants(
-            env, scenario, state, rng, agent_id, jnp.zeros(n_variants), Action.from_shape((n_variants,))
+            env, scenario, state, obs, rng, agent_id, jnp.zeros(n_variants), Action.from_shape((n_variants,))
         )
         eval_leaf = eval_bt(
             behavior.predecessors,

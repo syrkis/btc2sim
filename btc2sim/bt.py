@@ -23,7 +23,7 @@ from lark import Transformer
 
 # from flax.struct import dataclass
 from chex import dataclass
-from btc2sim.dsl import all_variants, txt2expr
+from btc2sim.dsl import all_vars, txt2expr
 from jax import Array
 
 
@@ -45,8 +45,8 @@ def compute_right_siblings(n_nodes):
 
 # %%
 class Expr2array(Transformer):
-    def __init__(self, all_variants):
-        self.all_variants = all_variants
+    def __init__(self, all_vars):
+        self.all_vars = all_vars
 
     def node(self, args):
         return args[0]
@@ -55,10 +55,10 @@ class Expr2array(Transformer):
         return args
 
     def condition(self, args):
-        return [(Parent.NONE, Parent.NONE, None, self.all_variants.index(" ".join(args[0])))]
+        return [(Parent.NONE, Parent.NONE, None, self.all_vars.index(" ".join(args[0])))]
 
     def action(self, args):
-        return [(Parent.NONE, Parent.NONE, None, self.all_variants.index(" ".join(args[0])))]
+        return [(Parent.NONE, Parent.NONE, None, self.all_vars.index(" ".join(args[0])))]
 
     def sequence(self, args):
         array = []
@@ -173,7 +173,7 @@ class Behavior:
     atomics_id: Array
 
 
-expr2array_transformer = Expr2array(all_variants)
+expr2array_transformer = Expr2array(all_vars)
 
 
 def expr2array(expr, size):

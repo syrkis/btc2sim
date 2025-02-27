@@ -9,22 +9,21 @@ import btc2sim as b2s
 
 
 # %% Constants
-bt = """S(A (stand) :: A (stand))"""
-max_leafs = 10
+bt, n = """S(A (stand) :: A (stand))""", 10
 env = pb.env.Env(cfg=(cfg := pb.env.Conf()))
-action_fn = b2s.atomics.get_action_factory(b2s.dsl.all_variants, cfg.num_agents, max_leafs)
-vaction_fn = vmap(action_fn, in_axes=(None, None, 0, None, 0, 0))
-behavior = tree.map(lambda x: repeat(x, "h -> agents h", agents=env.cfg.num_agents), b2s.bt.txt2array(bt, max_leafs))
+action_fn = vmap(
+    b2s.atomics.make_action_fn(b2s.dsl.all_vars, cfg.num_agents, n), in_axes=(None, None, 0, None, None, 0, 0)
+)
+behavior = tree.map(lambda x: repeat(x, "h -> agents h", agents=env.cfg.num_agents), b2s.bt.txt2array(bt, n))
 
 
 # Functions
-def step(state, rng):
+def step(carry, rng):
+    obs, state = carry
     action_key, step_key = random.split(rng, (2, env.cfg.num_agents))
-    # print(action_key.shape, behavior.parents.shape)
-    # exit()
-    action = vaction_fn(env, env.cfg, action_key, state, behavior, jnp.arange(env.cfg.num_agents))
+    action = action_fn(env, env.cfg, action_key, state, obs, behavior, jnp.arange(env.cfg.num_agents))
     obs, state = env.step(step_key, state, action)
-    return state, state
+    return state, (obs, state)
 
 
 def anim(seq, scale=8, width=10):  # animate positions
@@ -35,9 +34,8 @@ def anim(seq, scale=8, width=10):  # animate positions
 
 
 # Environment
-
 rng, key = random.split(random.PRNGKey(0))
 rngs = random.split(rng, 100)
 obs, state = env.reset(key)
-state, seq = lax.scan(step, state, rngs)
+state, seq = lax.scan(step, (obs, state), rngs)
 # anim(seq.unit_position.astype(int), width=env.cfg.size, scale=8)
