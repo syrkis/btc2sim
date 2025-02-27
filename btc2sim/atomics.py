@@ -803,7 +803,7 @@ def get_action_factory(all_variants, n_agents, bt_max_size):
     n_variants = len(all_variants)
     compute_variants = compute_variants_factory(all_variants, n_agents)
 
-    def get_action(env, scenario, state, rng, behavior, agent_id):  # for one agent
+    def get_action(env, scenario, rng, state, behavior, agent_id):  # for one agent
         variants_status, variants_action = compute_variants(
             env, scenario, state, rng, agent_id, jnp.zeros(n_variants), Action.from_shape((n_variants,))
         )
