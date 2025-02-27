@@ -14,13 +14,13 @@ qualifiers = [
     "Friend",
     "Qualifier",
     "Sense",
-    "Hp_Level",
     "Self",
     "Unit",
     "Negation",
     "Any",
     "Source",
     "Time",
+    "Intensity",
 ]
 
 # %% Constants
@@ -63,11 +63,11 @@ attack    : "attack" qualifier (unit ("or" unit)* |any)?
 stand     : "stand"
 in_sight  : "in_sight" (foe | friend) (unit ("or" unit)* |any)?
 in_reach  : "in_reach" (foe | friend) source time (unit ("or" unit)* |any)?
-is_dying  : "is_dying" (self | foe | friend) hp_level
+is_dying  : "is_dying" (self | foe | friend) intensity
 is_armed  : "is_armed" (self | foe | friend)
 is_flock  : "is_flock" (foe | friend) direction
 is_type   : "is_type" negation unit
-follow_map : "follow_map" sense
+follow_map : "follow_map" sense intensity?
 is_in_forest : "is_in_forest" 
 success_action : "success_action" 
 failure_action: "failure_action"
@@ -77,7 +77,7 @@ direction : /north|east|south|west|center/
 foe       : /foe/
 friend    : /friend/
 qualifier : /strongest|weakest|closest|farthest|random/
-hp_level  : /low|middle|high/
+intensity : /low|middle|high/
 self      : /self/
 unit      : /spearmen|archer|cavalry|balista|dragon|civilian/
 any       : /any/

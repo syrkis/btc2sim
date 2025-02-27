@@ -3,6 +3,7 @@
 # #   behavior tree code
 # # by: Noah Syrkis
 
+<<<<<<< HEAD
 # # %%
 # import jax
 # import jax.numpy as jnp
@@ -12,6 +13,14 @@
 # from flax.struct import dataclass
 # import chex
 # from jaxmarl import make
+=======
+# %%
+import jax
+import jax.numpy as jnp
+from jax import jit, vmap, tree_util
+from flax.struct import dataclass
+import chex
+>>>>>>> b8225c3118f3d5bf4a9a92a54b8a9fd515f5d608
 
 # from typing import Any
 

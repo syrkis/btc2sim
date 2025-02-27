@@ -30,8 +30,8 @@ class Action:
     def from_shape(cls, shape, dtype=jnp.float32):
         # Create an instance with empty arrays of the specified shape
         return cls(
-            kind=jnp.empty(shape, dtype=dtype),
-            value=jnp.empty(shape+(2,), dtype=dtype)
+            kind=jnp.zeros(shape, dtype=dtype),
+            value=jnp.zeros(shape+(2,), dtype=dtype)
         )
 
     def conditional_action(condition, action_if_true, action_if_false):
@@ -45,3 +45,5 @@ NONE, STAND, MOVE, ATTACK = jnp.array(-1), jnp.array(0), jnp.array(1), jnp.array
 
 None_action = Action(NONE, jnp.zeros((2,)))
 Stand_action = Action(STAND, jnp.zeros((2,)))
+
+

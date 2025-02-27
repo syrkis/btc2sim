@@ -6,7 +6,7 @@ authors = ["Noah Syrkis <noah@syrkis.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11,<3.12"
+python = "^3.10,<3.12"
 lark = "^1.1.9"
 functional = "^0.4"
 jupyterlab = "^4.2.4"
@@ -17,11 +17,9 @@ tqdm = "^4.66.5"
 jax = "^0.4.35"
 chex = "^0.1.87"
 
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
-
 
 [tool.pyright]
 venvPath = "."
