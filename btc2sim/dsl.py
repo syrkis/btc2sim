@@ -19,6 +19,8 @@ qualifiers = [
     "Unit",
     "Negation",
     "Any",
+    "Source",
+    "Time",
 ]
 
 # %% Constants
@@ -47,39 +49,41 @@ atomic :
     | follow_map
     | in_sight
     | in_reach
-    | in_region
     | is_dying
     | is_armed
     | is_flock
     | is_type 
-    | has_obstacle
     | is_in_forest
+    | success_action
+    | failure_action
+    
 
 move      : "move" (direction | sense qualifier (foe | friend) (unit ("or" unit)* |any)?)
 attack    : "attack" qualifier (unit ("or" unit)* |any)?
 stand     : "stand"
 in_sight  : "in_sight" (foe | friend) (unit ("or" unit)* |any)?
-in_reach  : "in_reach" (foe | friend) (unit ("or" unit)* |any)?
-in_region : "in_region" direction direction?
+in_reach  : "in_reach" (foe | friend) source time (unit ("or" unit)* |any)?
 is_dying  : "is_dying" (self | foe | friend) hp_level
 is_armed  : "is_armed" (self | foe | friend)
 is_flock  : "is_flock" (foe | friend) direction
 is_type   : "is_type" negation unit
-has_obstacle : "has_obstacle" direction
 follow_map : "follow_map" sense
 is_in_forest : "is_in_forest" 
+success_action : "success_action" 
+failure_action: "failure_action"
 
 sense     : /toward|away_from/
 direction : /north|east|south|west|center/
 foe       : /foe/
 friend    : /friend/
-qualifier : /strongest|weakest|closest|furthest/
+qualifier : /strongest|weakest|closest|farthest|random/
 hp_level  : /low|middle|high/
 self      : /self/
-unit      : /soldier|sniper|swat|turret|drone|civilian/
+unit      : /spearmen|archer|cavalry|balista|dragon|civilian/
 any       : /any/
 negation  : /a|not_a/
-
+source    : /them_from_me|me_from_them/
+time      : /now|low|middle|high/
 """
 
 grammar = Lark(grammar_txt, start="start")
