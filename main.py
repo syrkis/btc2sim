@@ -1,16 +1,26 @@
 # main.py
 import parabellum as pb
-from jax import random, lax
+from jax import random, lax, vmap
 import jax.numpy as jnp
 import numpy as np
 from PIL import Image
+import btc2sim
+
+
+# %% Constants
+bt = """S(A (stand) :: A (stand))"""
+max_leafs = 10
+env = pb.env.Env(cfg=(cfg := pb.env.Conf()))
+action_fn = btc2sim.atomics.get_action_factory(btc2sim.dsl.all_variants, cfg.num_agents, max_leafs)
+vaction_fn = vmap(action_fn, in_axes=(None, None, None, 0, 0, 0))
+behavior = btc2sim.bt.txt2array(bt, max_leafs)
 
 
 # Functions
-def step(state, rng):
-    moving = random.normal(rng, (env.cfg.num_agents, 2))  # <- ADD BT BASED ACTION HERE
-    action = pb.env.Action(health=None, moving=moving)
-    obs, state = env.step(rng, state, action)
+def step(rng, state):
+    action_key, step_key = random.split(rng, (2, env.cfg.num_agents))
+    action = vaction_fn(env, env.cfg, state, action_key, behavior, jnp.arange(env.cfg.num_agents))
+    obs, state = env.step(step_key, state, action)
     return state, state
 
 
@@ -22,9 +32,9 @@ def anim(seq, scale=8, width=10):  # animate positions
 
 
 # Environment
-env = pb.env.Env(cfg=(cfg := pb.env.Conf()))
+
 rng, key = random.split(random.PRNGKey(0))
-obs, state = env.reset(key)
 rngs = random.split(rng, 100)
-state, seq = lax.scan(step, state, rngs)
-anim(seq.unit_position.astype(int), width=env.cfg.size, scale=8)
+obs, state = env.reset(key)
+# state, seq = lax.scan(step, state, rngs)
+# anim(seq.unit_position.astype(int), width=env.cfg.size, scale=8)

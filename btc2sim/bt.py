@@ -19,15 +19,12 @@
 # %%
 import numpy as np
 import jax.numpy as jnp
-from lark import Lark, Transformer
-from flax.struct import dataclass
+from lark import Transformer
 
-# %%
-from btc2sim.dsl import *
-
-
-# %% [markdown]
-# # The Array
+# from flax.struct import dataclass
+from chex import dataclass
+from btc2sim.dsl import all_variants, txt2expr
+from jax import Array
 
 
 # %%
@@ -36,10 +33,6 @@ class Parent:  # for behavior tree
     SEQUENCE: int = 1
     NONE: int = 0
     FALLBACK: int = -1
-
-
-# %% [markdown]
-# ## expr 2 array
 
 
 # %%
@@ -172,6 +165,14 @@ class Expr2array(Transformer):
         return str(args[0])
 
 
+@dataclass
+class Behavior:
+    predecessors: Array
+    parents: Array
+    passings: Array
+    atomics_id: Array
+
+
 expr2array_transformer = Expr2array(all_variants)
 
 
@@ -188,7 +189,8 @@ def expr2array(expr, size):
         parents = parents.at[i].set(parent)
         passings = passings.at[i].set(0 if passing is None else passing)
         atomics_id = atomics_id.at[i].set(atomic_id)
-    return predecessors, parents, passings, atomics_id
+    # return predecessors, parents, passings, atomics_id
+    return Behavior(predecessors=predecessors, parents=parents, passings=passings, atomics_id=atomics_id)
 
 
 def txt2array(txt, size):

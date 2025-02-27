@@ -18,6 +18,7 @@ jax = "^0.5.1"
 chex = "^0.1.89"
 equinox = "^0.11.12"
 flax = "^0.10.4"
+aim = "^3.27.0"
 
 [tool.poetry.group.dev.dependencies]
 parabellum = { path = "../parabellum" }

@@ -803,13 +803,18 @@ def get_action_factory(all_variants, n_agents, bt_max_size):
     n_variants = len(all_variants)
     compute_variants = compute_variants_factory(all_variants, n_agents)
 
-    def get_action(
-        env, scenario, state, rng, predecessors, parents, passing_nodes, variant_ids, agent_id
-    ):  # for one agent
+    def get_action(env, scenario, state, rng, behavior, agent_id):  # for one agent
         variants_status, variants_action = compute_variants(
             env, scenario, state, rng, agent_id, jnp.zeros(n_variants), Action.from_shape((n_variants,))
         )
-        eval_leaf = eval_bt(predecessors, parents, passing_nodes, variant_ids, variants_status, variants_action)
+        eval_leaf = eval_bt(
+            behavior.predecessors,
+            behavior.parents,
+            behavior.passing_nodes,
+            behavior.variant_ids,
+            variants_status,
+            variants_action,
+        )
         carry = Status.NONE, NONE_ACTION, 0
         s, a, p = fori_loop(0, bt_max_size, eval_leaf, carry)
         return a.where(jnp.logical_and(s == Status.SUCCESS, a.kind != NONE), STAND_ACTION)
