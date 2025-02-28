@@ -1,27 +1,8 @@
-# ---
-# jupyter:
-#   jupytext:
-#     formats: py:percent
-#     text_representation:
-#       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
-#       jupytext_version: 1.16.6
-#   kernelspec:
-#     display_name: Python 3 (ipykernel)
-#     language: python
-#     name: python3
-# ---
-
-# %% [markdown]
-# # Import
-
 # %%
 import numpy as np
 import jax.numpy as jnp
 from lark import Transformer
 
-# from flax.struct import dataclass
 from chex import dataclass
 from btc2sim.dsl import all_vars, txt2expr
 from jax import Array
@@ -195,17 +176,3 @@ def expr2array(expr, size):
 
 def txt2array(txt, size):
     return expr2array(txt2expr(txt), size)
-
-
-# %% [raw]
-# #txt = "S(S(C (in_sight friend any) :: C (in_sight foe any))::F(C (in_sight friend archer) :: C (in_sight foe archer)))"
-# #txt = "F(A (stand) :: A (move toward closest foe any))"
-# #txt = "S(A (stand) :: A (stand))"
-# #txt = "S(A(stand))"
-# txt = "A (follow_map toward 0%)"
-# #txt = "A (stand)"
-# txt2array(txt, 6)
-
-# %%
-
-# %%

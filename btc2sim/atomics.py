@@ -21,7 +21,6 @@ from jax import vmap, random
 from jax.lax import fori_loop
 import jax.numpy as jnp
 from flax.struct import dataclass
-import chex
 
 # %%
 from btc2sim.dsl import unit_types
@@ -145,7 +144,7 @@ def debug_factory(all_variants):
                 variant_id, Action(MOVE, motion)
             )
 
-        velocity = env.unit_type_velocities[scenario.unit_types[agent_id]]
+        velocity = env.unit_type_velocities[scenario.unit_type[agent_id]]
         variants_status, variants_action = aux(all_variants.index("debug north"), jnp.array([0, velocity]))  # type: ignore
         variants_status, variants_action = aux(all_variants.index("debug south"), jnp.array([0, -velocity]))  # type: ignore
         variants_status, variants_action = aux(all_variants.index("debug east"), jnp.array([velocity, 0]))  # type: ignore
@@ -163,15 +162,15 @@ def debug_factory(all_variants):
 def attack_factory(all_variants):
     def attack(env, scenario, state, rng, agent_id, variants_status, variants_action):
         can_attack = jnp.logical_and(
-            state.unit_cooldowns[agent_id] <= 0, scenario.unit_types[agent_id] != target_types["healer"]
+            state.unit_cooldowns[agent_id] <= 0, scenario.unit_type[agent_id] != target_types["healer"]
         )
-        attack_type = jnp.where(scenario.unit_types[agent_id] == target_types["grenadier"], AREA_ATTACK, ATTACK)
+        attack_type = jnp.where(scenario.unit_type[agent_id] == target_types["grenadier"], AREA_ATTACK, ATTACK)
         close_dist_matrix = state.unit_in_sight_distance[agent_id]
         close_dist_matrix = jnp.where(
             scenario.unit_team != scenario.unit_team[agent_id], close_dist_matrix, jnp.inf
         )  # only enemies
         close_dist_matrix = jnp.where(  # type:ignore
-            close_dist_matrix <= env.unit_type_attack_ranges[scenario.unit_types[agent_id]],
+            close_dist_matrix <= env.unit_type_attack_ranges[scenario.unit_type[agent_id]],
             close_dist_matrix,  # type:ignore
             jnp.inf,  # type:ignore
         )  # in attack range # type:ignore
@@ -209,7 +208,7 @@ def attack_factory(all_variants):
         variants_status, variants_action = aux(max_health, "max", "strongest any", variants_status, variants_action)
 
         for unit_type in unit_types:
-            units = scenario.unit_types == target_types[unit_type]
+            units = scenario.unit_type == target_types[unit_type]
             # random
             variants_status, variants_action = aux(
                 jnp.where(units, value, -jnp.inf), "max", f"random {unit_type}", variants_status, variants_action
@@ -267,7 +266,7 @@ def move_factory(all_variants):
             )
             delta = state.unit_position[target_id] - state.unit_position[agent_id]
             norm = jnp.linalg.norm(delta)
-            velocity = env.cfg.unit_type_velocities[scenario.unit_types[agent_id]]
+            velocity = env.cfg.unit_type_velocities[scenario.unit_type[agent_id]]
             delta = jnp.where(norm <= velocity, delta, velocity * delta / norm)
             obstacles = scenario.terrain.building + scenario.terrain.water  # cannot cross building and water
 
@@ -343,7 +342,7 @@ def move_factory(all_variants):
                 variants_action,
             )
             for unit_type in unit_types:
-                units = jnp.logical_and(scenario.unit_types == target_types[unit_type], team)
+                units = jnp.logical_and(scenario.unit_type == target_types[unit_type], team)
                 # random
                 variants_status, variants_action = aux(
                     jnp.where(team, value, -jnp.inf),
@@ -409,7 +408,7 @@ def follow_map_factory(all_variants):
                 for step_size in jnp.arange(1, n_step_size + 1)
             ]
         )
-        candidates *= env.unit_type_velocities[scenario.unit_types[agent_id]]
+        candidates *= env.unit_type_velocities[scenario.unit_type[agent_id]]
         candidates_idx = jnp.array(state.unit_position[agent_id] + candidates, dtype=jnp.uint32)
         candidates_idx = jnp.clip(candidates_idx, 0, env.size - 1)
 
@@ -427,7 +426,7 @@ def follow_map_factory(all_variants):
         distances_away = jnp.where(distances_toward >= env.size**2, -1, distances_toward)
 
         for margin_name, margin in zip(["0%", "25%", "50%", "100%"], [0, 0.25, 0.5, 1.0]):
-            d = env.unit_type_sight_ranges[scenario.unit_types[agent_id]] * margin
+            d = env.unit_type_sight_ranges[scenario.unit_type[agent_id]] * margin
             for sense_name, target_idx in zip(
                 ["toward", "away_from"],
                 [jnp.argmin(distances_toward), jnp.argmax(distances_away)],  # type: ignore
@@ -459,7 +458,7 @@ def follow_map_factory(all_variants):
 def heal_factory(all_variants):
     def heal(env, scenario, state, rng, agent_id, variants_status, variants_action):
         can_heal = jnp.logical_and(
-            state.unit_cooldowns[agent_id] <= 0, scenario.unit_types[agent_id] == target_types["healer"]
+            state.unit_cooldowns[agent_id] <= 0, scenario.unit_type[agent_id] == target_types["healer"]
         )
         close_dist_matrix = state.unit_in_sight_distance[agent_id]
         close_dist_matrix = jnp.where(
@@ -467,7 +466,7 @@ def heal_factory(all_variants):
         )  # only allies
         # in attack range
         close_dist_matrix = jnp.where(  # type: ignore
-            close_dist_matrix <= env.unit_type_attack_ranges[scenario.unit_types[agent_id]],
+            close_dist_matrix <= env.unit_type_attack_ranges[scenario.unit_type[agent_id]],
             close_dist_matrix,  # type: ignore
             jnp.inf,  # type: ignore
         )  # type: ignore
@@ -505,7 +504,7 @@ def heal_factory(all_variants):
         variants_status, variants_action = aux(max_health, "max", "strongest any", variants_status, variants_action)
 
         for unit_type in unit_types:
-            units = scenario.unit_types == target_types[unit_type]
+            units = scenario.unit_type == target_types[unit_type]
             # random
             variants_status, variants_action = aux(
                 jnp.where(units, value, -jnp.inf), "max", f"random {unit_type}", variants_status, variants_action
@@ -572,7 +571,7 @@ def in_sight_factory(all_variants, n_agents):
                 aux(team, any_unit)
             )
             for unit_type in unit_types:
-                units = scenario.unit_types == target_types[unit_type]
+                units = scenario.unit_type == target_types[unit_type]
                 variants_status = variants_status.at[all_variants.index(f"in_sight {team_name} {unit_type}")].set(
                     aux(team, units)
                 )
@@ -590,37 +589,37 @@ def in_reach_factory(all_variants, n_agents):
     def in_reach(env, scenario, state, agent_id, variants_status):
         foes = scenario.unit_team != scenario.unit_team[agent_id]
         friends = scenario.unit_team == scenario.unit_team[agent_id]
-        spearmen = scenario.unit_types == target_types["spearmen"]
-        archer = scenario.unit_types == target_types["archer"]
-        cavalry = scenario.unit_types == target_types["cavalry"]
-        healer = scenario.unit_types == target_types["healer"]
-        grenadier = scenario.unit_types == target_types["grenadier"]
+        spearmen = scenario.unit_type == target_types["spearmen"]
+        archer = scenario.unit_type == target_types["archer"]
+        cavalry = scenario.unit_type == target_types["cavalry"]
+        healer = scenario.unit_type == target_types["healer"]
+        grenadier = scenario.unit_type == target_types["grenadier"]
 
         any_unit = jnp.ones(n_agents, dtype=jnp.bool)
         dist_matrix = state.unit_in_sight_distance[agent_id]
-        in_reach_0_from_me = dist_matrix <= env.unit_type_attack_ranges[scenario.unit_types[agent_id]]
+        in_reach_0_from_me = dist_matrix <= env.unit_type_attack_ranges[scenario.unit_type[agent_id]]
         in_reach_1_from_me = dist_matrix <= (
-            env.unit_type_attack_ranges[scenario.unit_types[agent_id]]
-            + env.unit_type_velocities[scenario.unit_types[agent_id]]
+            env.unit_type_attack_ranges[scenario.unit_type[agent_id]]
+            + env.unit_type_velocities[scenario.unit_type[agent_id]]
         )
         in_reach_2_from_me = dist_matrix <= (
-            env.unit_type_attack_ranges[scenario.unit_types[agent_id]]
-            + 2 * env.unit_type_velocities[scenario.unit_types[agent_id]]
+            env.unit_type_attack_ranges[scenario.unit_type[agent_id]]
+            + 2 * env.unit_type_velocities[scenario.unit_type[agent_id]]
         )
         in_reach_3_from_me = dist_matrix <= (
-            env.unit_type_attack_ranges[scenario.unit_types[agent_id]]
-            + 3 * env.unit_type_velocities[scenario.unit_types[agent_id]]
+            env.unit_type_attack_ranges[scenario.unit_type[agent_id]]
+            + 3 * env.unit_type_velocities[scenario.unit_type[agent_id]]
         )
         them_from_me = [in_reach_0_from_me, in_reach_1_from_me, in_reach_2_from_me, in_reach_3_from_me]
-        in_reach_0_from_them = dist_matrix <= env.unit_type_attack_ranges[scenario.unit_types]
+        in_reach_0_from_them = dist_matrix <= env.unit_type_attack_ranges[scenario.unit_type]
         in_reach_1_from_them = dist_matrix <= (
-            env.unit_type_attack_ranges[scenario.unit_types] + env.unit_type_velocities[scenario.unit_types]
+            env.unit_type_attack_ranges[scenario.unit_type] + env.unit_type_velocities[scenario.unit_type]
         )
         in_reach_2_from_them = dist_matrix <= (
-            env.unit_type_attack_ranges[scenario.unit_types] + 2 * env.unit_type_velocities[scenario.unit_types]
+            env.unit_type_attack_ranges[scenario.unit_type] + 2 * env.unit_type_velocities[scenario.unit_type]
         )
         in_reach_3_from_them = dist_matrix <= (
-            env.unit_type_attack_ranges[scenario.unit_types] + 3 * env.unit_type_velocities[scenario.unit_types]
+            env.unit_type_attack_ranges[scenario.unit_type] + 3 * env.unit_type_velocities[scenario.unit_type]
         )
         me_from_them = [in_reach_0_from_them, in_reach_1_from_them, in_reach_2_from_them, in_reach_3_from_them]
         for source_name, sources in zip(["me_from_them", "them_from_me"], [me_from_them, them_from_me]):
@@ -652,7 +651,7 @@ def is_type_factory(all_variants):
     def is_type(env, scenario, state, agent_id, variants_status):
         for unit_type in unit_types:
             variants_status = variants_status.at[all_variants.index(f"is_type {unit_type}")].set(
-                jnp.where(scenario.unit_types[agent_id] == target_types[unit_type], Status.SUCCESS, Status.FAILURE)
+                jnp.where(scenario.unit_type[agent_id] == target_types[unit_type], Status.SUCCESS, Status.FAILURE)
             )
         return variants_status
 
@@ -671,14 +670,14 @@ def is_dying_factory(all_variants):
         friends = jnp.where(scenario.unit_team == scenario.unit_team[agent_id], dist_matrix, jnp.inf)
         for threshold_name, threshold in zip(["25%", "50%", "75%"], [0.25, 0.5, 0.75]):
             flag = jnp.where(
-                state.unit_health[agent_id] / env.unit_type_health[scenario.unit_types[agent_id]] <= threshold,
+                state.unit_health[agent_id] / env.unit_type_health[scenario.unit_type[agent_id]] <= threshold,
                 Status.SUCCESS,
                 Status.FAILURE,
             )
             variants_status = variants_status.at[all_variants.index(f"is_dying self {threshold_name}")].set(flag)
             foes_flag = jnp.where(
                 jnp.any(
-                    jnp.where(foes != jnp.inf, state.unit_health / env.unit_type_health[scenario.unit_types], 1)[0]
+                    jnp.where(foes != jnp.inf, state.unit_health / env.unit_type_health[scenario.unit_type], 1)[0]
                     <= threshold
                 ),
                 Status.SUCCESS,
@@ -687,7 +686,7 @@ def is_dying_factory(all_variants):
             variants_status = variants_status.at[all_variants.index(f"is_dying foe {threshold_name}")].set(foes_flag)
             friends_flag = jnp.where(
                 jnp.any(
-                    jnp.where(friends != jnp.inf, state.unit_health / env.unit_type_health[scenario.unit_types], 1)[0]
+                    jnp.where(friends != jnp.inf, state.unit_health / env.unit_type_health[scenario.unit_type], 1)[0]
                     <= threshold
                 ),
                 Status.SUCCESS,
@@ -709,7 +708,7 @@ def is_dying_factory(all_variants):
 def is_in_forest_factory(all_variants):
     def is_in_forest(env, scenario, state, agent_id, variants_status):
         pos = state.unit_position[agent_id].astype(jnp.uint32)
-        variants_status = variants_status.at[all_variants.index(f"is_in_forest")].set(
+        variants_status = variants_status.at[all_variants.index("is_in_forest")].set(
             jnp.where(scenario.terrain.forest[pos[0], pos[1]], Status.SUCCESS, Status.FAILURE)
         )
         return variants_status
@@ -728,34 +727,34 @@ def compute_variants_factory(all_variants, n_agents):
     attack_eval = attack_factory(all_variants)
     follow_map_eval = follow_map_factory(all_variants)
     heal_eval = heal_factory(all_variants)
-    debug_eval = debug_factory(all_variants)
+    # debug_eval = debug_factory(all_variants)
     in_sight_eval = in_sight_factory(all_variants, n_agents)
     in_reach_eval = in_reach_factory(all_variants, n_agents)
     is_type_eval = is_type_factory(all_variants)
     is_dying_eval = is_dying_factory(all_variants)
     is_in_forest_eval = is_in_forest_factory(all_variants)
 
-    def compute_variants(env, scenario, state, obs, rng, agent_id, variants_status, variants_action):
+    def compute_variants(env, state, obs, rng, agent_id, variants_status, variants_action):
         move_rng, attack_rng, follow_map_rng, heal_rng = random.split(rng, 4)
-        variants_status, variants_action = stand_eval(env, scenario, state, agent_id, variants_status, variants_action)
+        variants_status, variants_action = stand_eval(env, env.scene, state, agent_id, variants_status, variants_action)
         variants_status, variants_action = move_eval(
-            env, scenario, state, obs, move_rng, agent_id, variants_status, variants_action
+            env, env.scene, state, obs, move_rng, agent_id, variants_status, variants_action
         )
         variants_status, variants_action = attack_eval(
-            env, scenario, state, attack_rng, agent_id, variants_status, variants_action
+            env, env.scene, state, attack_rng, agent_id, variants_status, variants_action
         )
         variants_status, variants_action = follow_map_eval(
-            env, scenario, state, follow_map_rng, agent_id, variants_status, variants_action
+            env, env.scene, state, follow_map_rng, agent_id, variants_status, variants_action
         )
         variants_status, variants_action = heal_eval(
-            env, scenario, state, heal_rng, agent_id, variants_status, variants_action
+            env, env.scene, state, heal_rng, agent_id, variants_status, variants_action
         )
         # variants_status, variants_action = debug_eval(env, scenario, state, agent_id, variants_status, variants_action)
-        variants_status = in_sight_eval(env, scenario, state, agent_id, variants_status)
-        variants_status = in_reach_eval(env, scenario, state, agent_id, variants_status)
-        variants_status = is_type_eval(env, scenario, state, agent_id, variants_status)
-        variants_status = is_dying_eval(env, scenario, state, agent_id, variants_status)
-        variants_status = is_in_forest_eval(env, scenario, state, agent_id, variants_status)
+        variants_status = in_sight_eval(env, env.scene, state, agent_id, variants_status)
+        variants_status = in_reach_eval(env, env.scene, state, agent_id, variants_status)
+        variants_status = is_type_eval(env, env.scene, state, agent_id, variants_status)
+        variants_status = is_dying_eval(env, env.scene, state, agent_id, variants_status)
+        variants_status = is_in_forest_eval(env, env.scene, state, agent_id, variants_status)
         return variants_status, variants_action
 
     return compute_variants
@@ -803,9 +802,9 @@ def make_action_fn(all_variants, n_agents, bt_max_size):
     n_variants = len(all_variants)
     compute_variants = compute_variants_factory(all_variants, n_agents)
 
-    def get_action(env, scenario, rng, state, obs, behavior, agent_id):  # for one agent
+    def get_action(env, rng, state, obs, behavior, agent_id):  # for one agent
         variants_status, variants_action = compute_variants(
-            env, scenario, state, obs, rng, agent_id, jnp.zeros(n_variants), Action.from_shape((n_variants,))
+            env, state, obs, rng, agent_id, jnp.zeros(n_variants), Action.from_shape((n_variants,))
         )
         eval_leaf = eval_bt(
             behavior.predecessors,
