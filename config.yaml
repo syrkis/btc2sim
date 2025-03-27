@@ -1,3 +1,12 @@
 n_envs: 100
-n_trees : 10
+n_trees: 10
 n_steps: 100
+terminals:
+  qualifiers: ["closest", "farthest", "weakest", "strongest", "random"]
+  senses: ["toward", "away_from"]
+  directions: ["north", "south", "east", "west"]
+  unit_types: ["spearmen", "archer", "cavalry", "healer", "grenadier"]
+  source: ["me_from_them", "them_from_me"]
+  steps: ["0", "1", "2", "3"]
+  thresholds: ["25%", "50%", "75%"]
+  margins: ["0%", "25%", "50%", "100%"]

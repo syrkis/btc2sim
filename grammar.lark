@@ -1,0 +1,57 @@
+?start: node
+
+%import common.WS
+%ignore WS
+
+// Define all terminals directly in the grammar
+QUALIFIER : "closest" | "farthest" | "weakest" | "strongest" | "random"
+SENSE     : "toward" | "away_from"
+DIRECTION : "north" | "south" | "east" | "west"
+UNIT_TYPE : "spearmen" | "archer" | "cavalry" | "healer" | "grenadier"
+SOURCE    : "me_from_them" | "them_from_me"
+STEP      : "0" | "1" | "2" | "3"
+THRESHOLD : "25%" | "50%" | "75%"
+MARGIN    : "0%" | "25%" | "50%" | "100%"
+FOE       : "foe"
+FRIEND    : "friend"
+SELF      : "self"
+ANY       : "any"
+
+nodes : node ("::" node | "|>" node)*
+node  : sequence | fallback | action | condition
+
+sequence  : "S" "(" nodes ")"
+fallback  : "F" "(" nodes ")"
+action    : "A" "(" atomic ")"
+condition : "C" "(" atomic ")"
+
+atomic : move | attack | stand | follow_map | heal | debug | in_sight | in_reach | is_type | is_dying | is_hidden
+
+// Actions
+move       : "move" sense qualifier (foe | friend) (unit | any)
+attack     : "attack" qualifier (unit | any)
+stand      : "stand"
+follow_map : "follow_map" sense margin
+heal       : "heal" qualifier (unit | any)
+debug      : "debug" direction
+
+// Conditions
+in_sight  : "in_sight" (foe | friend) (unit | any)
+in_reach  : "in_reach" (foe | friend) source step (unit | any)
+is_type   : "type" unit
+is_dying  : "dying" (self | foe | friend) threshold
+is_hidden : "is_hidden"
+
+// Terminal references
+qualifier : QUALIFIER
+margin    : MARGIN
+unit      : UNIT_TYPE
+sense     : SENSE
+foe       : FOE
+friend    : FRIEND
+self      : SELF
+any       : ANY
+direction : DIRECTION
+source    : SOURCE
+step      : STEP
+threshold : THRESHOLD

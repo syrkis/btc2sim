@@ -109,18 +109,11 @@ STAND_ACTION = Action(STAND, jnp.zeros((2,), dtype=jnp.float32))
 def has_line_of_sight(obstacles, source, target, env):
     # suppose that the target position is in sight_range of source, otherwise the line of sight might miss some cells
     current_line_of_sight = (
-        source[:, jnp.newaxis] * (1 - env.line_of_sight) + env.line_of_sight * target[:, jnp.newaxis]
+        source[:, jnp.newaxis] * (1 - env.scene.line_of_sight) + env.scene.line_of_sight * target[:, jnp.newaxis]
     )
     cells = jnp.array(current_line_of_sight, dtype=jnp.int32)
     in_sight = obstacles[cells[0], cells[1]].sum() == 0
     return in_sight
-
-
-# %% [markdown]
-# ## Action atomics
-
-# %% [markdown]
-# ### Stand
 
 
 # %%
@@ -133,10 +126,6 @@ def stand_factory(all_variants):
 
 
 # %% [markdown]
-# ### Debug
-
-
-# %%
 def debug_factory(all_variants):
     def debug(env, scenario, state, agent_id, variants_status, variants_action):
         def aux(variant_id, motion):
@@ -160,17 +149,17 @@ def debug_factory(all_variants):
 
 # %%
 def attack_factory(all_variants):
-    def attack(env, scenario, state, rng, agent_id, variants_status, variants_action):
+    def attack(env, scenario, state, obs, rng, agent_id, variants_status, variants_action):
         can_attack = jnp.logical_and(
-            state.unit_cooldowns[agent_id] <= 0, scenario.unit_type[agent_id] != target_types["healer"]
+            state.unit_cooldown[agent_id] <= 0, scenario.unit_type[agent_id] != target_types["healer"]
         )
         attack_type = jnp.where(scenario.unit_type[agent_id] == target_types["grenadier"], AREA_ATTACK, ATTACK)
-        close_dist_matrix = state.unit_in_sight_distance[agent_id]
+        close_dist_matrix = obs.dist[agent_id]
         close_dist_matrix = jnp.where(
             scenario.unit_team != scenario.unit_team[agent_id], close_dist_matrix, jnp.inf
         )  # only enemies
         close_dist_matrix = jnp.where(  # type:ignore
-            close_dist_matrix <= env.unit_type_attack_ranges[scenario.unit_type[agent_id]],
+            close_dist_matrix <= env.scene.unit_type_attack_ranges[scenario.unit_type[agent_id]],
             close_dist_matrix,  # type:ignore
             jnp.inf,  # type:ignore
         )  # in attack range # type:ignore
@@ -396,7 +385,7 @@ def follow_map_factory(all_variants):
     n_direction = 8  # number of direction arround the unit (2pi/n_direction)
     n_step_size = 4  # number of steps in the direction up to the unit's velocity (should be at least equal to the max velocity so that it check every cells
 
-    def follow_map(env, scenario, state, rng, agent_id, variants_status, variants_action):
+    def follow_map(env, scene, state, rng, agent_id, variants_status, variants_action):
         candidates = jnp.array(
             [[0, 0]]
             + [
@@ -408,17 +397,17 @@ def follow_map_factory(all_variants):
                 for step_size in jnp.arange(1, n_step_size + 1)
             ]
         )
-        candidates *= env.unit_type_velocities[scenario.unit_type[agent_id]]
+        candidates *= scene.unit_type_velocities[scene.unit_type[agent_id]]
         candidates_idx = jnp.array(state.unit_position[agent_id] + candidates, dtype=jnp.uint32)
-        candidates_idx = jnp.clip(candidates_idx, 0, env.size - 1)
+        candidates_idx = jnp.clip(candidates_idx, 0, env.cfg.size - 1)
 
-        distances = scenario.distance_map[scenario.unit_target_position_id[agent_id]][
+        distances = scene.distance_map[scene.unit_target_position_id[agent_id]][
             candidates_idx[:, 0], candidates_idx[:, 1]
         ]
         distances += random.uniform(
-            rng, distances.shape, minval=0.0, maxval=scenario.movement_randomness
+            rng, distances.shape, minval=0.0, maxval=scene.movement_randomness
         )  # to resolve tighs and give a more organic vibe
-        obstacles = scenario.terrain.building + scenario.terrain.water  # cannot walk through building and water
+        obstacles = scene.terrain.building + scene.terrain.water  # cannot walk through building and water
         in_sight = vmap(has_line_of_sight, in_axes=(None, None, 0, None))(
             obstacles, state.unit_position[agent_id], state.unit_position[agent_id] + candidates, env
         )
@@ -426,7 +415,7 @@ def follow_map_factory(all_variants):
         distances_away = jnp.where(distances_toward >= env.size**2, -1, distances_toward)
 
         for margin_name, margin in zip(["0%", "25%", "50%", "100%"], [0, 0.25, 0.5, 1.0]):
-            d = env.unit_type_sight_ranges[scenario.unit_type[agent_id]] * margin
+            d = env.unit_type_sight_ranges[scene.unit_type[agent_id]] * margin
             for sense_name, target_idx in zip(
                 ["toward", "away_from"],
                 [jnp.argmin(distances_toward), jnp.argmax(distances_away)],  # type: ignore
@@ -458,7 +447,7 @@ def follow_map_factory(all_variants):
 def heal_factory(all_variants):
     def heal(env, scenario, state, rng, agent_id, variants_status, variants_action):
         can_heal = jnp.logical_and(
-            state.unit_cooldowns[agent_id] <= 0, scenario.unit_type[agent_id] == target_types["healer"]
+            state.unit_cooldown[agent_id] <= 0, scenario.unit_type[agent_id] == target_types["healer"]
         )
         close_dist_matrix = state.unit_in_sight_distance[agent_id]
         close_dist_matrix = jnp.where(
@@ -741,7 +730,7 @@ def compute_variants_factory(all_variants, n_agents):
             env, env.scene, state, obs, move_rng, agent_id, variants_status, variants_action
         )
         variants_status, variants_action = attack_eval(
-            env, env.scene, state, attack_rng, agent_id, variants_status, variants_action
+            env, env.scene, state, obs, attack_rng, agent_id, variants_status, variants_action
         )
         variants_status, variants_action = follow_map_eval(
             env, env.scene, state, follow_map_rng, agent_id, variants_status, variants_action

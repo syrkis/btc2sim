@@ -1,15 +1,24 @@
-# main.py
+# %% main.py
+#   btc2sim main file
+# by: Noah Syrkis
+
+# Imports
 import parabellum as pb
 from jax import random, vmap, lax, tree
 from einops import repeat
 import jax.numpy as jnp
 import numpy as np
 from PIL import Image
+from lark import Lark
 import btc2sim as b2s
 
 
 # %% Constants
+grammar = Lark(open("grammar.lark", "r").read())
 bt, n = """S(A (stand) :: A (stand))""", 10
+print(grammar.parse(bt))
+exit()
+
 env = pb.env.Env(cfg=(cfg := pb.env.Conf()))
 action_fn = vmap(b2s.make_action_fn(b2s.dsl.all_vars, cfg.num_agents, n), in_axes=(None, 0, None, None, 0, 0))
 behavior = tree.map(lambda x: repeat(x, "h -> agents h", agents=env.cfg.num_agents), b2s.bt.txt2array(bt, n))

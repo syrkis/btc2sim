@@ -25,7 +25,7 @@ def compute_right_siblings(n_nodes):
 
 
 # %%
-class Expr2array(Transformer):
+class BehaviorTree(Transformer):
     def __init__(self, all_vars):
         self.all_vars = all_vars
 
@@ -35,13 +35,13 @@ class Expr2array(Transformer):
     def nodes(self, args):
         return args
 
-    def condition(self, args):
+    def condition(self, args):  # returns four things
         return [(Parent.NONE, Parent.NONE, None, self.all_vars.index(" ".join(args[0])))]
 
-    def action(self, args):
+    def action(self, args):  # returns four things
         return [(Parent.NONE, Parent.NONE, None, self.all_vars.index(" ".join(args[0])))]
 
-    def sequence(self, args):
+    def sequence(self, args):  # returns four things
         array = []
         n_nodes = [len(child_array) for child_array in args[0]]
         n_right_siblings = compute_right_siblings(n_nodes)
@@ -57,7 +57,7 @@ class Expr2array(Transformer):
             ]
         return array
 
-    def fallback(self, args):
+    def fallback(self, args):  # returns four things
         array = []
         n_nodes = [len(child_array) for child_array in args[0]]
         n_right_siblings = compute_right_siblings(n_nodes)
@@ -107,7 +107,7 @@ class Expr2array(Transformer):
         return ["is_dying"] + args
 
     def is_in_forest(self, args):
-        return ["is_in_forest"]
+        return ["is_hidden"]
 
     def sense(self, args):
         return str(args[0])
@@ -154,12 +154,9 @@ class Behavior:
     atomics_id: Array
 
 
-expr2array_transformer = Expr2array(all_vars)
-
-
 def expr2array(expr, size):
-    A = expr2array_transformer.transform(expr)  # [(parent, atomic id)]
-
+    trans = BehaviorTree(all_vars)
+    A = trans.transform(expr)  # [(parent, atomic id)]
     parents = jnp.ones(size, dtype=jnp.int32) * Parent.NONE
     predecessors = jnp.ones(size, dtype=jnp.int32) * Parent.NONE
     atomics_id = jnp.ones(size, dtype=jnp.int32) * -1
@@ -171,7 +168,12 @@ def expr2array(expr, size):
         passings = passings.at[i].set(0 if passing is None else passing)
         atomics_id = atomics_id.at[i].set(atomic_id)
     # return predecessors, parents, passings, atomics_id
-    return Behavior(predecessors=predecessors, parents=parents, passings=passings, atomics_id=atomics_id)
+    return Behavior(
+        predecessors=predecessors,
+        parents=parents,
+        passings=passings,
+        atomics_id=atomics_id,
+    )
 
 
 def txt2array(txt, size):

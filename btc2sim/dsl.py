@@ -1,28 +1,6 @@
-# ---
-# jupyter:
-#   jupytext:
-#     formats: py:percent
-#     text_representation:
-#       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
-#       jupytext_version: 1.16.6
-#   kernelspec:
-#     display_name: Python 3 (ipykernel)
-#     language: python
-#     name: python3
-# ---
-
-# %% [markdown]
-# # Import
-
 # %%
 from lark import Lark
 from itertools import product
-
-
-# %% [markdown]
-# # The Grammar
 
 
 # %%
@@ -60,6 +38,7 @@ conditions = {
 }
 
 atomics = {"A": actions, "C": conditions}
+grammar = Lark(open("grammar.lark", "r").read())
 
 # %%
 all_vars = []
@@ -67,71 +46,10 @@ for atomic in atomics.values():
     for variants in atomic.values():
         all_vars += variants
 
-# %%
-bt_grammar = Lark(f"""?start: node
-
-%import common.WS
-%ignore WS
-
-nodes : node ("::" node | "|>" node)*
-node  :
-    | sequence
-    | fallback
-    | action
-    | condition
-
-sequence  : "S" "(" nodes ")"
-fallback  : "F" "(" nodes ")"
-action    : "A" "(" atomic ")"
-condition : "C" "(" atomic ")"
-
-atomic :
-    | move
-    | attack
-    | stand
-    | follow_map
-    | heal
-    | debug
-    | in_sight
-    | in_reach
-    | is_type
-    | is_dying
-    | is_in_forest
-
-
-move       : "move" sense qualifier (foe | friend) (unit | any)
-attack     : "attack" qualifier (unit |any)
-stand      : "stand"
-follow_map : "follow_map" sense margin
-heal       : "heal" qualifier (unit |any)
-debug      : "debug" direction
-in_sight  : "in_sight" (foe | friend) (unit | any)
-in_reach  : "in_reach" (foe | friend) source steps (unit | any)
-is_type   : "is_type" unit
-is_dying  : "is_dying" (self | foe | friend) threshold
-is_in_forest : "is_in_forest"
-qualifier : /{"|".join(qualifiers)}/
-margin  : /{"|".join(margins)}/
-unit      : /{"|".join(unit_types)}/
-sense     : /{"|".join(senses)}/
-foe       : /foe/
-friend    : /friend/
-self      : /self/
-any       : /any/
-direction : /{"|".join(directions)}/
-source    : /{"|".join(source)}/
-steps     : /{"|".join(steps)}/
-threshold : /{"|".join(thresholds)}/
-""")
-
 
 # %%
 def txt2expr(txt):
-    return bt_grammar.parse(txt)
-
-
-# %% [markdown]
-# # compute variants from unit_types
+    return grammar.parse(txt)
 
 
 # %%
