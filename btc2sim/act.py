@@ -614,15 +614,15 @@ def is_in_forest_factory(all_variants):
 def compute_variants_factory(vars, env: pb.env.Env):
     stand_eval = stand_factory(vars)
     move_eval = move_factory(vars)
-    attack_eval = attack_factory(vars)
+    # attack_eval = attack_factory(vars)
     # follow_map_eval = follow_map_factory(vars)
-    heal_eval = heal_factory(vars)
+    # heal_eval = heal_factory(vars)
     # debug_eval = debug_factory(vars)
-    in_sight_eval = in_sight_factory(vars, env.num_units)
-    in_reach_eval = in_reach_factory(vars, env.num_units)
-    is_type_eval = is_type_factory(vars)
-    is_dying_eval = is_dying_factory(vars)
-    is_in_forest_eval = is_in_forest_factory(vars)
+    # in_sight_eval = in_sight_factory(vars, env.num_units)
+    # in_reach_eval = in_reach_factory(vars, env.num_units)
+    # is_type_eval = is_type_factory(vars)
+    # is_dying_eval = is_dying_factory(vars)
+    # is_in_forest_eval = is_in_forest_factory(vars)
 
     def compute_variants(env, scene, state, obs, rng, agent_id, variants_status, variants_action):
         move_rng, attack_rng, follow_map_rng, heal_rng = random.split(rng, 4)
@@ -630,21 +630,21 @@ def compute_variants_factory(vars, env: pb.env.Env):
         variants_status, variants_action = move_eval(
             env, scene, state, obs, move_rng, agent_id, variants_status, variants_action
         )
-        variants_status, variants_action = attack_eval(
-            env, scene, state, obs, attack_rng, agent_id, variants_status, variants_action
-        )
+        # variants_status, variants_action = attack_eval(
+        # env, scene, state, obs, attack_rng, agent_id, variants_status, variants_action
+        # )
         # variants_status, variants_action = follow_map_eval(
         # env, scene, state, follow_map_rng, agent_id, variants_status, variants_action
         # )
-        variants_status, variants_action = heal_eval(
-            env, scene, state, heal_rng, agent_id, variants_status, variants_action
-        )
+        # variants_status, variants_action = heal_eval(
+        # env, scene, state, heal_rng, agent_id, variants_status, variants_action
+        # )
         # variants_status, variants_action = debug_eval(env, scene, state, agent_id, variants_status, variants_action)
-        variants_status = in_sight_eval(env, scene, state, agent_id, variants_status)
-        variants_status = in_reach_eval(env, scene, state, agent_id, variants_status)
-        variants_status = is_type_eval(env, scene, state, agent_id, variants_status)
-        variants_status = is_dying_eval(env, scene, state, agent_id, variants_status)
-        variants_status = is_in_forest_eval(env, scene, state, agent_id, variants_status)
+        # variants_status = in_sight_eval(env, scene, state, agent_id, variants_status)
+        # variants_status = in_reach_eval(env, scene, state, agent_id, variants_status)
+        # variants_status = is_type_eval(env, scene, state, agent_id, variants_status)
+        # variants_status = is_dying_eval(env, scene, state, agent_id, variants_status)
+        # variants_status = is_in_forest_eval(env, scene, state, agent_id, variants_status)
         return variants_status, variants_action
 
     return compute_variants

@@ -111,6 +111,9 @@ class BehaviorTree(Transformer):
     def friend(self, args):
         return str(args[0])
 
+    def piece(self, args):
+        return str(args[0])
+
     def qualifier(self, args):
         return str(args[0])
 

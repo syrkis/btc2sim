@@ -8,7 +8,7 @@ from itertools import product
 
 # Constants
 grammar = Lark(open("grammar.lark", "r").read())
-k = "QUALIFIER SENSE DIRECTION UNIT_TYPE SOURCE STEP THRESH MARGIN FRIEND FOE".lower().split()
+k = "QUALIFIER SENSE DIRECTION UNIT_TYPE SOURCE STEP THRESH MARGIN FRIEND FOE PIECE".lower().split()
 v = map(lambda x: x.pattern.value.strip("()?:").split("|"), filter(lambda x: x.name.lower() in k, grammar.terminals))
 t = {k: v for k, v in zip(k, v)}
 
@@ -21,7 +21,8 @@ set_product = lambda sets: [" ".join(a) for a in product(*tuple(vals for vals in
 # %% Globals  # <- maybe put into grammar
 actions = {
     "attack": set_product([["attack"], t["qualifier"], t["unit_type"] + ["any"]]),
-    "move": set_product([["move"], t["sense"], t["qualifier"], t["friend"] + t["foe"], t["unit_type"] + ["any"]]),
+    "move": set_product([["move"], t["sense"], t["qualifier"], t["friend"] + t["foe"], t["unit_type"] + ["any"]])
+    + set_product([["move"], t["sense"], t["piece"]]),
     "stand": ["stand"],
     "follow_map": set_product([["follow_map"], t["sense"], t["margin"]]),
     "heal": set_product([["heal"], t["qualifier"], t["unit_type"] + ["any"]]),

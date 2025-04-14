@@ -26,6 +26,8 @@ env, scene = pb.env.Env(cfg=cfg), pb.env.scene_fn(cfg)
 
 behavior = tree.map(lambda x: repeat(x, "h -> agents h", agents=env.num_units), bt)
 action_fn = vmap(b2s.act.make_action_fn(b2s.dsl.all_vars, env.num_units), in_axes=(None, None, 0, None, None, 0, 0))
+print(7)
+exit()
 
 
 # Functions

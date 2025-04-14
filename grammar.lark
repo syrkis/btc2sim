@@ -5,7 +5,7 @@
 
 // Define all terminals directly in the grammar
 QUALIFIER : "closest" | "farthest" | "weakest" | "strongest" | "random"
-SENSE     : "toward" | "away_from"
+SENSE     : "to" | "from"
 DIRECTION : "north" | "south" | "east" | "west"
 UNIT_TYPE : "spearmen" | "archer" | "cavalry" | "healer" | "grenadier"
 SOURCE    : "me_from_them" | "them_from_me"
@@ -30,7 +30,7 @@ condition : "C" "(" atomic ")"
 atomic : move | attack | stand | follow_map | heal | debug | in_sight | in_reach | is_type | is_dying | is_hidden
 
 // Actions
-move       : "move" sense qualifier (foe | friend) (unit | any)
+move       : "move" sense qualifier* (foe | friend | piece) (unit | any)*
 attack     : "attack" qualifier (unit | any)
 stand      : "stand"
 follow_map : "follow_map" sense margin
@@ -58,3 +58,4 @@ source    : SOURCE
 step      : STEP
 thresh    : THRESH
 team      : TEAM
+piece     : PIECE
