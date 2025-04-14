@@ -651,47 +651,51 @@ def compute_variants_factory(all_variants, n_agents):
 
 
 # %%
-def eval_bt(behavior: Behavior, variants_status, variants_action, i, carry):
-    s, a, passing = carry
-    variant_id = behavior.atomics_id[i]
-    has_not_found_action = jnp.logical_or(s != Status.SUCCESS, a.kind == NONE)
-    is_valid_from_sequence = jnp.logical_and(behavior.predecessors[i] == Parent.SEQUENCE, s != Status.FAILURE)
-    is_valid_from_fallback = jnp.logical_and(behavior.predecessors[i] == Parent.FALLBACK, s != Status.SUCCESS)
-    is_valid_from_root = behavior.predecessors[i] == Parent.NONE
+
+
+def eval_bt(behavior: Behavior, variants_status, variants_action, carry, i):
+    status, action, passing = carry
+    variant_id = behavior.atomics_id
+    has_not_found_action = jnp.logical_or(status != Status.SUCCESS, action.kind == NONE)
+    is_valid_from_sequence = jnp.logical_and(behavior.predecessors == Parent.SEQUENCE, status != Status.FAILURE)
+    is_valid_from_fallback = jnp.logical_and(behavior.predecessors == Parent.FALLBACK, status != Status.SUCCESS)
+    is_valid_from_root = behavior.predecessors == Parent.NONE
 
     is_valid = jnp.logical_or(jnp.logical_or(is_valid_from_sequence, is_valid_from_fallback), is_valid_from_root)
     is_valid = jnp.logical_and(is_valid, variant_id != -1)  # not an empty leaf (from fixed size)
     condition = jnp.logical_and(jnp.logical_and(has_not_found_action, is_valid), passing <= 0)
 
     passing_if_FAILURE_in_sequence = jnp.logical_and(
-        behavior.parents[i] == Parent.SEQUENCE, variants_status[variant_id] == Status.FAILURE
+        behavior.parents == Parent.SEQUENCE, variants_status[variant_id] == Status.FAILURE
     )
     passing_if_SUCCESS_in_failure = jnp.logical_and(
-        behavior.parents[i] == Parent.FALLBACK, variants_status[variant_id] == Status.SUCCESS
+        behavior.parents == Parent.FALLBACK, variants_status[variant_id] == Status.SUCCESS
     )
 
     if_passing = jnp.logical_and(
         condition, jnp.logical_or(passing_if_FAILURE_in_sequence, passing_if_SUCCESS_in_failure)
     )
-    passing = jnp.where(if_passing, behavior.passings[i], passing - 1)
+    passing = jnp.where(if_passing, behavior.passings, passing - 1)
 
-    status = jnp.where(condition, variants_status[variant_id], s)  # status
-    action = variants_action[variant_id].where(condition, a)  # action
+    status = jnp.where(condition, variants_status[variant_id], status)  # status
+    action = variants_action[variant_id].where(condition, action)  # action
     return status, action, passing
 
 
 # %%  THS IS WHERE WE ARE AT NOW NOAH
-def make_action_fn(all_variants, n_agents, bt_max_size=10):
+def make_action_fn(all_variants, n_agents):
     n_variants = len(all_variants)
     compute_variants = compute_variants_factory(all_variants, n_agents)
 
-    def get_action(env, scene, rng, state, obs, behavior, agent_id):  # for one agent
-        return pb.types.Action(kinds=jnp.array(0), coord=jnp.array([1, 1]))
-        aux = partial(compute_variants, env, scene, state, obs, rng, agent_id)
-        variants_status, variants_action = aux(jnp.zeros(n_variants), Action.from_shape((n_variants,)))
+    def get_action(env, scene, rng, state, obs, behavior: Behavior, agent_id):  # for one agent
+        action = pb.types.Action(kinds=jnp.array(0), coord=jnp.array([1, 0]))
+        return action
+        variants_status, variants_action = compute_variants(
+            env, scene, state, obs, rng, agent_id, jnp.zeros(n_variants), Action.from_shape((n_variants,))
+        )
         eval_leaf = partial(eval_bt, behavior, variants_status, variants_action)
         carry = Status.NONE, NONE_ACTION, 0
-        status, action, passing = lax.fori_loop(0, bt_max_size, eval_leaf, carry)
+        stats, (status, action, passing) = lax.scan(eval_leaf, carry, behavior)  # scan through behavior nodes
         return action.where(jnp.logical_and(status == Status.SUCCESS, action.kind != NONE), STAND_ACTION)
 
     return get_action

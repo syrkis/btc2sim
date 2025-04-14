@@ -21,6 +21,9 @@ class Behavior:
     predecessors: Array
     passings: Array
 
+    def __len__(self):
+        return self.atomics_id.shape[0]
+
 
 @dataclass
 class Status:  # for behavior tree
