@@ -25,17 +25,15 @@ env, scene = pb.env.Env(cfg=cfg), pb.env.scene_fn(cfg)
 
 
 behavior = tree.map(lambda x: repeat(x, "h -> agents h", agents=env.num_units), bt)
-action_fn = vmap(b2s.act.make_action_fn(b2s.dsl.all_vars, env.num_units), in_axes=(None, None, 0, None, None, 0, 0))
-print(7)
-exit()
+action_fn = vmap(b2s.act.action_fn, in_axes=(None, None, None, 0, 0, 0))
 
 
 # Functions
 def step(carry, rng):
     obs, state = carry
-    action_key, step_key = random.split(rng, (2, env.num_units))
-    action = action_fn(env, scene, action_key, state, obs, behavior, jnp.arange(env.num_units))
-    obs, state = env.step(step_key, scene, state, action)
+    rngs = random.split(rng, (2, env.num_units))
+    action = action_fn(rngs[0], env, scene, state, obs, behavior)
+    obs, state = env.step(rngs[1], scene, state, action)
     return (obs, state), state
 
 
@@ -53,4 +51,4 @@ rng, key = random.split(random.PRNGKey(0))
 rngs = random.split(rng, 100)
 obs, state = env.reset(key, scene)
 state, seq = lax.scan(step, (obs, state), rngs)
-anim(scene, seq)
+# anim(scene, seq)

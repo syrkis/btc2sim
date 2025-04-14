@@ -6,12 +6,12 @@
 # imports
 import jax.numpy as jnp
 from flax.struct import dataclass
-from jax import random, vmap, lax
+from jax import random, vmap, lax, tree, debug
 from functools import partial
 import parabellum as pb
 
 from btc2sim.bts import Parent
-from btc2sim.types import Behavior
+from btc2sim.types import Behavior, State
 
 
 # %%
@@ -59,7 +59,7 @@ def has_line_of_sight(obstacles, source, target, env):
 
 # %%
 def stand_factory(all_variants):
-    def stand(env, scene, state, agent_id, variants_status, variants_action):
+    def stand(env, scene, state, variants_status, variants_action):
         variant_id = all_variants.index("stand")
         return variants_status.at[variant_id].set(Status.SUCCESS), variants_action.set_item(variant_id, STAND_ACTION)
 
@@ -316,7 +316,6 @@ def move_factory(all_variants):
     return move
 
 
-# %%
 def follow_map_factory(all_variants):
     n_direction = 8  # number of direction arround the unit (2pi/n_direction)
     n_step_size = 4  # number of steps in the direction up to the unit's velocity (should be at least equal to the max velocity so that it check every cells
@@ -598,77 +597,45 @@ def is_dying_factory(all_variants):
     return is_dying
 
 
-# %%
-def is_in_forest_factory(all_variants):
-    def is_in_forest(env, scene, state, agent_id, variants_status):
-        pos = state.unit_position[agent_id].astype(jnp.uint32)
-        variants_status = variants_status.at[all_variants.index("is_in_forest")].set(
-            jnp.where(scene.terrain.forest[pos[0], pos[1]], Status.SUCCESS, Status.FAILURE)
-        )
-        return variants_status
-
-    return is_in_forest
+# returns dir for all 6 pieces
+def move_fns(rng, env, scene: pb.types.Scene, state: pb.types.State, obs: pb.types.Obs, behavior: Behavior):
+    direction = obs.unit_pos[0] - state.mark_position
+    status = jnp.zeros_like(behavior.atomics_id).at[behavior.atomics_id == 0].set(1)
+    coords = jnp.zeros_like(behavior.parents).at[0].set(direction / jnp.linalg.norm(direction))
+    action = pb.types.Action(kinds=jnp.bool(True), coord=coords)
+    return State(status=status, action=action)
 
 
-# %%
-def compute_variants_factory(vars, env: pb.env.Env):
-    stand_eval = stand_factory(vars)
-    move_eval = move_factory(vars)
-    # attack_eval = attack_factory(vars)
-    # follow_map_eval = follow_map_factory(vars)
-    # heal_eval = heal_factory(vars)
-    # debug_eval = debug_factory(vars)
-    # in_sight_eval = in_sight_factory(vars, env.num_units)
-    # in_reach_eval = in_reach_factory(vars, env.num_units)
-    # is_type_eval = is_type_factory(vars)
-    # is_dying_eval = is_dying_factory(vars)
-    # is_in_forest_eval = is_in_forest_factory(vars)
-
-    def compute_variants(env, scene, state, obs, rng, agent_id, variants_status, variants_action):
-        move_rng, attack_rng, follow_map_rng, heal_rng = random.split(rng, 4)
-        variants_status, variants_action = stand_eval(env, scene, state, agent_id, variants_status, variants_action)
-        variants_status, variants_action = move_eval(
-            env, scene, state, obs, move_rng, agent_id, variants_status, variants_action
-        )
-        # variants_status, variants_action = attack_eval(
-        # env, scene, state, obs, attack_rng, agent_id, variants_status, variants_action
-        # )
-        # variants_status, variants_action = follow_map_eval(
-        # env, scene, state, follow_map_rng, agent_id, variants_status, variants_action
-        # )
-        # variants_status, variants_action = heal_eval(
-        # env, scene, state, heal_rng, agent_id, variants_status, variants_action
-        # )
-        # variants_status, variants_action = debug_eval(env, scene, state, agent_id, variants_status, variants_action)
-        # variants_status = in_sight_eval(env, scene, state, agent_id, variants_status)
-        # variants_status = in_reach_eval(env, scene, state, agent_id, variants_status)
-        # variants_status = is_type_eval(env, scene, state, agent_id, variants_status)
-        # variants_status = is_dying_eval(env, scene, state, agent_id, variants_status)
-        # variants_status = is_in_forest_eval(env, scene, state, agent_id, variants_status)
-        return variants_status, variants_action
-
-    return compute_variants
+# stands
+def stand_fns(rng, env, scene, stats, obs, behavior):
+    status = jnp.zeros_like(behavior.atomics_id).at[behavior.atomics_id == 0].set(1)
+    coords = jnp.zeros_like(behavior.atomics_id).at[behavior.atomics_id == 0].set(1)
+    action = pb.types.Action(kinds=jnp.zeros(0), coord=coords)
+    return State(status=status, action=action)
 
 
-def make_action_fn(all_variants, n_agents):
-    n_variants = len(all_variants)
-    compute_variants = compute_variants_factory(all_variants, n_agents)
-
-    def get_action(env, scene, state, obs, rng, behavior: Behavior, agent_id):  # for one agent
-        action = pb.types.Action(kinds=jnp.array(0), coord=jnp.array([1, 0]))
-        return action
-        variants_status, variants_action = compute_variants(
-            env, scene, state, obs, rng, agent_id, jnp.zeros(n_variants), Action.from_shape((n_variants,))
-        )
-        eval_leaf = partial(eval_bt, behavior, variants_status, variants_action)
-        carry = Status.NONE, NONE_ACTION, 0
-        stats, (status, action, passing) = lax.scan(eval_leaf, carry, behavior)  # scan through behavior nodes
-        return action.where(jnp.logical_and(status == Status.SUCCESS, action.kind != NONE), STAND_ACTION)
-
-    return get_action
+# evaluate all atomics
+def atomic_fns(env, scene, state, obs, rng, behavior):
+    rngs = random.split(rng)
+    args = env, scene, state, obs, behavior
+    state = stand_fns(rngs[0], *args) + move_fns(rngs[1], *args)
+    return state
 
 
-def eval_bt(behavior: Behavior, variants_status, variants_action, carry, i):
+# return action based on state, obs, etc.
+def action_fn(rng, env, scene, state, obs, behavior: Behavior):  # for one agent
+    state = atomic_fns(rng, env, scene, state, obs, behavior)
+    stats, (status, action, passing) = lax.scan(partial(eval_bt, behavior), state, behavior)
+    return action
+    # return action.where(jnp.logical_and(status == Status.SUCCESS, action.kind != NONE), STAND_ACTION)
+
+
+# return get_action
+
+
+def eval_bt(behavior: Behavior, carry, function):
+    action = pb.types.Action(kinds=jnp.array(0), coord=jnp.array([1, 0]))
+    return None, (None, action, None)
     status, action, passing = carry
     variant_id = behavior.atomics_id
     has_not_found_action = jnp.logical_or(status != Status.SUCCESS, action.kind == NONE)
@@ -681,10 +648,10 @@ def eval_bt(behavior: Behavior, variants_status, variants_action, carry, i):
     condition = jnp.logical_and(jnp.logical_and(has_not_found_action, is_valid), passing <= 0)
 
     passing_if_FAILURE_in_sequence = jnp.logical_and(
-        behavior.parents == Parent.SEQUENCE, variants_status[variant_id] == Status.FAILURE
+        behavior.parents == Parent.SEQUENCE, behavior.status[variant_id] == Status.FAILURE
     )
     passing_if_SUCCESS_in_failure = jnp.logical_and(
-        behavior.parents == Parent.FALLBACK, variants_status[variant_id] == Status.SUCCESS
+        behavior.parents == Parent.FALLBACK, behavior.status[variant_id] == Status.SUCCESS
     )
 
     if_passing = jnp.logical_and(
@@ -692,7 +659,8 @@ def eval_bt(behavior: Behavior, variants_status, variants_action, carry, i):
     )
     passing = jnp.where(if_passing, behavior.passings, passing - 1)
 
-    status = jnp.where(condition, variants_status[variant_id], status)  # status
-    action = variants_action[variant_id].where(condition, action)  # action
+    status = jnp.where(condition, behavior.status[variant_id], status)  # status
+    action = behavior.action
+    [variant_id].where(condition, action)  # action
     stats = jnp.ones(10)  # TODO: should hold how often different node is a success
     return stats, (status, action, passing)

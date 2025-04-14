@@ -1,9 +1,12 @@
 # imports
 # from chex import dataclass
 from chex import dataclass
-from jax import Array
+from dataclasses import field
+from jaxtyping import Array
+import jax.numpy as jnp
 import parabellum as pb
 from typing import Any, Callable
+import parabellum as pb
 
 
 # dataclasses
@@ -23,6 +26,15 @@ class Behavior:
 
     def __len__(self):
         return self.atomics_id.shape[0]
+
+
+@dataclass
+class State:
+    status: Array
+    action: pb.types.Action
+
+    def __add__(self, other):
+        return State(status=self.status + other.status, action=self.action + other.action)
 
 
 @dataclass
