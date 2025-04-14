@@ -611,18 +611,18 @@ def is_in_forest_factory(all_variants):
 
 
 # %%
-def compute_variants_factory(all_variants, n_agents):
-    stand_eval = stand_factory(all_variants)
-    move_eval = move_factory(all_variants)
-    attack_eval = attack_factory(all_variants)
-    # follow_map_eval = follow_map_factory(all_variants)
-    heal_eval = heal_factory(all_variants)
-    # debug_eval = debug_factory(all_variants)
-    in_sight_eval = in_sight_factory(all_variants, n_agents)
-    in_reach_eval = in_reach_factory(all_variants, n_agents)
-    is_type_eval = is_type_factory(all_variants)
-    is_dying_eval = is_dying_factory(all_variants)
-    is_in_forest_eval = is_in_forest_factory(all_variants)
+def compute_variants_factory(vars, env: pb.env.Env):
+    stand_eval = stand_factory(vars)
+    move_eval = move_factory(vars)
+    attack_eval = attack_factory(vars)
+    # follow_map_eval = follow_map_factory(vars)
+    heal_eval = heal_factory(vars)
+    # debug_eval = debug_factory(vars)
+    in_sight_eval = in_sight_factory(vars, env.num_units)
+    in_reach_eval = in_reach_factory(vars, env.num_units)
+    is_type_eval = is_type_factory(vars)
+    is_dying_eval = is_dying_factory(vars)
+    is_in_forest_eval = is_in_forest_factory(vars)
 
     def compute_variants(env, scene, state, obs, rng, agent_id, variants_status, variants_action):
         move_rng, attack_rng, follow_map_rng, heal_rng = random.split(rng, 4)
@@ -640,17 +640,32 @@ def compute_variants_factory(all_variants, n_agents):
             env, scene, state, heal_rng, agent_id, variants_status, variants_action
         )
         # variants_status, variants_action = debug_eval(env, scene, state, agent_id, variants_status, variants_action)
-        variants_status = in_sight_eval(env, env.scene, state, agent_id, variants_status)
-        variants_status = in_reach_eval(env, env.scene, state, agent_id, variants_status)
-        variants_status = is_type_eval(env, env.scene, state, agent_id, variants_status)
-        variants_status = is_dying_eval(env, env.scene, state, agent_id, variants_status)
-        variants_status = is_in_forest_eval(env, env.scene, state, agent_id, variants_status)
+        variants_status = in_sight_eval(env, scene, state, agent_id, variants_status)
+        variants_status = in_reach_eval(env, scene, state, agent_id, variants_status)
+        variants_status = is_type_eval(env, scene, state, agent_id, variants_status)
+        variants_status = is_dying_eval(env, scene, state, agent_id, variants_status)
+        variants_status = is_in_forest_eval(env, scene, state, agent_id, variants_status)
         return variants_status, variants_action
 
     return compute_variants
 
 
-# %%
+def make_action_fn(all_variants, n_agents):
+    n_variants = len(all_variants)
+    compute_variants = compute_variants_factory(all_variants, n_agents)
+
+    def get_action(env, scene, state, obs, rng, behavior: Behavior, agent_id):  # for one agent
+        action = pb.types.Action(kinds=jnp.array(0), coord=jnp.array([1, 0]))
+        return action
+        variants_status, variants_action = compute_variants(
+            env, scene, state, obs, rng, agent_id, jnp.zeros(n_variants), Action.from_shape((n_variants,))
+        )
+        eval_leaf = partial(eval_bt, behavior, variants_status, variants_action)
+        carry = Status.NONE, NONE_ACTION, 0
+        stats, (status, action, passing) = lax.scan(eval_leaf, carry, behavior)  # scan through behavior nodes
+        return action.where(jnp.logical_and(status == Status.SUCCESS, action.kind != NONE), STAND_ACTION)
+
+    return get_action
 
 
 def eval_bt(behavior: Behavior, variants_status, variants_action, carry, i):
@@ -679,23 +694,5 @@ def eval_bt(behavior: Behavior, variants_status, variants_action, carry, i):
 
     status = jnp.where(condition, variants_status[variant_id], status)  # status
     action = variants_action[variant_id].where(condition, action)  # action
-    return status, action, passing
-
-
-# %%  THS IS WHERE WE ARE AT NOW NOAH
-def make_action_fn(all_variants, n_agents):
-    n_variants = len(all_variants)
-    compute_variants = compute_variants_factory(all_variants, n_agents)
-
-    def get_action(env, scene, rng, state, obs, behavior: Behavior, agent_id):  # for one agent
-        action = pb.types.Action(kinds=jnp.array(0), coord=jnp.array([1, 0]))
-        return action
-        variants_status, variants_action = compute_variants(
-            env, scene, state, obs, rng, agent_id, jnp.zeros(n_variants), Action.from_shape((n_variants,))
-        )
-        eval_leaf = partial(eval_bt, behavior, variants_status, variants_action)
-        carry = Status.NONE, NONE_ACTION, 0
-        stats, (status, action, passing) = lax.scan(eval_leaf, carry, behavior)  # scan through behavior nodes
-        return action.where(jnp.logical_and(status == Status.SUCCESS, action.kind != NONE), STAND_ACTION)
-
-    return get_action
+    stats = jnp.ones(10)  # TODO: should hold how often different node is a success
+    return stats, (status, action, passing)

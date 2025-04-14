@@ -17,6 +17,7 @@ FOE       : "foe"
 FRIEND    : "friend"
 SELF      : "self"
 ANY       : "any"
+PIECE     : "king" | "queen" | "bishop" | "knight" | "pawn" | "rook"
 
 nodes : node ("::" node | "|>" node)*
 node  : sequence | fallback | action | condition
