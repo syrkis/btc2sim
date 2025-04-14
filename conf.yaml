@@ -1,0 +1,38 @@
+place: "Copenhagen, Denmark"
+size: 500
+knn: 5
+num_units: 12
+num_allies: 6
+num_enemies: 6
+counts:
+  allies:
+    Infantry: 2
+    Tank: 2
+    Airplane: 2
+  enemies:
+    Infantry: 2
+    Tank: 2
+    Airplane: 2
+
+types:
+  - name: "Infantry"
+    health: 100
+    damage: 100
+    reload: 1
+    reach: 1
+    sight: 5
+    speed: 1
+  - name: "Tank"
+    health: 200
+    damage: 200
+    reload: 2
+    reach: 2
+    sight: 2
+    speed: 0.5
+  - name: "Airplane"
+    health: 500
+    damage: 50
+    reload: 3
+    reach: 3
+    sight: 3
+    speed: 2

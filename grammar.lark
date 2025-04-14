@@ -10,8 +10,9 @@ DIRECTION : "north" | "south" | "east" | "west"
 UNIT_TYPE : "spearmen" | "archer" | "cavalry" | "healer" | "grenadier"
 SOURCE    : "me_from_them" | "them_from_me"
 STEP      : "0" | "1" | "2" | "3"
-THRESHOLD : "25%" | "50%" | "75%"
+THRESH    : "25%" | "50%" | "75%"
 MARGIN    : "0%" | "25%" | "50%" | "100%"
+TEAM      : "friend" | "foe"
 FOE       : "foe"
 FRIEND    : "friend"
 SELF      : "self"
@@ -39,7 +40,7 @@ debug      : "debug" direction
 in_sight  : "in_sight" (foe | friend) (unit | any)
 in_reach  : "in_reach" (foe | friend) source step (unit | any)
 is_type   : "type" unit
-is_dying  : "dying" (self | foe | friend) threshold
+is_dying  : "dying" (self | foe | friend) thresh
 is_hidden : "is_hidden"
 
 // Terminal references
@@ -54,4 +55,5 @@ any       : ANY
 direction : DIRECTION
 source    : SOURCE
 step      : STEP
-threshold : THRESHOLD
+thresh    : THRESH
+team      : TEAM

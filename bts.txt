@@ -1,0 +1,4 @@
+F ( A ( attack random any ) |> A ( follow_map toward 25% ) |> A ( move toward closest foe any ) |> A ( move toward closest friend any ))
+F ( A ( attack closest any ) |> A (move toward closest foe any))
+F ( S ( C ( is_in_forest ) |> A ( follow_map toward 0% )) |> S ( C ( in_reach foe me_from_them 3 any ) |> A ( move away_from closest foe any )) |> A ( attack closest any ))
+F ( S ( C ( is_in_forest ) |> A ( follow_map toward 0% )) |> A ( attack closest any ) |> A ( move toward closest foe any ))

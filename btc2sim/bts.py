@@ -2,18 +2,8 @@
 import numpy as np
 import jax.numpy as jnp
 from lark import Transformer
-
-from chex import dataclass
-from btc2sim.dsl import all_vars, txt2expr
-from jax import Array
-
-
-# %%
-@dataclass
-class Parent:  # for behavior tree
-    SEQUENCE: int = 1
-    NONE: int = 0
-    FALLBACK: int = -1
+from btc2sim.dsl import all_vars, grammar
+from btc2sim.types import Parent, Behavior
 
 
 # %%
@@ -146,15 +136,8 @@ class BehaviorTree(Transformer):
         return str(args[0])
 
 
-@dataclass
-class Behavior:
-    predecessors: Array
-    parents: Array
-    passings: Array
-    atomics_id: Array
-
-
-def expr2array(expr, size):
+def txt2bts(txt, size=10):
+    expr = grammar.parse(txt)
     trans = BehaviorTree(all_vars)
     A = trans.transform(expr)  # [(parent, atomic id)]
     parents = jnp.ones(size, dtype=jnp.int32) * Parent.NONE
@@ -167,14 +150,9 @@ def expr2array(expr, size):
         parents = parents.at[i].set(parent)
         passings = passings.at[i].set(0 if passing is None else passing)
         atomics_id = atomics_id.at[i].set(atomic_id)
-    # return predecessors, parents, passings, atomics_id
     return Behavior(
         predecessors=predecessors,
         parents=parents,
         passings=passings,
         atomics_id=atomics_id,
     )
-
-
-def txt2array(txt, size):
-    return expr2array(txt2expr(txt), size)
