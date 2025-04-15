@@ -18,7 +18,7 @@ class Parent:  # for behavior tree
 
 
 @dataclass
-class Behavior:
+class BehaviorArray:
     atomics_id: Array
     parents: Array
     predecessors: Array
@@ -26,15 +26,6 @@ class Behavior:
 
     def __len__(self):
         return self.atomics_id.shape[0]
-
-
-@dataclass
-class State:
-    status: Array
-    action: pb.types.Action
-
-    def __add__(self, other):
-        return State(status=self.status + other.status, action=self.action + other.action)
 
 
 @dataclass

@@ -4,17 +4,19 @@
 
 
 # imports
+import equinox as eqx
 import jax.numpy as jnp
-from flax.struct import dataclass
-from jax import random, vmap, lax, tree, debug
-from functools import partial
 import parabellum as pb
+from flax.struct import dataclass
+from jax import lax, random, tree, vmap
+from jaxtyping import Array
+from parabellum.env import Env
+from parabellum.types import Obs, Scene, State
 
 from btc2sim.bts import Parent
-from btc2sim.types import Behavior, State
+from btc2sim.types import BehaviorArray
 
-
-# %%
+# from btc2sim.utils import fmap
 
 # %%
 target_types = {
@@ -547,16 +549,16 @@ def in_reach_factory(all_variants, n_agents):
     return in_reach
 
 
-# %%
-def is_type_factory(all_variants):
-    def is_type(env, scene, state, agent_id, variants_status):
-        for unit_type in unit_types:
-            variants_status = variants_status.at[all_variants.index(f"is_type {unit_type}")].set(
-                jnp.where(scene.unit_type[agent_id] == target_types[unit_type], Status.SUCCESS, Status.FAILURE)
-            )
-        return variants_status
+# # %%
+# def is_type_factory(all_variants):
+#     def is_type(env, scene, state, agent_id, variants_status):
+#         for unit_type in unit_types:
+#             variants_status = variants_status.at[all_variants.index(f"is_type {unit_type}")].set(
+#                 jnp.where(scene.unit_type[agent_id] == target_types[unit_type], Status.SUCCESS, Status.FAILURE)
+#             )
+#         return variants_status
 
-    return is_type
+#     return is_type
 
 
 # %%
@@ -598,45 +600,45 @@ def is_dying_factory(all_variants):
 
 
 # returns dir for all 6 pieces
-def move_fns(rng, env, scene: pb.types.Scene, state: pb.types.State, obs: pb.types.Obs, behavior: Behavior):
+def move_fns(rng: Array, env: Env, scene: Scene, state: State, obs: Obs, behavior: BehaviorArray):
     direction = obs.unit_pos[0] - state.mark_position
-    status = jnp.zeros_like(behavior.atomics_id).at[behavior.atomics_id == 0].set(1)
-    coords = jnp.zeros_like(behavior.parents).at[0].set(direction / jnp.linalg.norm(direction))
-    action = pb.types.Action(kinds=jnp.bool(True), coord=coords)
-    return State(status=status, action=action)
+    coords = direction / jnp.linalg.norm(direction)
+    action = pb.types.Action(kinds=jnp.ones(coords.shape[0]), coord=coords)
+    return jnp.ones(action.kinds.size), action
 
 
 # stands
-def stand_fns(rng, env, scene, stats, obs, behavior):
-    status = jnp.zeros_like(behavior.atomics_id).at[behavior.atomics_id == 0].set(1)
-    coords = jnp.zeros_like(behavior.atomics_id).at[behavior.atomics_id == 0].set(1)
-    action = pb.types.Action(kinds=jnp.zeros(0), coord=coords)
-    return State(status=status, action=action)
+def stand_fns(rng: Array, env: Env, scene: Scene, state: State, obs: Obs, behavior: BehaviorArray):
+    action = pb.types.Action(kinds=jnp.ones((1,)), coord=jnp.zeros((1, 2)))
+    return jnp.ones(1), action
 
 
-# evaluate all atomics
-def atomic_fns(env, scene, state, obs, rng, behavior):
-    rngs = random.split(rng)
+@eqx.filter_jit
+def fmap(fns, rng: Array, env: Env, scene: Scene, state: State, obs: Obs, behavior: BehaviorArray):
     args = env, scene, state, obs, behavior
-    state = stand_fns(rngs[0], *args) + move_fns(rngs[1], *args)
-    return state
+    status, action = zip(*(f(rng, *args) for f, rng in zip(fns, jnp.split(rng, len(fns)))))
+    return jnp.concatenate(status), tree.map(lambda *xs: jnp.concatenate(xs, axis=0), *action)
 
 
-# return action based on state, obs, etc.
-def action_fn(rng, env, scene, state, obs, behavior: Behavior):  # for one agent
-    state = atomic_fns(rng, env, scene, state, obs, behavior)
-    stats, (status, action, passing) = lax.scan(partial(eval_bt, behavior), state, behavior)
-    return action
-    # return action.where(jnp.logical_and(status == Status.SUCCESS, action.kind != NONE), STAND_ACTION)
+def atomic_fns(rng: Array, env: Env, scene: Scene, state: State, obs: Obs, behavior: BehaviorArray):
+    fns = (stand_fns, move_fns)
+    args = env, scene, state, obs, behavior
+    status, action = fmap(fns, rng, *args)
+    return status, action
 
 
-# return get_action
+def action_fn(rng, env, scene, state, obs, behavior: BehaviorArray):  # for one agent
+    status, actions = atomic_fns(rng, env, scene, state, obs, behavior)
+    output, stats = lax.scan(eval_bt, (False, pb.types.Action()), (status, actions, behavior))
+    return output[1]
 
 
-def eval_bt(behavior: Behavior, carry, function):
-    action = pb.types.Action(kinds=jnp.array(0), coord=jnp.array([1, 0]))
-    return None, (None, action, None)
-    status, action, passing = carry
+def eval_bt(carry, inputs):
+    status, actions, behavior = inputs
+    status, action = carry
+    action = tree.map(jnp.int32, pb.types.Action(kinds=jnp.zeros(1), coord=jnp.array([1, 0])))
+    return (True, action), None
+    status, action = carry
     variant_id = behavior.atomics_id
     has_not_found_action = jnp.logical_or(status != Status.SUCCESS, action.kind == NONE)
     is_valid_from_sequence = jnp.logical_and(behavior.predecessors == Parent.SEQUENCE, status != Status.FAILURE)

@@ -3,7 +3,7 @@ import numpy as np
 import jax.numpy as jnp
 from lark import Transformer
 from btc2sim.dsl import all_vars, grammar
-from btc2sim.types import Parent, Behavior
+from btc2sim.types import Parent, BehaviorArray
 
 
 # %%
@@ -139,7 +139,7 @@ class BehaviorTree(Transformer):
         return str(args[0])
 
 
-def txt2bts(txt, size=10):
+def txt2bts(txt, size=7):
     expr = grammar.parse(txt)
     trans = BehaviorTree(all_vars)
     A = trans.transform(expr)  # [(parent, atomic id)]
@@ -153,9 +153,4 @@ def txt2bts(txt, size=10):
         parents = parents.at[i].set(parent)
         passings = passings.at[i].set(0 if passing is None else passing)
         atomics_id = atomics_id.at[i].set(atomic_id)
-    return Behavior(
-        predecessors=predecessors,
-        parents=parents,
-        passings=passings,
-        atomics_id=atomics_id,
-    )
+    return BehaviorArray(predecessors=predecessors, parents=parents, passings=passings, atomics_id=atomics_id)
