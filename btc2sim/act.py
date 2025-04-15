@@ -7,7 +7,7 @@
 import equinox as eqx
 import jax.numpy as jnp
 import parabellum as pb
-from jax import lax, tree, debug
+from jax import lax, tree
 from jaxtyping import Array
 from parabellum.env import Env
 from parabellum.types import Obs, Scene, State
@@ -57,19 +57,15 @@ def action_fn(rng, env, scene, state, obs, behavior: BehaviorArray):  # for one 
 
 
 def eval_bt(carry: Tuple[Array, Action, Array], input: Tuple[Array, Action, BehaviorArray]):
-    # load atomics and bt status
-    fn_status, fn_action, behavior = input
+    fn_status, fn_action, behavior = input  # load atomics and bt status
     status, action, passing = carry
 
-    # boolean flags
-    search = status != 1 | (action.coord == 0).all()
+    search = status != 1 | (action.coord == 0).all()  # boolean flags
     active = (status != (behavior.pred != S)) | (behavior.pred == -1)
 
-    # (potentially) update action and status
-    status = jnp.where(search & active & (passing <= 0), fn_status, status)
+    status = jnp.where(search & active & (passing <= 0), fn_status, status)  # (potentially) update action
     action = tree.map(lambda x, y: jnp.where(search & active & (passing <= 0), x, y), fn_action, action)
 
-    # (potentially) upate passing variable
-    flag = ((behavior.parent == S) & (status == 0)) | ((behavior.parent == F) & (status == 1))
+    flag = ((behavior.parent == S) & (status == 0)) | ((behavior.parent == F) & (status == 1))  # (potentially) upate
     passing = jnp.where(search & active & (passing <= 0), jnp.where(flag, passing - 1, behavior.passing), passing)
     return (status, action, passing), flag
