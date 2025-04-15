@@ -153,4 +153,4 @@ def txt2bts(txt, size=7):
         parents = parents.at[i].set(parent)
         passings = passings.at[i].set(0 if passing is None else passing)
         atomics_id = atomics_id.at[i].set(atomic_id)
-    return BehaviorArray(predecessors=predecessors, parents=parents, passings=passings, atomics_id=atomics_id)
+    return BehaviorArray(pred=predecessors, parent=parents, passing=passings, atomics_id=atomics_id)

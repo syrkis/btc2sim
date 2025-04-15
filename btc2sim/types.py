@@ -20,9 +20,9 @@ class Parent:  # for behavior tree
 @dataclass
 class BehaviorArray:
     atomics_id: Array
-    parents: Array
-    predecessors: Array
-    passings: Array
+    parent: Array
+    pred: Array
+    passing: Array
 
     def __len__(self):
         return self.atomics_id.shape[0]
