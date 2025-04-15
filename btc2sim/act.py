@@ -15,6 +15,7 @@ from typing import Tuple
 
 from btc2sim.bts import Parent
 from btc2sim.types import BehaviorArray
+from parabellum.types import Action
 
 
 S, F, N = Parent.SEQUENCE, Parent.FALLBACK, Parent.NONE
@@ -24,21 +25,21 @@ S, F, N = Parent.SEQUENCE, Parent.FALLBACK, Parent.NONE
 def move_fns(rng: Array, env: Env, scene: Scene, state: State, obs: Obs):
     direction = obs.unit_pos[0] - state.mark_position
     coords = direction / jnp.linalg.norm(direction)
-    action = pb.types.Action(kinds=jnp.ones(coords.shape[0]), coord=coords)
-    return jnp.ones(action.kinds.size), action
+    action = pb.types.Action(kinds=jnp.ones(coords.shape[0]) == 1, coord=coords)
+    return jnp.ones(action.kinds.size) == 1, action
 
 
 # stands
 def stand_fns(rng: Array, env: Env, scene: Scene, state: State, obs: Obs):
-    action = pb.types.Action(kinds=jnp.ones((1,)), coord=jnp.zeros((1, 2)))
-    return jnp.ones(1), action
+    action = pb.types.Action(kinds=jnp.ones((1,)) == 1, coord=jnp.zeros((1, 2)))
+    return jnp.array((True,)), action
 
 
 @eqx.filter_jit
 def fmap(fns, rng: Array, env: Env, scene: Scene, state: State, obs: Obs):
     args = env, scene, state, obs
     status, action = zip(*(f(rng, *args) for f, rng in zip(fns, jnp.split(rng, len(fns)))))
-    return jnp.concatenate(status), tree.map(lambda *xs: jnp.concatenate(xs, axis=0), *action)
+    return jnp.concatenate(status), tree.map(lambda *xs: jnp.concatenate(xs), *action)
 
 
 def atomic_fns(rng: Array, env: Env, scene: Scene, state: State, obs: Obs):
@@ -49,21 +50,26 @@ def atomic_fns(rng: Array, env: Env, scene: Scene, state: State, obs: Obs):
 
 
 def action_fn(rng, env, scene, state, obs, behavior: BehaviorArray):  # for one agent
-    status, actions = atomic_fns(rng, env, scene, state, obs)
-    output, stats = lax.scan(eval_bt, (False, pb.types.Action(), 0), (status, actions, behavior))
-    return output[1], stats
+    status, action = atomic_fns(rng, env, scene, state, obs)
+    init = (jnp.array((True,)), Action(), jnp.zeros(1))
+    (status, action, passing), stats = lax.scan(eval_bt, init, (status, action, behavior))
+    return action, stats
 
 
-def eval_bt(carry, inputs: Tuple[Array, pb.types.Action, BehaviorArray]):  # depth first
-    fn_status, fn_action, behavior = inputs  # load atomic in focus
-    status, action, passing = carry  # passing on bt eval state
+def eval_bt(carry: Tuple[Array, Action, Array], input: Tuple[Array, Action, BehaviorArray]):
+    # load atomics and bt status
+    fn_status, fn_action, behavior = input
+    status, action, passing = carry
 
-    search = status != 0 | (action.coord == 0).all()  # have we found yet?
-    active = (status != (behavior.pred != S)) | (~behavior.pred == -1)  # is this fn in bt?
+    # boolean flags
+    search = status != 1 | (action.coord == 0).all()
+    active = (status != (behavior.pred != S)) | (behavior.pred == -1)
 
-    status = lax.cond(search & active & (passing <= 0), lambda: fn_status, lambda: status)  #  update status
-    action = lax.cond(search & active & (passing <= 0), lambda: fn_action, lambda: action)  # update action
+    # (potentially) update action and status
+    status = jnp.where(search & active & (passing <= 0), fn_status, status)
+    action = tree.map(lambda x, y: jnp.where(search & active & (passing <= 0), x, y), fn_action, action)
 
-    flag = (behavior.parent == S & status == 0) | (behavior.parent == F & status == 1)  # passing flag
-    passing = (passing - 1 if flag else behavior.passing) if search & active & passing <= 0 else passing  # update
+    # (potentially) upate passing variable
+    flag = ((behavior.parent == S) & (status == 0)) | ((behavior.parent == F) & (status == 1))
+    passing = jnp.where(search & active & (passing <= 0), jnp.where(flag, passing - 1, behavior.passing), passing)
     return (status, action, passing), flag
