@@ -1,12 +1,8 @@
 # imports
-# from chex import dataclass
 from chex import dataclass
-from dataclasses import field
 from jaxtyping import Array
-import jax.numpy as jnp
 import parabellum as pb
 from typing import Any, Callable
-import parabellum as pb
 
 
 # dataclasses
