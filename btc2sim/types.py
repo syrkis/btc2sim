@@ -12,8 +12,8 @@ import parabellum as pb
 # dataclasses
 @dataclass
 class Parent:  # for behavior tree
-    SEQUENCE: int = 1
     NONE: int = 0
+    SEQUENCE: int = 1
     FALLBACK: int = -1
 
 

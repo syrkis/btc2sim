@@ -7,7 +7,6 @@
 import equinox as eqx
 import jax.numpy as jnp
 import parabellum as pb
-from flax.struct import dataclass
 from jax import lax, tree, debug
 from jaxtyping import Array
 from parabellum.env import Env
@@ -18,7 +17,7 @@ from btc2sim.bts import Parent
 from btc2sim.types import BehaviorArray
 
 
-S, F = Parent.SEQUENCE, Parent.FALLBACK
+S, F, N = Parent.SEQUENCE, Parent.FALLBACK, Parent.NONE
 
 
 # returns dir for all 6 pieces
@@ -56,10 +55,15 @@ def action_fn(rng, env, scene, state, obs, behavior: BehaviorArray):  # for one 
 
 
 def eval_bt(carry, inputs: Tuple[Array, pb.types.Action, BehaviorArray]):  # depth first
-    (fn_status, fn_action, behavior), (status, action, passing) = inputs, carry  # load into vars
-    searching = status != 0 | (action.coord == 0).all()
-    valid_pre = status != (0 if behavior.pred == S else 1) | ~behavior.pred == -1
-    status, action = (fn_status, fn_action) if searching & valid_pre & passing <= 0 else (status, action)
-    flag = (behavior.parent == S and status == 0) or (behavior.parent == F and status == 1)
-    passing = (passing - 1 if flag else behavior.passing) if searching & valid_pre & passing <= 0 else passing
+    fn_status, fn_action, behavior = inputs  # load atomic in focus
+    status, action, passing = carry  # passing on bt eval state
+
+    search = status != 0 | (action.coord == 0).all()  # have we found yet?
+    active = (status != (behavior.pred != S)) | (~behavior.pred == -1)  # is this fn in bt?
+
+    status = lax.cond(search & active & (passing <= 0), lambda: fn_status, lambda: status)  #  update status
+    action = lax.cond(search & active & (passing <= 0), lambda: fn_action, lambda: action)  # update action
+
+    flag = (behavior.parent == S & status == 0) | (behavior.parent == F & status == 1)  # passing flag
+    passing = (passing - 1 if flag else behavior.passing) if search & active & passing <= 0 else passing  # update
     return (status, action, passing), flag
