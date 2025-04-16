@@ -2,17 +2,9 @@
 from chex import dataclass
 from jaxtyping import Array
 import parabellum as pb
-from typing import Any, Callable
 
 
 # dataclasses
-@dataclass
-class Parent:  # for behavior tree
-    NONE: int = 0
-    SEQUENCE: int = 1
-    FALLBACK: int = -1
-
-
 @dataclass
 class Behavior:
     idxs: Array
@@ -22,12 +14,6 @@ class Behavior:
 
     def __len__(self):
         return self.idxs.shape[0]
-
-
-@dataclass
-class Status:  # for behavior tree
-    SUCCESS: int = 1
-    FAILURE: int = -1
 
 
 @dataclass
@@ -58,7 +44,3 @@ class AgentInfo:
 class Info:
     env: EnvInfo
     agent: AgentInfo
-
-
-# types
-NodeFunc = Callable[[Any], Status]

@@ -13,11 +13,11 @@ from typing import Tuple
 import equinox as eqx
 from jax import lax, tree, debug
 from parabellum.types import Action
-from btc2sim.types import Behavior, Parent
+from btc2sim.types import Behavior
 
 
 # %% Globals
-S, F, N = Parent.SEQUENCE, Parent.FALLBACK, Parent.NONE
+S, F = 1, 0
 
 
 # %% Behavior functions
