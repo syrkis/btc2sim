@@ -7,6 +7,8 @@ from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor
 from btc2sim.types import BehaviorArray, Parent
 import jax.numpy as jnp
+from chex import dataclass
+from typing import Dict
 
 grammar = Grammar(r"""
     tree        = node (sep node)*
@@ -118,22 +120,44 @@ class BehaviorTreeVisitor(NodeVisitor):
         return visited_children or node.text
 
 
-def txt2bts(txt, size=7):
+def txt2bts(txt):
     visitor = BehaviorTreeVisitor()
     tree = grammar.parse(txt)
     result = visitor.visit(tree)
-    print(result)
-    exit()
+    # behavior = Behavior(result=result)
+    size = size_fn(result)
     parents = jnp.ones(size, dtype=jnp.int32) * Parent.NONE
     predecessors = jnp.ones(size, dtype=jnp.int32) * Parent.NONE
     atomics_id = jnp.ones(size, dtype=jnp.int32) * -1
     passings = jnp.zeros(size, dtype=jnp.int32)
+    exit()
     for i, (predecessor, parent, passing, atomic_id) in enumerate(A):
         predecessors = predecessors.at[i].set(predecessor)
         parents = parents.at[i].set(parent)
         passings = passings.at[i].set(0 if passing is None else passing)
         atomics_id = atomics_id.at[i].set(atomic_id)
     return BehaviorArray(pred=predecessors, parent=parents, passing=passings, atomics_id=atomics_id)
+
+
+@dataclass
+class Behavior:
+    result: Dict
+
+
+def size_fn(node):
+    node_type = node.get("type")
+
+    # If it's a leaf node (condition or action), return 1
+    if node_type == "condition" or node_type == "action":
+        return 1
+
+    # If it's a control flow node (fallback or sequence), recursively count children
+    elif node_type == "fallback" or node_type == "sequence":
+        children = node.get("children", [])
+        return sum(size_fn(child) for child in children)
+
+    # Handle unexpected node types
+    return 0
 
 
 # Example usage:
