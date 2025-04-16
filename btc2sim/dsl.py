@@ -6,7 +6,6 @@
 from parsimonious.nodes import NodeVisitor
 from btc2sim.types import Behavior
 import jax.numpy as jnp
-from jax import tree
 from functools import reduce
 from parsimonious.grammar import Grammar
 from itertools import product
@@ -26,7 +25,7 @@ def skips_fn(node):
     def aux_fn(n):
         if n.get("type") in ["condition", "action"]:
             return 1
-        return sum(aux_fn(child) for child in n["children"])
+        return sum(aux_fn(child) for child in n["children"])  # type: ignore
 
     if "children" not in node:
         return [0]  # No leaves after a leaf
