@@ -14,7 +14,7 @@ from omegaconf import OmegaConf
 
 
 # %% Constants
-bt = b2s.bts.txt2bts(open("bts.txt", "r").readline())
+bt = b2s.dsl.txt2bts(open("bts.txt", "r").readline())
 cfg = OmegaConf.load("conf.yaml")
 
 rng, key = random.split(random.PRNGKey(0))

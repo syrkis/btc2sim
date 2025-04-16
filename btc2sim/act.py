@@ -10,10 +10,6 @@ from jaxtyping import Array
 from parabellum.env import Env
 from parabellum.types import Obs, Scene, State
 
-from btc2sim.bts import Parent
-
-S, F, N = Parent.SEQUENCE, Parent.FALLBACK, Parent.NONE
-
 
 # %% Functions
 def move_fns(rng: Array, env: Env, scene: Scene, state: State, obs: Obs):
