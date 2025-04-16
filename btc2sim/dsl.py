@@ -33,12 +33,22 @@ class BehaviorTreeVisitor(NodeVisitor):
     def visit_tree(self, node, visited_children):
         """Process the full tree with all its nodes."""
         first_node, rest = visited_children
+
         if rest:
-            # There are multiple nodes joined by separators
+            # Start with the first node
             nodes = [first_node]
-            for sep_and_node in rest:
-                # Each element is [separator, node]
-                nodes.append(sep_and_node[1])
+
+            # For each item in rest
+            for item in rest:
+                # The separator is at index 0 (a string)
+                # The node is at index 1 (a dictionary)
+                if isinstance(item, list) and len(item) > 1:
+                    nodes.append(item[1])
+                elif item is None:
+                    continue
+                else:
+                    nodes.append(item)
+
             return nodes
         return first_node
 
@@ -94,7 +104,7 @@ class BehaviorTreeVisitor(NodeVisitor):
     # Handle whitespace and separators (usually just returning them or ignoring them)
     def visit_sep(self, node, visited_children):
         """Process a separator."""
-        return node.text
+        return None
 
     def visit_ws(self, node, visited_children):
         """Process whitespace."""
@@ -112,8 +122,7 @@ def txt2bts(txt, size=7):
     visitor = BehaviorTreeVisitor()
     tree = grammar.parse(txt)
     result = visitor.visit(tree)
-    for r in result:
-        print(r)
+    print(result)
     exit()
     parents = jnp.ones(size, dtype=jnp.int32) * Parent.NONE
     predecessors = jnp.ones(size, dtype=jnp.int32) * Parent.NONE
