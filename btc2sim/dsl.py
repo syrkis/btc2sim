@@ -22,6 +22,18 @@ with open("grammar.peg", "r") as f:
     v2i = {var: i for i, var in enumerate(i2v)}
 
 
+# %% Behavior dataclass
+def txt2bts(txt) -> Behavior:
+    node = BehaviorTreeVisitor().visit(grammar.parse(txt))
+    fns = [idxs_fn, parent_fn, skips_fn, prevs_fn]
+    idxs, parent, skips, prevs = map(jnp.array, [fn(node) for fn in fns])
+    behavior = Behavior(idxs=idxs, parent=parent, skips=skips, prevs=prevs)
+    print(behavior)
+    exit()
+    return behavior
+
+
+# %% Tree traversales
 def idxs_fn(node):
     if node.get("type") in ["condition", "action"]:
         node = node[node.get("type")]
@@ -58,16 +70,6 @@ def prevs_fn(node):
         else:
             prevs += prevs_fn(child)
     return prevs
-
-
-# %% Where the magic happens
-def txt2bts(txt) -> Behavior:
-    node = BehaviorTreeVisitor().visit(grammar.parse(txt))
-    fns = [idxs_fn, parent_fn, skips_fn, prevs_fn]
-    idxs, parent, skips, prevs = map(jnp.array, [fn(node) for fn in fns])
-    print(idxs, parent, skips, prevs, sep="\n")
-    exit()
-    return Behavior(idxs=idxs, parent=parent, skips=skips, prevs=prevs)
 
 
 # %% Visitor
