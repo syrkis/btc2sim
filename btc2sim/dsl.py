@@ -17,7 +17,7 @@ def txt2bts(txt) -> Behavior:
     node = BehaviorTreeVisitor().visit(grammar.parse(txt))
     fns = [idxs_fn, parent_fn, skips_fn, prevs_fn]
     idxs, parent, skips, prevs = map(jnp.array, [fn(node) for fn in fns])
-    behavior = Behavior(idxs=idxs, parent=parent, skips=skips)
+    behavior = Behavior(idxs=idxs, parent=parent, skips=skips, prevs=prevs)
     return behavior
 
 
