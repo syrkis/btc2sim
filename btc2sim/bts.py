@@ -46,8 +46,8 @@ def bt_fn(carry: Tuple[Array, Action, Array], input: Tuple[Array, Action, Behavi
     active = (status != (behavior.pred != S)) | (behavior.pred == -1)
 
     status = jnp.where(search & active & (passing <= 0), fn_status, status)  # (potentially) update action
-    action = tree.map(lambda x, y: jnp.where(search & active & (passing <= 0), x, y), fn_action, action)
+    action = tree.map(lambda x, y: jnp.where(search & active & (passing <= 0), x, y), fn_action, action)  # don't skip
 
-    flag = ((behavior.parent == S) & (status == 0)) | ((behavior.parent == F) & (status == 1))  # (potentially) upate
+    flag = ((behavior.parent == S) & (status == 0)) | ((behavior.parent == F) & (status == 1))  # update passing
     passing = jnp.where(search & active & (passing <= 0), jnp.where(flag, passing - 1, behavior.passing), passing)
     return (status, action, passing), flag

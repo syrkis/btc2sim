@@ -15,13 +15,13 @@ class Parent:  # for behavior tree
 
 @dataclass
 class BehaviorArray:
-    atomics_id: Array
+    idxs: Array
     parent: Array
     pred: Array
     passing: Array
 
     def __len__(self):
-        return self.atomics_id.shape[0]
+        return self.idxs.shape[0]
 
 
 @dataclass

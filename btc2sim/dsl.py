@@ -7,30 +7,66 @@ from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor
 from btc2sim.types import BehaviorArray, Parent
 import jax.numpy as jnp
-from chex import dataclass
-from typing import Dict
-
-grammar = Grammar(r"""
-    tree        = node (sep node)*
-    node        = fallback / sequence / action / condition
-
-    fallback    = "F" ws "(" ws tree ws ")" ws
-    sequence    = "S" ws "(" ws tree ws ")" ws
-    action      = "A" ws (move / stand) ws
-    condition   = "C" ws cond ws
-
-    move        = "move" ws (to_from) ws (piece)
-    to_from     = "to" / "from"
-    piece      = "king" / "queen" / "rook" / "bishop" / "knight" / "pawn"
-    stand       = "stand"
-
-    cond        = "is_alive"
-
-    sep         = ws "|>" ws
-    ws          = ~r"\s*"
-""")
+from itertools import product
+from functools import reduce
 
 
+# %% Globals
+with open("grammar.peg", "r") as f:
+    grammar = Grammar(f.read())
+    pieces = [m.literal for m in grammar["piece"].members]  # type: ignore
+    directions = [m.literal for m in grammar["direction"].members]  # type: ignore
+    move_fns = [("stand",)] + [("move", *comb) for comb in list(product(directions, pieces))]
+    cond_fns = [("is_alive",)]
+    i2v = sorted(move_fns + cond_fns)
+    v2i = {var: i for i, var in enumerate(i2v)}
+
+
+def idxs_fn(node):
+    if node.get("type") in ["condition", "action"]:
+        node = node[node.get("type")]
+        return [v2i[(node,)] if type(node) is str else v2i[tuple(node.values())]]
+    else:
+        return reduce(lambda acc, child: acc + idxs_fn(child), node["children"], [])
+
+
+def parent_fn(node):
+    parents = []
+    for child in node["children"]:
+        if child["type"] not in ["sequence", "fallback"]:
+            parents += [int(node["type"] == "sequence")]
+        else:
+            parents += parent_fn(child)
+    return parents
+
+
+def passing_fn(node):
+    pass
+
+
+# %% Where the magic happens
+def txt2bts(txt) -> BehaviorArray:
+    visitor = BehaviorTreeVisitor()
+    tree = grammar.parse(txt)
+    root = visitor.visit(tree)
+    idxs = jnp.array(idxs_fn(root))
+    parent = parent_fn(root)
+
+    print(idxs, parent)
+    exit()
+    idxs = jnp.array([v2i[tuple(leaf)] for leaf in leafs])  # type: ignore
+    parents = jnp.ones(len(leafs), dtype=jnp.int32) * Parent.NONE
+    predecessors = jnp.ones(len(leafs), dtype=jnp.int32) * Parent.NONE
+    passings = jnp.zeros(len(leafs), dtype=jnp.int32)
+    idxs = jnp.arange(len(leafs))
+    for i, (predecessor, parent, passing, atomic_id) in enumerate(A):
+        predecessors = predecessors.at[i].set(predecessor)
+        parents = parents.at[i].set(parent)
+        passings = passings.at[i].set(0 if passing is None else passing)
+    return BehaviorArray(pred=predecessors, parent=parents, passing=passings, idxs=idxs)
+
+
+# %% Visitor
 class BehaviorTreeVisitor(NodeVisitor):
     def visit_tree(self, node, visited_children):
         """Process the full tree with all its nodes."""
@@ -82,7 +118,7 @@ class BehaviorTreeVisitor(NodeVisitor):
 
     def visit_move(self, node, visited_children):
         """Process a move action."""
-        # The structure is ["move", ws, to_from, ws, piece]
+        # The structure is ["move", ws, direction, ws, piece]
         direction = visited_children[2]
         piece = visited_children[4]
         return {"name": "move", "direction": direction, "piece": piece}
@@ -118,53 +154,3 @@ class BehaviorTreeVisitor(NodeVisitor):
         if visited_children and len(visited_children) == 1:
             return visited_children[0]
         return visited_children or node.text
-
-
-def txt2bts(txt):
-    visitor = BehaviorTreeVisitor()
-    tree = grammar.parse(txt)
-    result = visitor.visit(tree)
-    # behavior = Behavior(result=result)
-    size = size_fn(result)
-    parents = jnp.ones(size, dtype=jnp.int32) * Parent.NONE
-    predecessors = jnp.ones(size, dtype=jnp.int32) * Parent.NONE
-    atomics_id = jnp.ones(size, dtype=jnp.int32) * -1
-    passings = jnp.zeros(size, dtype=jnp.int32)
-    exit()
-    for i, (predecessor, parent, passing, atomic_id) in enumerate(A):
-        predecessors = predecessors.at[i].set(predecessor)
-        parents = parents.at[i].set(parent)
-        passings = passings.at[i].set(0 if passing is None else passing)
-        atomics_id = atomics_id.at[i].set(atomic_id)
-    return BehaviorArray(pred=predecessors, parent=parents, passing=passings, atomics_id=atomics_id)
-
-
-@dataclass
-class Behavior:
-    result: Dict
-
-
-def size_fn(node):
-    node_type = node.get("type")
-
-    # If it's a leaf node (condition or action), return 1
-    if node_type == "condition" or node_type == "action":
-        return 1
-
-    # If it's a control flow node (fallback or sequence), recursively count children
-    elif node_type == "fallback" or node_type == "sequence":
-        children = node.get("children", [])
-        return sum(size_fn(child) for child in children)
-
-    # Handle unexpected node types
-    return 0
-
-
-# Example usage:
-# source = "S ( C is_alive |> A move from king |> A  stand )"
-# tree = grammar.parse(source)
-# visitor = BehaviorTreeVisitor()
-# result = visitor.visit(tree)
-# print(result)
-
-# exit()

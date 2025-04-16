@@ -1,0 +1,17 @@
+tree        = node (sep node)*
+node        = fallback / sequence / action / condition
+
+fallback    = "F" ws "(" ws tree ws ")" ws
+sequence    = "S" ws "(" ws tree ws ")" ws
+action      = "A" ws (move / stand) ws
+condition   = "C" ws cond ws
+
+move        = "move" ws (direction) ws (piece)
+direction   = "to" / "from"
+piece       = "king" / "queen" / "rook" / "bishop" / "knight" / "pawn"
+stand       = "stand"
+
+cond        = "is_alive"
+
+sep         = ws "|>" ws
+ws          = ~r"\s*"

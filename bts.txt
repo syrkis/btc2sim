@@ -1,3 +1,1 @@
-F ( S ( C is_alive |> A move from king ) |> A  stand )
-S ( C is_alive |> A move from king )
-S ( C is_alive |> A move from king |> A  stand )
+F ( S ( C is_alive |> A move from king ) |> A stand )

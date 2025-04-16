@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "btc2sim"
-version = "0.0.6"
+version = "0.0.7"
 description = ""
 authors = ["Noah Syrkis <noah@syrkis.com>"]
 readme = "README.md"
