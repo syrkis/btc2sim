@@ -4043,7 +4043,7 @@ files = [
 
 [[package]]
 name = "parabellum"
-version = "0.5.19"
+version = "0.5.20"
 description = "Parabellum environment for parallel warfare simulation"
 optional = false
 python-versions = "^3.11,<3.12"
