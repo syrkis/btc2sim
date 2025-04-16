@@ -36,9 +36,7 @@ def skips_fn(node):
     for i, child in enumerate(node["children"]):
         child_leaves = aux_fn(child)
         leaves_after = total_leaves - sum(aux_fn(node["children"][j]) for j in range(i + 1))
-        result.extend(
-            [leaves_after] * child_leaves if child.get("type") in ["condition", "action"] else skips_fn(child)
-        )
+        result.extend([leaves_after] * child_leaves if "children" not in child else skips_fn(child))
     return result
 
 
