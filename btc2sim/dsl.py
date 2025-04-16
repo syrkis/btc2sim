@@ -44,29 +44,30 @@ def skips_fn(node):
     skips = []
     for i, child in enumerate(node["children"]):
         if child["type"] not in ["sequence", "fallback"]:
-            skips += [len(node["children"]) - i]
+            skips += [len(node["children"]) - (i + 1)]
         else:
             skips += skips_fn(child)
     return skips
 
 
 def prevs_fn(node):
-    print(node)
-    exit()
-
-
-def fmap(fns, node):
-    return [fn(node) for fn in fns]
+    prevs = []
+    for child in node["children"]:
+        if child["type"] not in ["sequence", "fallback"]:
+            prevs += [int(node["type"] == "sequence")]
+        else:
+            prevs += prevs_fn(child)
+    return prevs
 
 
 # %% Where the magic happens
 def txt2bts(txt) -> Behavior:
     node = BehaviorTreeVisitor().visit(grammar.parse(txt))
-    fns = [idxs_fn, parent_fn, skips_fn]
-    idxs, parent, skips = map(jnp.array, fmap(fns, node))
-    print(skips)
+    fns = [idxs_fn, parent_fn, skips_fn, prevs_fn]
+    idxs, parent, skips, prevs = map(jnp.array, [fn(node) for fn in fns])
+    print(idxs, parent, skips, prevs, sep="\n")
     exit()
-    # return Behavior(idxs=idxs, parent=parent, skips=skips, prevs=prevs)
+    return Behavior(idxs=idxs, parent=parent, skips=skips, prevs=prevs)
 
 
 # %% Visitor
