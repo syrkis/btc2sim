@@ -21,7 +21,7 @@ rng, key = random.split(random.PRNGKey(0))
 env, scene = pb.env.Env(cfg=cfg), pb.env.scene_fn(cfg)
 
 behavior = tree.map(lambda x: repeat(x, "h -> agents h", agents=env.num_units), bt)
-action_fn = vmap(b2s.bts.action_fn, in_axes=(0, None, None, None, 0, 0))
+action_fn = vmap(b2s.act.action_fn, in_axes=(0, None, None, None, 0, 0))
 
 
 # Functions
