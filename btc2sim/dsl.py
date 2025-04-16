@@ -5,7 +5,7 @@
 # Imports
 from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor
-from btc2sim.types import BehaviorArray, Parent
+from btc2sim.types import Behavior
 import jax.numpy as jnp
 from itertools import product
 from functools import reduce
@@ -40,30 +40,33 @@ def parent_fn(node):
     return parents
 
 
-def passing_fn(node):
-    pass
+def skips_fn(node):
+    skips = []
+    for i, child in enumerate(node["children"]):
+        if child["type"] not in ["sequence", "fallback"]:
+            skips += [len(node["children"]) - i]
+        else:
+            skips += skips_fn(child)
+    return skips
+
+
+def prevs_fn(node):
+    print(node)
+    exit()
+
+
+def fmap(fns, node):
+    return [fn(node) for fn in fns]
 
 
 # %% Where the magic happens
-def txt2bts(txt) -> BehaviorArray:
-    visitor = BehaviorTreeVisitor()
-    tree = grammar.parse(txt)
-    root = visitor.visit(tree)
-    idxs = jnp.array(idxs_fn(root))
-    parent = parent_fn(root)
-
-    print(idxs, parent)
+def txt2bts(txt) -> Behavior:
+    node = BehaviorTreeVisitor().visit(grammar.parse(txt))
+    fns = [idxs_fn, parent_fn, skips_fn]
+    idxs, parent, skips = map(jnp.array, fmap(fns, node))
+    print(skips)
     exit()
-    idxs = jnp.array([v2i[tuple(leaf)] for leaf in leafs])  # type: ignore
-    parents = jnp.ones(len(leafs), dtype=jnp.int32) * Parent.NONE
-    predecessors = jnp.ones(len(leafs), dtype=jnp.int32) * Parent.NONE
-    passings = jnp.zeros(len(leafs), dtype=jnp.int32)
-    idxs = jnp.arange(len(leafs))
-    for i, (predecessor, parent, passing, atomic_id) in enumerate(A):
-        predecessors = predecessors.at[i].set(predecessor)
-        parents = parents.at[i].set(parent)
-        passings = passings.at[i].set(0 if passing is None else passing)
-    return BehaviorArray(pred=predecessors, parent=parents, passing=passings, idxs=idxs)
+    # return Behavior(idxs=idxs, parent=parent, skips=skips, prevs=prevs)
 
 
 # %% Visitor

@@ -14,11 +14,11 @@ class Parent:  # for behavior tree
 
 
 @dataclass
-class BehaviorArray:
+class Behavior:
     idxs: Array
     parent: Array
-    pred: Array
-    passing: Array
+    prevs: Array
+    skips: Array
 
     def __len__(self):
         return self.idxs.shape[0]

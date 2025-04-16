@@ -9,7 +9,7 @@ from parabellum.types import Obs, Scene, State, Action
 from parabellum.env import Env
 
 from btc2sim.act import move_fns, stand_fns
-from btc2sim.types import BehaviorArray, Parent
+from btc2sim.types import Behavior, Parent
 
 
 # %% Globals
@@ -31,14 +31,14 @@ def leafs_fns(rng: Array, env: Env, scene: Scene, state: State, obs: Obs):
     return status, action
 
 
-def action_fn(rng, env, scene, state, obs, behavior: BehaviorArray):  # for one agent
+def action_fn(rng, env, scene, state, obs, behavior: Behavior):  # for one agent
     status, action = leafs_fns(rng, env, scene, state, obs)
     init = (jnp.array((True,)), Action(), jnp.zeros(1))
     (status, action, passing), stats = lax.scan(bt_fn, init, (status, action, behavior))
     return action, stats
 
 
-def bt_fn(carry: Tuple[Array, Action, Array], input: Tuple[Array, Action, BehaviorArray]):
+def bt_fn(carry: Tuple[Array, Action, Array], input: Tuple[Array, Action, Behavior]):
     fn_status, fn_action, behavior = input  # load atomics and bt status
     status, action, passing = carry
 
