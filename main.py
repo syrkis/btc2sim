@@ -4,7 +4,7 @@
 
 # Imports
 import parabellum as pb
-from jax import random, vmap, tree, lax
+from jax import random, vmap, tree, lax, debug
 from einops import repeat
 import jax.numpy as jnp
 import numpy as np

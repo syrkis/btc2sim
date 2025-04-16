@@ -1,1 +1,2 @@
+S ( A move to king )
 F ( A move to king |> S ( C is_alive |> A move from queen ) |> A move to pawn )

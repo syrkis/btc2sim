@@ -11,7 +11,7 @@ from parabellum.env import Env
 from parabellum.types import Obs, Scene, State
 from typing import Tuple
 import equinox as eqx
-from jax import lax, tree
+from jax import lax, tree, debug
 from parabellum.types import Action
 from btc2sim.types import Behavior, Parent
 
@@ -36,9 +36,10 @@ def leafs_fns(rng: Array, env: Env, scene: Scene, state: State, obs: Obs):
 
 
 def action_fn(rng, env, scene, state, obs, behavior: Behavior):  # for one agent
-    status, action = leafs_fns(rng, env, scene, state, obs)
+    fn_status, fn_action = leafs_fns(rng, env, scene, state, obs)
     init = (jnp.array((True,)), Action(), jnp.zeros(1))
-    (status, action, passing), stats = lax.scan(bt_fn, init, (status, action, behavior))
+    (status, action, passing), stats = lax.scan(bt_fn, init, (fn_status, fn_action, behavior))
+    debug.breakpoint()
     return action, stats
 
 
@@ -60,7 +61,7 @@ def bt_fn(carry: Tuple[Array, Action, Array], input: Tuple[Array, Action, Behavi
 # %% Atomics
 def move_fns(rng: Array, env: Env, scene: Scene, state: State, obs: Obs):
     direction = obs.unit_pos[0] - state.mark_position
-    coords = direction / jnp.linalg.norm(direction)
+    coords = direction / jnp.linalg.norm(direction, axis=-1)[..., None]
     action = pb.types.Action(kinds=jnp.ones(coords.shape[0]) == 1, coord=coords)
     return jnp.ones(action.kinds.size) == 1, action
 
