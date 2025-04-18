@@ -24,28 +24,28 @@ STAND = Action(coord=jnp.array([0, 0]), shoot=jnp.array(False))
 
 # %% Behavior functions
 @eqx.filter_jit
-def fmap(fns, rng: Array, obs: Obs, env: Env, scene: Scene):
+def fmap(fns, rng: Array, obs: Obs, env: Env, scene: Scene, bt: Behavior):
     *args, rngs = obs, env, scene, random.split(rng, len(fns))
     status, action = zip(*(f(rng, *args) for f, rng in zip(fns, rngs)))
-    status = tree.map(lambda *xs: jnp.stack(xs), *status)
-    action = tree.map(lambda *xs: jnp.stack(xs), *action)
+    status = tree.map(lambda *xs: jnp.stack(xs)[bt.idx], *status)
+    action = tree.map(lambda *xs: jnp.stack(xs)[bt.idx], *action)
     return status, action
 
 
-def leafs_fns(rng: Array, env: Env, scene: Scene, obs: Obs) -> Tuple[Status, Action]:
+def leafs_fns(rng: Array, env: Env, scene: Scene, obs: Obs, bt: Behavior) -> Tuple[Status, Action]:
     fns = (alive_fn, move_fn, stand_fn)  # it is important that this is run alphabetacally
     args = obs, env, scene
-    status, action = fmap(fns, rng, *args)
+    status, action = fmap(fns, rng, *args, bt)
     return status, action
 
 
-def action_fn(rng, obs: Obs, behavior: Behavior, env: Env, scene: Scene):  # for one agent
-    fn_status, fn_action = leafs_fns(rng, env, scene, obs)
+def action_fn(rng, obs: Obs, bt: Behavior, env: Env, scene: Scene):  # for one agent
+    fn_status, fn_action = leafs_fns(rng, env, scene, obs, bt)
     init = (Status(), Action(), jnp.array(0))
-    xs = fn_status, fn_action, behavior, jnp.arange(behavior.idx.shape[0])
+    xs = fn_status, fn_action, bt, jnp.arange(bt.idx.shape[0])
     # for all potential atomics
-    (_, action_idx, _), _ = lax.scan(bt_fn, init, xs)
-    return tree.map(lambda x: x[action_idx], fn_action)
+    (_, action, _), _ = lax.scan(bt_fn, init, xs)
+    return action
 
 
 def bt_fn(carry: Tuple[Status, Action, Array], input: Tuple[Status, Action, Behavior, Array]):  # this is wrong

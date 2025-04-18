@@ -178,5 +178,5 @@ class BehaviorTreeVisitor(NodeVisitor):
 # %% Grammar stuff
 with open("grammar.peg", "r") as f:
     grammar = Grammar(f.read())
-    atomics = [("is_alive",), ("move", "target"), ("stand",)]
+    atomics = [("stand",), ("is_alive",), ("move", "target")]
     a2i = {var: i for i, var in enumerate(atomics)}
