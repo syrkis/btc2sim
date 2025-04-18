@@ -8,7 +8,7 @@ import jax.numpy as jnp
 import parabellum as pb
 from jaxtyping import Array
 from parabellum.env import Env
-from parabellum.types import Obs, Scene, State
+from parabellum.types import Obs, Scene
 from typing import Tuple
 import equinox as eqx
 from jax import lax, tree, debug, random
@@ -22,21 +22,21 @@ S, F = 1, 0
 
 # %% Behavior functions
 @eqx.filter_jit
-def fmap(fns, rng: Array, env: Env, scene: Scene, state: State, obs: Obs):
-    *args, rngs = env, scene, state, obs, random.split(rng, len(fns))
+def fmap(fns, rng: Array, obs: Obs, env: Env, scene: Scene):
+    *args, rngs = obs, env, scene, random.split(rng, len(fns))
     status, action = zip(*(f(rng, *args) for f, rng in zip(fns, rngs)))
-    return jnp.concatenate(status), tree.map(lambda *xs: jnp.concatenate(xs), *action)
+    return jnp.stack(status), tree.map(lambda *xs: jnp.stack(xs), *action)
 
 
-def leafs_fns(rng: Array, env: Env, scene: Scene, state: State, obs: Obs):
-    fns = (is_alive, move_fns, stand_fns)  # it is important that this is run alphabetacally
-    args = env, scene, state, obs
+def leafs_fns(rng: Array, env: Env, scene: Scene, obs: Obs):
+    fns = (alive_fn, move_fn, stand_fn)  # it is important that this is run alphabetacally
+    args = obs, env, scene
     status, action = fmap(fns, rng, *args)
     return status, action
 
 
-def action_fn(rng, env, scene, state, obs, behavior: Behavior):  # for one agent
-    fn_status, fn_action = leafs_fns(rng, env, scene, state, obs)
+def action_fn(rng, obs: Obs, behavior: Behavior, env: Env, scene: Scene):  # for one agent
+    fn_status, fn_action = leafs_fns(rng, env, scene, obs)
     init = (jnp.array((True,)), Action(), jnp.zeros(1))
     (status, action, passing), stats = lax.scan(bt_fn, init, (fn_status, fn_action, behavior))
     return action, stats
@@ -65,24 +65,24 @@ def bt_fn(carry: Tuple[Array, Action, Array], input: Tuple[Array, Action, Behavi
     # debug.breakpoint()
 
     passing = jnp.where(search & active & (passing <= 0), jnp.where(flag, passing - 1, behavior.skip), passing)
-    debug.breakpoint()
+    # debug.breakpoint()
 
     return (status, action, passing), flag
 
 
 # %% Atomics
-def move_fns(rng: Array, env: Env, scene: Scene, state: State, obs: Obs):
-    direction = obs.unit_pos[0] - state.mark_position
-    coords = direction / jnp.linalg.norm(direction, axis=-1)[..., None]  # used for moving from (-) and to (+)
-    action = pb.types.Action(shoot=jnp.ones(coords.shape[0] * 2) == 0, coord=jnp.concat((-coords, coords)))
-    return jnp.ones(action.shoot.size) == 1, action
+def move_fn(rng: Array, obs: Obs, env: Env, scene: Scene):
+    direction = obs.coords[0] - obs.target
+    coords = direction / jnp.linalg.norm(direction)  # used for moving from (-) and to (+)
+    action = pb.types.Action(shoot=jnp.array(False), coord=coords)
+    return jnp.array(True), action
 
 
-def stand_fns(rng: Array, env: Env, scene: Scene, state: State, obs: Obs):
-    action = pb.types.Action(shoot=jnp.ones((1,)) == 0, coord=jnp.zeros((1, 2)))
-    return jnp.array((True,)), action
+def stand_fn(rng: Array, obs: Obs, env: Env, scene: Scene):
+    action = pb.types.Action(shoot=jnp.array(False), coord=jnp.zeros(2))
+    return jnp.array(True), action
 
 
-def is_alive(rng: Array, env: Env, scene: Scene, state: State, obs: Obs):
-    action = pb.types.Action(shoot=jnp.ones((1,)) == 0, coord=jnp.zeros((1, 2)))
-    return (obs.unit_health[0] > 0).reshape((1,)), action
+def alive_fn(rng: Array, obs: Obs, env: Env, scene: Scene):
+    action = pb.types.Action(shoot=jnp.array(False), coord=jnp.zeros(2))
+    return obs.health[0] > 0, action

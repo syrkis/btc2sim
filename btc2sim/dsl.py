@@ -3,19 +3,20 @@
 # by: Noah Syrkis
 
 # Imports
-from parsimonious.nodes import NodeVisitor
-from btc2sim.types import Behavior
-import jax.numpy as jnp
 from functools import reduce
+
+import jax.numpy as jnp
 from parsimonious.grammar import Grammar
-from itertools import product
+from parsimonious.nodes import NodeVisitor
+
+from btc2sim.types import Behavior
 
 
 # %% Behavior dataclass
 def txt2bts(txt) -> Behavior:
     node = BehaviorTreeVisitor().visit(grammar.parse(txt))
     fns = [idxs_fn, parent_fn, skips_fn, prevs_fn]
-    idx, parent, skip, prev = map(lambda x: jnp.pad(x, (0, len(t2i) - x.size)), map(jnp.array, [f(node) for f in fns]))
+    idx, parent, skip, prev = map(lambda x: jnp.pad(x, (0, len(a2i) - x.size)), map(jnp.array, [f(node) for f in fns]))
     behavior = Behavior(idx=idx, parent=parent, skip=skip, prev=prev)
     return behavior
 
@@ -69,7 +70,7 @@ def prevs_fn(node):
 def idxs_fn(node):  # CORRECT
     if "children" not in node:
         node = node[node.get("type")]
-        return [t2i[(node,)] if type(node) is str else t2i[tuple(node.values())]]
+        return [a2i[(node,)] if type(node) is str else a2i[tuple(node.values())]]
     else:
         return reduce(lambda acc, child: acc + idxs_fn(child), node["children"], [])
 
@@ -141,20 +142,16 @@ class BehaviorTreeVisitor(NodeVisitor):
 
     def visit_move(self, node, visited_children):
         """Process a move action."""
-        # The structure is ["move", ws, direction, ws, piece]
-        _, _, direction, _, piece, *_ = visited_children
-        return {"name": "move", "direction": direction, "piece": piece}
+        # The structure is ["move", ws, target]
+        _, _, target, *_ = visited_children
+        return {"name": "move", "target": target}
 
     def visit_stand(self, node, visited_children):
         """Process a stand action."""
         return {"name": "stand"}
 
-    def visit_to_from(self, node, visited_children):
-        """Process the direction (to/from)."""
-        return node.text
-
-    def visit_piece(self, node, visited_children):
-        """Process the chess piece."""
+    def visit_target(self, node, visited_children):
+        """Process the target."""
         return node.text
 
     def visit_cond(self, node, visited_children):
@@ -181,9 +178,5 @@ class BehaviorTreeVisitor(NodeVisitor):
 # %% Grammar stuff
 with open("grammar.peg", "r") as f:
     grammar = Grammar(f.read())
-    pieces = [m.literal for m in grammar["piece"].members]  # type: ignore
-    directions = [m.literal for m in grammar["direction"].members]  # type: ignore
-    move_fns = [("stand",)] + [("move", *comb) for comb in list(product(directions, pieces))]
-    cond_fns = [("is_alive",)]
-    i2t = sorted(move_fns + cond_fns)
-    t2i = {var: i for i, var in enumerate(i2t)}
+    atomics = [("is_alive",), ("move", "target"), ("stand",)]
+    a2i = {var: i for i, var in enumerate(atomics)}
