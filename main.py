@@ -28,9 +28,9 @@ action_fn = vmap(b2s.act.action_fn, in_axes=(0, 0, 0, None, None))
 def step(carry, rng):
     obs, state = carry
     rngs = random.split(rng, (2, env.num_units))
-    action, stats = tree.map(jnp.squeeze, action_fn(rngs[0], obs, behavior, env, scene))
+    action = tree.map(jnp.squeeze, action_fn(rngs[0], obs, behavior, env, scene))
     obs, state = env.step(rngs[1], scene, state, action)
-    return (obs, state), (state, stats)
+    return (obs, state), state
 
 
 def anim(scene, seq, scale=2):  # animate positions TODO: remove dead units
@@ -46,5 +46,5 @@ def anim(scene, seq, scale=2):  # animate positions TODO: remove dead units
 rng, key = random.split(random.PRNGKey(0))
 rngs = random.split(rng, 100)
 obs, state = env.reset(key, scene)
-state, (seq, stats) = lax.scan(step, (obs, state), rngs)
+state, seq = lax.scan(step, (obs, state), rngs)
 anim(scene, seq)

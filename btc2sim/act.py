@@ -17,7 +17,9 @@ from btc2sim.types import Behavior, Status
 
 
 # %% Globals
-S, F = 1, 0
+STAND = Action(coord=jnp.array([0, 0]), shoot=jnp.array(False))
+# SUCCESS = Status(status=jnp.array(True))
+# FAILURE = Status(status=jnp.array(False))
 
 
 # %% Behavior functions
@@ -41,33 +43,31 @@ def action_fn(rng, obs: Obs, behavior: Behavior, env: Env, scene: Scene):  # for
     fn_status, fn_action = leafs_fns(rng, env, scene, obs)
     init = (Status(), Action(), jnp.array(0))
     xs = fn_status, fn_action, behavior, jnp.arange(behavior.idx.shape[0])
-    (status, action, passing), stats = lax.scan(bt_fn, init, xs)
-    return action, stats
+    # for all potential atomics
+    (_, action_idx, _), _ = lax.scan(bt_fn, init, xs)
+    return tree.map(lambda x: x[action_idx], fn_action)
 
 
 def bt_fn(carry: Tuple[Status, Action, Array], input: Tuple[Status, Action, Behavior, Array]):  # this is wrong
-    fn_status, fn_action, behavior, step = input  # load atomics and bt status
-    status, action, passing = carry
+    atom_status, atom_action, bt, idx = input  # load atomics and bt status
+    prev_status, prev_action, passing = carry
+
+    search = prev_status.failure | (prev_action.coord == 0).all()
+    checks = (bt.prev_sequence & prev_status.success) | (bt.prev_fallback & prev_status.failure) | (idx == 0)
+
+    status = Status(status=jnp.where(search & checks & (passing <= 0), atom_status.status, prev_status.status))
+    action = tree.map(lambda x, y: jnp.where(search & checks & (passing <= 0), x, y), prev_action, atom_action)
     # debug.breakpoint()
 
-    searching = status.failure | (action.coord == 0).all()
-    validated = (behavior.prev_sequence & status.success) | (behavior.prev_fallback & status.failure) | step == 0
-    debug.breakpoint()
-
-    status.status = jnp.where(searching & validated & (passing <= 0), fn_status.status, status.status)
-    action = tree.map(lambda x, y: jnp.where(searching & validated & (passing <= 0), x, y), fn_action, action)
-    # debug.breakpoint()
-
-    flag = (behavior.parent_sequence & status.failure) | (behavior.parent_fallback & status.success)  # update passing
-    passing = jnp.where(searching & validated & (passing <= 0), jnp.where(flag, passing - 1, behavior.skip), passing)
-    # debug.breakpoint()
+    flag = (bt.parent_sequence & status.failure) | (bt.parent_fallback & status.success)  # update passing
+    passing = jnp.where(search & checks & (passing <= 0), jnp.where(flag, passing - 1, bt.skip), passing)
 
     return (status, action, passing), flag
 
 
 # %% Atomics
 def move_fn(rng: Array, obs: Obs, env: Env, scene: Scene):
-    direction = obs.coords[0] - obs.target
+    direction = obs.target - obs.coords[0]
     coords = direction / jnp.linalg.norm(direction)  # used for moving from (-) and to (+)
     action = pb.types.Action(shoot=jnp.array(False), coord=coords)
     status = Status(status=jnp.array(True))
@@ -75,12 +75,10 @@ def move_fn(rng: Array, obs: Obs, env: Env, scene: Scene):
 
 
 def stand_fn(rng: Array, obs: Obs, env: Env, scene: Scene):
-    action = pb.types.Action(shoot=jnp.array(False), coord=jnp.zeros(2))
     status = Status(status=jnp.array(True))
-    return status, action
+    return status, STAND
 
 
 def alive_fn(rng: Array, obs: Obs, env: Env, scene: Scene):
-    action = pb.types.Action(shoot=jnp.array(False), coord=jnp.zeros(2))
     status = Status(status=(obs.health[0] > 0))
-    return status, action
+    return status, STAND
