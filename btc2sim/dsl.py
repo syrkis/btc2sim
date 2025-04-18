@@ -6,6 +6,7 @@
 from functools import reduce
 
 import jax.numpy as jnp
+from jax import tree
 from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor
 
@@ -16,9 +17,10 @@ from btc2sim.types import Behavior
 def txt2bts(txt) -> Behavior:
     node = BehaviorTreeVisitor().visit(grammar.parse(txt))
     fns = [idxs_fn, parent_fn, skips_fn, prevs_fn]
-    idx, parent, skip, prev = map(lambda x: jnp.pad(x, (0, len(a2i) - x.size)), map(jnp.array, [f(node) for f in fns]))
-    behavior = Behavior(idx=idx, parent=parent, skip=skip, prev=prev)
-    return behavior
+    # idx, parent, skip, prev = map(lambda x: jnp.pad(x, (0, len(a2i) - x.size)), map(jnp.array, [f(node) for f in fns]))
+    idx, parent, skip, prev = map(jnp.array, [f(node) for f in fns])
+    bt = Behavior(idx=idx, parent=parent, skip=skip, prev=prev)
+    return tree.map(lambda x: jnp.pad(x, (0, len(a2i) - x.size)), bt)
 
 
 # %% Tree traversales

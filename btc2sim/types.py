@@ -27,22 +27,6 @@ class Behavior:
     prev: Array
     skip: Array
 
-    @property
-    def prev_fallback(self):
-        return ~self.prev.astype(jnp.bool)
-
-    @property
-    def prev_sequence(self):
-        return self.prev.astype(jnp.bool)
-
-    @property
-    def parent_fallback(self):
-        return ~self.parent.astype(jnp.bool)
-
-    @property
-    def parent_sequence(self):
-        return self.parent.astype(jnp.bool)
-
 
 @dataclass
 class EnvInfo:  # for atomics (who am i, what is this world?)

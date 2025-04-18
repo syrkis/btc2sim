@@ -14,13 +14,12 @@ from omegaconf import OmegaConf
 
 
 # %% Constants
-bt = b2s.dsl.txt2bts(open("bts.txt", "r").readline())
 cfg = OmegaConf.load("conf.yaml")
-
 rng, key = random.split(random.PRNGKey(0))
 env, scene = pb.env.Env(cfg=cfg), pb.env.scene_fn(cfg)
 
-behavior = tree.map(lambda x: repeat(x, "h -> agents h", agents=env.num_units), bt)
+bt = b2s.dsl.txt2bts(open("bts.txt", "r").readline())
+bt = tree.map(lambda x: repeat(x, "h -> agents h", agents=env.num_units), bt)
 action_fn = vmap(b2s.act.action_fn, in_axes=(0, 0, 0, None, None))
 
 
@@ -28,7 +27,7 @@ action_fn = vmap(b2s.act.action_fn, in_axes=(0, 0, 0, None, None))
 def step(carry, rng):
     obs, state = carry
     rngs = random.split(rng, (2, env.num_units))
-    action = tree.map(jnp.squeeze, action_fn(rngs[0], obs, behavior, env, scene))
+    action = tree.map(jnp.squeeze, action_fn(rngs[0], obs, bt, env, scene))
     obs, state = env.step(rngs[1], scene, state, action)
     return (obs, state), state
 
