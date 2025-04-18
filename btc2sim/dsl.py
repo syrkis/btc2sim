@@ -15,10 +15,8 @@ from itertools import product
 def txt2bts(txt) -> Behavior:
     node = BehaviorTreeVisitor().visit(grammar.parse(txt))
     fns = [idxs_fn, parent_fn, skips_fn, prevs_fn]
-    idxs, parent, skips, prevs = map(lambda x: jnp.pad(x, (0, 7 - x.size)), map(jnp.array, [fn(node) for fn in fns]))
-    behavior = Behavior(idxs=idxs, parent=parent, skips=skips, prevs=prevs)
-    print(behavior)
-    exit()
+    idx, parent, skip, prev = map(lambda x: jnp.pad(x, (0, len(t2i) - x.size)), map(jnp.array, [f(node) for f in fns]))
+    behavior = Behavior(idx=idx, parent=parent, skip=skip, prev=prev)
     return behavior
 
 
@@ -187,5 +185,5 @@ with open("grammar.peg", "r") as f:
     directions = [m.literal for m in grammar["direction"].members]  # type: ignore
     move_fns = [("stand",)] + [("move", *comb) for comb in list(product(directions, pieces))]
     cond_fns = [("is_alive",)]
-    i2v = sorted(move_fns + cond_fns)
-    t2i = {var: i for i, var in enumerate(i2v)}
+    i2t = sorted(move_fns + cond_fns)
+    t2i = {var: i for i, var in enumerate(i2t)}

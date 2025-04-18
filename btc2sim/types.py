@@ -7,13 +7,13 @@ import parabellum as pb
 # dataclasses
 @dataclass
 class Behavior:
-    idxs: Array
+    idx: Array
     parent: Array
-    prevs: Array
-    skips: Array
+    prev: Array
+    skip: Array
 
     def __len__(self):
-        return self.idxs.shape[0]
+        return self.idx.shape[0]
 
 
 @dataclass
