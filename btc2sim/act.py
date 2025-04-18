@@ -37,33 +37,25 @@ def leafs_fns(rng: Array, env: Env, scene: Scene, obs: Obs):
 
 def action_fn(rng, obs: Obs, behavior: Behavior, env: Env, scene: Scene):  # for one agent
     fn_status, fn_action = leafs_fns(rng, env, scene, obs)
-    init = (jnp.array((True,)), Action(), jnp.zeros(1))
+    init = (jnp.array(False), Action(), jnp.array(0))
     (status, action, passing), stats = lax.scan(bt_fn, init, (fn_status, fn_action, behavior))
     return action, stats
 
 
 def bt_fn(carry: Tuple[Array, Action, Array], input: Tuple[Array, Action, Behavior]):  # this is wrong
     fn_status, fn_action, behavior = input  # load atomics and bt status
-    # debug.breakpoint()
-
     status, action, passing = carry
-    # debug.breakpoint()
+    debug.breakpoint()
 
-    search = status != 1 | (action.coord == 0).all()  # boolean flags
-    # debug.breakpoint()
-
-    active = (status != (behavior.prev != S)) | (behavior.prev == -1)
+    search = ~status | (action.coord == 0).all()  # status is false and still standing
+    active = status != behavior.fallback | (behavior.prev == 0)  # maybe mistake here
     # debug.breakpoint()
 
     status = jnp.where(search & active & (passing <= 0), fn_status, status)  # (potentially) update action
-    # debug.breakpoint()
-
     action = tree.map(lambda x, y: jnp.where(search & active & (passing <= 0), x, y), fn_action, action)  # don't skip
     # debug.breakpoint()
 
     flag = ((behavior.parent == S) & (status == 0)) | ((behavior.parent == F) & (status == 1))  # update passing
-    # debug.breakpoint()
-
     passing = jnp.where(search & active & (passing <= 0), jnp.where(flag, passing - 1, behavior.skip), passing)
     # debug.breakpoint()
 

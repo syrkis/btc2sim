@@ -2,6 +2,7 @@
 from chex import dataclass
 from jaxtyping import Array
 import parabellum as pb
+import jax.numpy as jnp
 
 
 # dataclasses
@@ -14,6 +15,14 @@ class Behavior:
 
     def __len__(self):
         return self.idx.shape[0]
+
+    @property
+    def fallback(self):
+        return ~self.parent.astype(jnp.bool)
+
+    @property
+    def sequence(self):
+        return self.parent.astype(jnp.bool)
 
 
 @dataclass
