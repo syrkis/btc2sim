@@ -17,13 +17,15 @@ def txt2bts(txt) -> Behavior:
     fns = [idxs_fn, parent_fn, skips_fn, prevs_fn]
     idxs, parent, skips, prevs = map(lambda x: jnp.pad(x, (0, 7 - x.size)), map(jnp.array, [fn(node) for fn in fns]))
     behavior = Behavior(idxs=idxs, parent=parent, skips=skips, prevs=prevs)
+    print(behavior)
+    exit()
     return behavior
 
 
 # %% Tree traversales
 def skips_fn(node):
     def aux_fn(n):
-        if n.get("type") in ["condition", "action"]:
+        if "children" not in n:
             return 1
         return sum(aux_fn(child) for child in n["children"])  # type: ignore
 
@@ -67,7 +69,7 @@ def prevs_fn(node):
 
 
 def idxs_fn(node):  # CORRECT
-    if node.get("type") in ["condition", "action"]:
+    if "children" not in node:
         node = node[node.get("type")]
         return [t2i[(node,)] if type(node) is str else t2i[tuple(node.values())]]
     else:
@@ -76,11 +78,14 @@ def idxs_fn(node):  # CORRECT
 
 def parent_fn(node):  # CORRECT
     parents = []
-    for child in node["children"]:
-        if "children" not in child:
-            parents += [int(node["type"] == "sequence")]
-        else:
-            parents += parent_fn(child)
+    if "children" in node:
+        for child in node["children"]:
+            if "children" not in child:
+                parents += [int(node["type"] == "sequence")]
+            else:
+                parents += parent_fn(child)
+    else:
+        parents += [int(node["type"] == "sequence")]
     return parents
 
 
@@ -100,7 +105,7 @@ class BehaviorTreeVisitor(NodeVisitor):
                 # The node is at index 1 (a dictionary)
                 if isinstance(item, list) and len(item) > 1:
                     nodes.append(item[1])
-                elif item is None:
+                elif type(item) is str and item.startswith("|>"):
                     continue
                 else:
                     nodes.append(item)
@@ -121,24 +126,25 @@ class BehaviorTreeVisitor(NodeVisitor):
     def visit_sequence(self, node, visited_children):
         """Process a sequence node (S)."""
         # The structure is ["S", ws, "(", ws, tree, ws, ")", ws]
-        return {"type": "sequence", "children": visited_children[4]}
+        _, _, _, _, tree, *_ = visited_children
+        return {"type": "sequence", "children": tree}
 
     def visit_action(self, node, visited_children):
         """Process an action node (A)."""
         # The structure is ["A", ws, move_or_stand, ws]
-        action_data = visited_children[2]
+        _, _, action_data, *_ = visited_children
         return {"type": "action", "action": action_data}
 
     def visit_condition(self, node, visited_children):
         """Process a condition node (C)."""
         # The structure is ["C", ws, condition, ws]
-        return {"type": "condition", "condition": visited_children[2]}
+        _, _, condition, *_ = visited_children
+        return {"type": "condition", "condition": condition}
 
     def visit_move(self, node, visited_children):
         """Process a move action."""
         # The structure is ["move", ws, direction, ws, piece]
-        direction = visited_children[2]
-        piece = visited_children[4]
+        _, _, direction, _, piece, *_ = visited_children
         return {"name": "move", "direction": direction, "piece": piece}
 
     def visit_stand(self, node, visited_children):
@@ -160,7 +166,7 @@ class BehaviorTreeVisitor(NodeVisitor):
     # Handle whitespace and separators (usually just returning them or ignoring them)
     def visit_sep(self, node, visited_children):
         """Process a separator."""
-        return None
+        return node.text
 
     def visit_ws(self, node, visited_children):
         """Process whitespace."""

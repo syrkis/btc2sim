@@ -1,7 +1,10 @@
 #import "@preview/touying:0.6.1": *
 #import "@local/lilka:0.0.0": *
 #import "@preview/simplebnf:0.1.1": *
+#import "@preview/treet:0.1.1": *
+
 #show: lilka
+
 
 #let title = "btc2sim"
 #let info = (author: "Noah Syrkis", date: datetime.today(), title: title)
@@ -19,44 +22,32 @@
     Prod(
       delim: $→$,
 
+      emph[root],
+      {
+        Or[#emph[tree] $(triangle.stroked.r$ #emph[tree])$star$][program]
+      },
+    ),
+    Prod(
+      delim: $→$,
       emph[tree],
       {
-        Or[#emph[node] $(triangle.stroked.r$ #emph[node])$star$][program]
+        Or[#emph[leaf] | #emph[node]][node or leaf]
+      },
+    ),
+    Prod(
+      delim: $→$,
+      emph[leaf],
+      {
+        Or[A (#emph[move] | #emph[stand])][action]
+        Or[C (is_alive | in_range)][condition]
       },
     ),
     Prod(
       delim: $→$,
       emph[node],
       {
-        Or[#emph[S] | #emph[F] | #emph[A] | #emph[C]][node or leaf]
-      },
-    ),
-    Prod(
-      delim: $→$,
-      emph[S],
-      {
-        Or[S (#emph[tree])][sequence operator]
-      },
-    ),
-    Prod(
-      delim: $→$,
-      emph[F],
-      {
-        Or[F (#emph[tree])][fallback operator]
-      },
-    ),
-    Prod(
-      delim: $→$,
-      emph[A],
-      {
-        Or[A (#emph[move] | #emph[stand])][action operator]
-      },
-    ),
-    Prod(
-      delim: $→$,
-      emph[C],
-      {
-        Or[C (is_alive | in_range)][condition operator]
+        Or[S (#emph[root])][sequence]
+        Or[F (#emph[root])][fallback]
       },
     ),
     Prod(
@@ -76,17 +67,3 @@
   ),
   caption: [The BTC2SIM DSL grammar],
 )
-
-
-#page[
-  #figure(
-    ```
-    F (
-      A move to king |>
-      S ( C is_alive |> A move from queen ) |>
-      A move to pawn
-    )
-    ```,
-    caption: [Example program],
-  )
-]
