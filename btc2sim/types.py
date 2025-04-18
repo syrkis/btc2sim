@@ -1,5 +1,6 @@
 # imports
 from chex import dataclass
+from dataclasses import field
 from jaxtyping import Array
 import parabellum as pb
 import jax.numpy as jnp
@@ -7,21 +8,39 @@ import jax.numpy as jnp
 
 # dataclasses
 @dataclass
+class Status:
+    status: Array = field(default_factory=lambda: jnp.array(False))
+
+    @property
+    def failure(self):
+        return ~(self.status.astype(jnp.bool))
+
+    @property
+    def success(self):
+        return self.status.astype(jnp.bool)
+
+
+@dataclass
 class Behavior:
     idx: Array
     parent: Array
     prev: Array
     skip: Array
 
-    def __len__(self):
-        return self.idx.shape[0]
+    @property
+    def prev_fallback(self):
+        return ~self.prev.astype(jnp.bool)
 
     @property
-    def fallback(self):
+    def prev_sequence(self):
+        return self.prev.astype(jnp.bool)
+
+    @property
+    def parent_fallback(self):
         return ~self.parent.astype(jnp.bool)
 
     @property
-    def sequence(self):
+    def parent_sequence(self):
         return self.parent.astype(jnp.bool)
 
 
