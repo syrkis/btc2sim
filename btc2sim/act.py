@@ -14,6 +14,7 @@ import equinox as eqx
 from jax import lax, tree, debug, random
 from parabellum.types import Action
 from btc2sim.types import Behavior, Status
+from btc2sim.gps import gps_fn
 
 
 # %% Behavior functions
@@ -60,12 +61,9 @@ def bt_fn(carry: Tuple[Status, Action, Array], input: Tuple[Status, Action, Beha
 
 # %% Atomics
 def move_fn(rng: Array, obs: Obs, env: Env, scene: Scene):
-    direction = obs.target - obs.coords[0]
-    coords = direction / jnp.linalg.norm(direction)  # used for moving from (-) and to (+)
-    action = pb.types.Action(shoot=jnp.array(False), coord=coords)
-    status = Status(status=jnp.array(True))
-    # debug.breakpoint()
-    return status, action
+    coord = gps_fn(scene, obs.target)
+    action = Action(coord=coord, shoot=jnp.array(False))
+    return Status(status=jnp.array(True)), action
 
 
 def stand_fn(rng: Array, obs: Obs, env: Env, scene: Scene):
@@ -74,5 +72,30 @@ def stand_fn(rng: Array, obs: Obs, env: Env, scene: Scene):
 
 
 def alive_fn(rng: Array, obs: Obs, env: Env, scene: Scene):
+    status = Status(status=(obs.health[0] > 0))
+    return status, Action()
+
+
+def foe_in_sight(rng: Array, obs: Obs, env: Env, scene: Scene):
+    status = Status(status=(obs.health[1] > 0))
+    return status, Action()
+
+
+def foe_in_range(rng: Array, obs: Obs, env: Env, scene: Scene):
+    status = Status(status=(obs.health[1] > 0) & (jnp.linalg.norm(obs.target - obs.coords[0]) < 1))
+    return status, Action()
+
+
+def friend_in_range(rng: Array, obs: Obs, env: Env, scene: Scene):
+    status = Status(status=(obs.health[2] > 0) & (jnp.linalg.norm(obs.target - obs.coords[0]) < 1))
+    return status, Action()
+
+
+def friend_in_sight(rng: Array, obs: Obs, env: Env, scene: Scene):
+    status = Status(status=(obs.health[2] > 0))
+    return status, Action()
+
+
+def shoot_nearest(rng: Array, obs: Obs, env: Env, scene: Scene):
     status = Status(status=(obs.health[0] > 0))
     return status, Action()

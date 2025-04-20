@@ -14,7 +14,7 @@ notebook = "^7.2.1"
 ipykernel = "^6.29.5"
 einops = "^0.8.0"
 tqdm = "^4.66.5"
-jax = "^0.5.1"
+jax = "^0.6.0"
 chex = "^0.1.89"
 equinox = "^0.11.12"
 flax = "^0.10.4"
@@ -25,6 +25,7 @@ parsimonious = "^0.10.0"
 
 [tool.poetry.group.dev.dependencies]
 parabellum = { path = "../parabellum" }
+JAxtar = { path = "../JAxtar" }
 
 [build-system]
 requires = ["poetry-core"]
