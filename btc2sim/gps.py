@@ -5,26 +5,30 @@
 
 # Imports
 import jax.numpy as jnp
-from parabellum.types import Obs, Scene
+from parabellum.types import Scene
 from jax import jit, debug, lax
 
 
 # %% Globals
-kernel = jnp.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]]).reshape((1, 1, 3, 3))
+kernel = jnp.int16(jnp.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]]).reshape((1, 1, 3, 3)))
 
 
-# @cache
-def step_fn(carry, step):
-    front, distance_map, obstacles, step_num = carry
-    expanded = lax.conv(front[None, None], kernel, (1, 1), "SAME")[0, 0]
-    new_front = (expanded > 0) & (distance_map == -1) & (~obstacles)
-    distance_map = jnp.where(new_front, step_num, distance_map)
-    return (new_front, distance_map), None
+def gps_fn(scene, obs):
+    df = df_fn(scene, jnp.int32(obs.target))
+    coord = jnp.int32(obs.coords[0])
+    debug.breakpoint()
+    return jnp.ones(2)
 
 
 @jit
-def gps_fn(scene: Scene, target):
-    front = jnp.zeros_like(scene.terrain.building).at[*jnp.int32(target)].set(1)
-    df = jnp.where(target, 0, -1)
-    init = (front, df, scene.terrain.building)
-    *(front, df), _ = lax.scan(step_fn, init, jnp.arange(100))
+def df_fn(scene: Scene, target):
+    def step_fn(carry, step):
+        front, df = carry
+        expanded = lax.conv(front[None, None, ...], kernel, (1, 1), "SAME").squeeze()
+        front = (expanded > 0) & (df == -1) & (~scene.terrain.building)
+        df = jnp.where(front, step, df)
+        return (front, df), None
+
+    front = jnp.zeros_like(scene.terrain.building).at[*target].set(1)
+    front, df = lax.scan(step_fn, (front, jnp.where(front, 0, -1)), jnp.arange(front.shape[0] * 2))[0]
+    return df

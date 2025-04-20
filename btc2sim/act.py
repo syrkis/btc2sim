@@ -61,7 +61,7 @@ def bt_fn(carry: Tuple[Status, Action, Array], input: Tuple[Status, Action, Beha
 
 # %% Atomics
 def move_fn(rng: Array, obs: Obs, env: Env, scene: Scene):
-    coord = gps_fn(scene, obs.target)
+    coord = gps_fn(scene, obs)
     action = Action(coord=coord, shoot=jnp.array(False))
     return Status(status=jnp.array(True)), action
 
