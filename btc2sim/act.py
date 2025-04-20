@@ -16,12 +16,6 @@ from parabellum.types import Action
 from btc2sim.types import Behavior, Status
 
 
-# %% Globals
-STAND = Action(coord=jnp.array([0, 0]), shoot=jnp.array(False))
-# SUCCESS = Status(status=jnp.array(True))
-# FAILURE = Status(status=jnp.array(False))
-
-
 # %% Behavior functions
 @eqx.filter_jit
 def fmap(fns, rng: Array, obs: Obs, env: Env, scene: Scene, bt: Behavior):
@@ -51,12 +45,12 @@ def bt_fn(carry: Tuple[Status, Action, Array], input: Tuple[Status, Action, Beha
     atom_status, atom_action, bt, idx = input  # load atomics and bt status
     prev_status, prev_action, passing = carry
 
-    search = prev_status.failure | (prev_action.coord == 0).all()
-    checks = (bt.prev & prev_status.success) | (~bt.prev & prev_status.failure) | (idx == 0)
+    search = prev_status.failure | ((prev_action.coord == 0).all() & prev_action.shoot)  # almost certainly right
+    checks = (bt.prev & ~prev_status.failure) | (~bt.prev & ~prev_status.success) | (idx == 0)  # probably right
 
     status = Status(status=jnp.where(search & checks & (passing <= 0), atom_status.status, prev_status.status))
-    action = tree.map(lambda x, y: jnp.where(search & checks & (passing <= 0), x, y), prev_action, atom_action)
-    debug.breakpoint()
+    action = tree.map(lambda x, y: jnp.where(search & checks & (passing <= 0), x, y), atom_action, prev_action)
+    # debug.breakpoint()
 
     flag = (bt.parent & status.failure) | (~bt.parent & status.success)  # update passing
     passing = jnp.where(search & checks & (passing <= 0), jnp.where(flag, passing - 1, bt.skip), passing)
@@ -70,15 +64,15 @@ def move_fn(rng: Array, obs: Obs, env: Env, scene: Scene):
     coords = direction / jnp.linalg.norm(direction)  # used for moving from (-) and to (+)
     action = pb.types.Action(shoot=jnp.array(False), coord=coords)
     status = Status(status=jnp.array(True))
-    debug.breakpoint()
+    # debug.breakpoint()
     return status, action
 
 
 def stand_fn(rng: Array, obs: Obs, env: Env, scene: Scene):
     status = Status(status=jnp.array(True))
-    return status, STAND
+    return status, Action(coord=jnp.array([0, 0]), shoot=jnp.array(False))
 
 
 def alive_fn(rng: Array, obs: Obs, env: Env, scene: Scene):
     status = Status(status=(obs.health[0] > 0))
-    return status, STAND
+    return status, Action()

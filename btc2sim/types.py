@@ -9,15 +9,16 @@ import jax.numpy as jnp
 # dataclasses
 @dataclass
 class Status:
-    status: Array = field(default_factory=lambda: jnp.array(False))
-
-    @property
-    def failure(self):
-        return ~(self.status.astype(jnp.bool))
+    status: Array = field(default_factory=lambda: jnp.array(True))  # status
+    active: Array = field(default_factory=lambda: jnp.array(False))  # active
 
     @property
     def success(self):
-        return self.status.astype(jnp.bool)
+        return self.status
+
+    @property
+    def failure(self):
+        return ~self.status
 
 
 @dataclass
