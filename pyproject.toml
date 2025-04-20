@@ -25,7 +25,6 @@ parsimonious = "^0.10.0"
 
 [tool.poetry.group.dev.dependencies]
 parabellum = { path = "../parabellum" }
-JAxtar = { path = "../JAxtar" }
 
 [build-system]
 requires = ["poetry-core"]

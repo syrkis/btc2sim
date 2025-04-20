@@ -16,7 +16,7 @@ kernel = jnp.int16(jnp.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]]).reshape((1, 1, 3
 def gps_fn(scene, obs):
     df = df_fn(scene, jnp.int32(obs.target))
     coord = jnp.int32(obs.coords[0])
-    debug.breakpoint()
+    # debug.breakpoint()
     return jnp.ones(2)
 
 
@@ -30,5 +30,5 @@ def df_fn(scene: Scene, target):
         return (front, df), None
 
     front = jnp.zeros_like(scene.terrain.building).at[*target].set(1)
-    front, df = lax.scan(step_fn, (front, jnp.where(front, 0, -1)), jnp.arange(front.shape[0] * 2))[0]
+    front, df = lax.scan(step_fn, (front, jnp.where(front, 0, -1)), jnp.arange(front.shape[0]))[0]
     return df

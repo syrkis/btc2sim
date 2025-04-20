@@ -11,6 +11,7 @@ import numpy as np
 from PIL import Image
 import btc2sim as b2s
 from omegaconf import OmegaConf
+import matplotlib.pyplot as plt
 
 
 # %% Constants
@@ -45,5 +46,9 @@ def anim(scene, seq, scale=2):  # animate positions TODO: remove dead units
 rng, key = random.split(random.PRNGKey(0))
 rngs = random.split(rng, 100)
 obs, state = env.reset(key, scene)
-state, seq = lax.scan(step, (obs, state), rngs)
-anim(scene, seq)
+fig, axes = plt.subplots(1, 2)
+axes[0].imshow(b2s.gps.df_fn(scene, jnp.int32(obs.target[1])))
+axes[1].imshow(scene.terrain.building)
+plt.show()
+# state, seq = lax.scan(step, (obs, state), rngs)
+# anim(scene, seq)
