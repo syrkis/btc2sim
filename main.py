@@ -11,29 +11,34 @@ import numpy as np
 from PIL import Image
 import btc2sim as b2s
 from omegaconf import OmegaConf
-import matplotlib.pyplot as plt
+from jax_tqdm import scan_tqdm
 
 
 # %% Constants
 cfg = OmegaConf.load("conf.yaml")
 rng, key = random.split(random.PRNGKey(0))
 env, scene = pb.env.Env(cfg=cfg), pb.env.scene_fn(cfg)
+gps, targets = b2s.gps.gps_fn(scene, 6, key)
+
 
 bt = b2s.dsl.txt2bts(open("bts.txt", "r").readline())
 bt = tree.map(lambda x: repeat(x, "h -> agents h", agents=env.num_units), bt)
-action_fn = vmap(b2s.act.action_fn, in_axes=(0, 0, 0, None, None))
+action_fn = vmap(b2s.act.action_fn, in_axes=(0, 0, 0, None, None, None, 0))
+n = 200
 
 
 # Functions
-def step(carry, rng):
+@scan_tqdm(n=n)
+def step_fn(carry, input):
+    step, rng = input
     obs, state = carry
     rngs = random.split(rng, (2, env.num_units))
-    action = tree.map(jnp.squeeze, action_fn(rngs[0], obs, bt, env, scene))
+    action = tree.map(jnp.squeeze, action_fn(rngs[0], obs, bt, env, scene, gps, targets))
     obs, state = env.step(rngs[1], scene, state, action)
     return (obs, state), state
 
 
-def anim(scene, seq, scale=2):  # animate positions TODO: remove dead units
+def anim(scene, seq, scale=4):  # animate positions TODO: remove dead units
     pos = seq.coords.astype(int)
     cord = jnp.concat((jnp.arange(pos.shape[0]).repeat(pos.shape[1])[..., None], pos.reshape(-1, 2)), axis=1).T
     idxs = cord[:, seq.health.flatten().astype(bool) > 0]
@@ -44,11 +49,7 @@ def anim(scene, seq, scale=2):  # animate positions TODO: remove dead units
 
 # Environment
 rng, key = random.split(random.PRNGKey(0))
-rngs = random.split(rng, 100)
+rngs = random.split(rng, n)
 obs, state = env.reset(key, scene)
-fig, axes = plt.subplots(1, 2)
-axes[0].imshow(b2s.gps.df_fn(scene, jnp.int32(obs.target[1])))
-axes[1].imshow(scene.terrain.building)
-plt.show()
-# state, seq = lax.scan(step, (obs, state), rngs)
-# anim(scene, seq)
+state, seq = lax.scan(step_fn, (obs, state), (jnp.arange(n), rngs))
+anim(scene, seq)

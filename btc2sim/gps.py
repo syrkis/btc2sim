@@ -5,23 +5,27 @@
 
 # Imports
 import jax.numpy as jnp
+import jax.lax as lax
+from jax import vmap, random
+import equinox as eqx
+from functools import partial
 from parabellum.types import Scene
-from jax import jit, debug, lax
+from btc2sim.types import GPS
+from typing import Tuple
+from jaxtyping import Array
+
+kernel = jnp.int16(jnp.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]]).reshape((1, 1, 3, 3)))
 
 
-# %% Globals
-kernel = jnp.int16(jnp.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]]).reshape((1, 1, 3, 3)))
+def gps_fn(scene: Scene, n, rng) -> Tuple[GPS, Array]:
+    marks = random.randint(rng, (n, 2), 0, scene.terrain.building.shape[0])
+    dy, dx = vmap(partial(grad_fn, scene))(marks)
+    targets = random.randint(rng, (scene.unit_types.size,), 0, n)
+    return GPS(dy=dy, dx=dx), targets
 
 
-def gps_fn(scene, obs):
-    df = df_fn(scene, jnp.int32(obs.target))
-    coord = jnp.int32(obs.coords[0])
-    # debug.breakpoint()
-    return jnp.ones(2)
-
-
-@jit
-def df_fn(scene: Scene, target):
+@eqx.filter_jit
+def grad_fn(scene: Scene, target) -> Tuple[Array, Array]:
     def step_fn(carry, step):
         front, df = carry
         expanded = lax.conv(front[None, None, ...], kernel, (1, 1), "SAME").squeeze()
@@ -31,4 +35,6 @@ def df_fn(scene: Scene, target):
 
     front = jnp.zeros_like(scene.terrain.building).at[*target].set(1)
     front, df = lax.scan(step_fn, (front, jnp.where(front, 0, -1)), jnp.arange(front.shape[0]))[0]
-    return df
+
+    dy, dx = jnp.gradient(df)
+    return dy, dx

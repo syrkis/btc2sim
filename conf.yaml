@@ -1,15 +1,15 @@
-place: "Copenhagen, Denmark"
-size: 500
-knn: 2
-num_units: 2
-num_allies: 1
-num_enemies: 1
+place: "Abel Cathrines Gade, Copenhagen, Denmark"
+size: 200
+knn: 5
+num_units: 20
+num_allies: 10
+num_enemies: 10
 counts:
   allies:
-    Infantry: 1
+    Infantry: 10
     # Tank: 2
   enemies:
-    Infantry: 1
+    Infantry: 10
     # Tank: 2
 
 types:
