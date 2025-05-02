@@ -25,6 +25,7 @@ parsimonious = "^0.10.0"
 
 [tool.poetry.group.dev.dependencies]
 parabellum = { path = "../parabellum" }
+esch = { path = "../../esch" }
 
 [build-system]
 requires = ["poetry-core"]

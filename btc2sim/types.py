@@ -30,11 +30,7 @@ class Behavior:
 
 @dataclass
 class GPS:
-    # marks: Array
+    marks: Array
+    df: Array
     dy: Array
     dx: Array
-
-
-@dataclass
-class Info:
-    targets: Array
