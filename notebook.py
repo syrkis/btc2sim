@@ -1,24 +1,30 @@
-# gps.py
-#   calculates a navigation path from everywhere on terrain to target
-# by: Noah Syrkis
-
-
-# Imports
-import jax.numpy as jnp
-import jax.lax as lax
-from jax import vmap, random
-import equinox as eqx
+# %% Imports
 from functools import partial
-from parabellum.types import Scene
-from btc2sim.types import GPS
 from typing import Tuple
+
+import equinox as eqx
+import jax.numpy as jnp
+import parabellum as pb
+from jax import lax, random, vmap
 from jaxtyping import Array
+from parabellum.types import Scene
+
+import btc2sim as b2s
+from btc2sim.types import GPS
+from omegaconf import OmegaConf
+import seaborn as sns
 import matplotlib.pyplot as plt
 
 
-kernel = jnp.array([[jnp.sqrt(2), 1, jnp.sqrt(2)], [1, 0, 1], [jnp.sqrt(2), 1, jnp.sqrt(2)]]).reshape((1, 1, 3, 3))
+# %% Globals
+cfg = OmegaConf.load("conf.yaml")
+rng, key = random.split(random.PRNGKey(0))
+env, scene = pb.env.Env(cfg=cfg), pb.env.scene_fn(cfg)
+scene.terrain.building = b2s.utils.scene_fn(scene.terrain.building)[4::10, 4::10]
+kernel = jnp.float32(jnp.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]]).reshape((1, 1, 3, 3)))
 
 
+# %% Functions
 def gps_fn(scene: Scene, n, rng) -> Tuple[GPS, Array]:
     marks = random.randint(rng, (n, 2), 0, scene.terrain.building.shape[0])
     df, dy, dx = vmap(partial(grad_fn, scene))(marks)
@@ -34,7 +40,6 @@ def grad_fn(scene: Scene, target):
         df = jnp.where(front, step, df).squeeze()
         return (front, df), None
 
-    mask = jnp.float32(jnp.abs(scene.terrain.building - 1))
     front = jnp.zeros(scene.terrain.building.shape).at[*target].set(1)[None, None, ...]
     df = jnp.where(front, 0, front.size).squeeze()
     steps = jnp.arange(scene.terrain.building.shape[0] * 2)
@@ -42,13 +47,14 @@ def grad_fn(scene: Scene, target):
     return df, *jnp.gradient(df)
 
 
-def plot_gps(gps):
-    plt.style.use("dark_background")
-    fig, axes = plt.subplots(1, int(gps.df.shape[0]), figsize=(20, 20))
-    for idx, ax in enumerate(axes.flat):
-        ax.imshow(gps.df[idx].clip(0, gps.df.shape[1] * 2), cmap="twilight")
-        ax.scatter(*gps.marks[idx][::-1])  # very sus that i need to flip order
-        ax.axis("off")
-        ax.set_aspect("equal")
-    plt.tight_layout()
-    plt.show()
+gps, target = gps_fn(scene, 10, rng)
+
+
+def plot_df(df):
+    sns.heatmap(df.squeeze().clip(0, df.shape[0] * 2), cmap="twilight", cbar=False)
+    plt.axis("off")
+    plt.gca().set_aspect("equal")
+
+
+plot_df(gps.df[0])
+# plot_df(gps.df[0])

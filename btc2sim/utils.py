@@ -19,4 +19,5 @@ def scene_fn(arr):
     start_idx = arr.shape[0] // 6
     end_idx = arr.shape[0] // 6 * 2
     arr = arr.at[start_idx + 30 : end_idx + 30, start_idx:end_idx].set(1)
+    arr = arr.at[start_idx + 30 + 5 : end_idx + 30 - 5, start_idx + 5 : end_idx].set(0)
     return arr

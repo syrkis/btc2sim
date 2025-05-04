@@ -22,13 +22,13 @@ from btc2sim.types import Behavior, Status, GPS
 def fmap(fns, rng: Array, obs: Obs, env: Env, scene: Scene, gps: GPS, target: Array, bt: Behavior):
     *args, rngs = obs, env, scene, gps, target, random.split(rng, len(fns))
     status, action = zip(*(f(rng, *args) for f, rng in zip(fns, rngs)))
-    status = tree.map(lambda *xs: jnp.stack(xs).take(bt.idx), *status)
-    action = tree.map(lambda *xs: jnp.stack(xs).take(bt.idx), *action)
+    status = tree.map(lambda *xs: jnp.stack(xs).take(bt.idx, axis=0), *status)
+    action = tree.map(lambda *xs: jnp.stack(xs).take(bt.idx, axis=0), *action)
     return status, action
 
 
 def leafs_fns(rng: Array, obs: Obs, env: Env, scene: Scene, gps: GPS, target: Array, bt: Behavior):
-    fns = (alive_fn, move_fn, stand_fn)  # it is important that this is run alphabetacally
+    fns = (stand_fn, alive_fn, move_fn)  # it is important that this is run alphabetacally
     args = obs, env, scene, gps, target
     status, action = fmap(fns, rng, *args, bt)
     return status, action
@@ -38,7 +38,8 @@ def action_fn(rng, obs: Obs, bt: Behavior, env: Env, scene: Scene, gps: GPS, tar
     atom_status, atom_action = leafs_fns(rng, obs, env, scene, gps, target, bt)
     init = (Status(), Action(), jnp.array(0))
     xs = atom_status, atom_action, bt, jnp.arange(atom_action.shoot.size)
-    (_, action, _), _ = lax.scan(bt_fn, init, xs)
+    (_, action, _), flag = lax.scan(bt_fn, init, xs)
+    # debug.breakpoint()
     return action
 
 
@@ -61,7 +62,7 @@ def bt_fn(carry: Tuple[Status, Action, Array], input: Tuple[Status, Action, Beha
 # %% Atomics
 def move_fn(rng: Array, obs: Obs, env: Env, scene: Scene, gps: GPS, target: Array):
     pos = jnp.int32(obs.coords[0])
-    coord = -jnp.array((gps.dx[target][*pos], gps.dy[target][*pos]))
+    coord = -jnp.array((gps.dy[target][*pos], gps.dx[target][*pos]))
     action = Action(coord=coord, shoot=jnp.array(False))
     return Status(status=jnp.array(True)), action
 
@@ -76,26 +77,27 @@ def alive_fn(rng: Array, obs: Obs, env: Env, scene: Scene, gps: GPS, targets: Ar
     return status, Action()
 
 
-def foe_in_sight(rng: Array, obs: Obs, env: Env, scene: Scene, gps: GPS, targets: Array):
-    status = Status(status=(obs.health[1] > 0))
-    return status, Action()
-
-
-def foe_in_range(rng: Array, obs: Obs, env: Env, scene: Scene, gps: GPS, targets: Array):
-    status = Status(status=(obs.health[1] > 0) & (jnp.linalg.norm(obs.target - obs.coords[0]) < 1))
-    return status, Action()
-
-
-def friend_in_range(rng: Array, obs: Obs, env: Env, scene: Scene, gps: GPS, targets: Array):
-    status = Status(status=(obs.health[2] > 0) & (jnp.linalg.norm(obs.target - obs.coords[0]) < 1))
-    return status, Action()
-
-
-def friend_in_sight(rng: Array, obs: Obs, env: Env, scene: Scene, gps: GPS, targets: Array):
-    status = Status(status=(obs.health[2] > 0))
-    return status, Action()
-
-
-def shoot_nearest(rng: Array, obs: Obs, env: Env, scene: Scene, gps: GPS, targets: Array):
-    status = Status(status=(obs.health[0] > 0))
-    return status, Action()
+# def foe_in_sight(rng: Array, obs: Obs, env: Env, scene: Scene, gps: GPS, targets: Array):
+# status = Status(status=(obs.health[1] > 0))
+# return status, Action()
+#
+#
+# def foe_in_range(rng: Array, obs: Obs, env: Env, scene: Scene, gps: GPS, targets: Array):
+# status = Status(status=(obs.health[1] > 0) & (jnp.linalg.norm(obs.target - obs.coords[0]) < 1))
+# return status, Action()
+#
+#
+# def friend_in_range(rng: Array, obs: Obs, env: Env, scene: Scene, gps: GPS, targets: Array):
+# status = Status(status=(obs.health[2] > 0) & (jnp.linalg.norm(obs.target - obs.coords[0]) < 1))
+# return status, Action()
+#
+#
+# def friend_in_sight(rng: Array, obs: Obs, env: Env, scene: Scene, gps: GPS, targets: Array):
+# status = Status(status=(obs.health[2] > 0))
+# return status, Action()
+#
+#
+# def shoot_nearest(rng: Array, obs: Obs, env: Env, scene: Scene, gps: GPS, targets: Array):
+# status = Status(status=(obs.health[0] > 0))
+# return status, Action()
+#

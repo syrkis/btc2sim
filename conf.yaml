@@ -1,16 +1,15 @@
-place: "The Pentagon, Pentagon Access Road, Arlington County, Virginia, 20301, United States"
+place: "Abel Cathrines Gade 1, Copenhagen, Denmark"
 size: 200
-knn: 5
-num_units: 20
-num_allies: 10
-num_enemies: 10
+steps: 200
+knn: 3
+num_units: 3
+num_allies: 2
+num_enemies: 1
 counts:
   allies:
-    Infantry: 10
-    # Tank: 2
+    Infantry: 2
   enemies:
-    Infantry: 10
-    # Tank: 2
+    Infantry: 1
 
 types:
   - name: "Infantry"
