@@ -1,15 +1,15 @@
 place: "Abel Cathrines Gade 1, Copenhagen, Denmark"
 size: 200
-steps: 200
+steps: 500
 knn: 3
-num_units: 3
-num_allies: 2
-num_enemies: 1
+num_units: 300
+num_allies: 200
+num_enemies: 100
 counts:
   allies:
-    Infantry: 2
+    Infantry: 200
   enemies:
-    Infantry: 1
+    Infantry: 100
 
 types:
   - name: "Infantry"

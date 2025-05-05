@@ -19,11 +19,11 @@ import matplotlib.pyplot as plt
 kernel = jnp.array([[jnp.sqrt(2), 1, jnp.sqrt(2)], [1, 0, 1], [jnp.sqrt(2), 1, jnp.sqrt(2)]]).reshape((1, 1, 3, 3))
 
 
-def gps_fn(scene: Scene, n, rng) -> Tuple[GPS, Array]:
-    marks = random.randint(rng, (n, 2), 0, scene.terrain.building.shape[0])
+def gps_fn(scene: Scene, marks) -> GPS:
+    # marks = random.randint(rng, (n, 2), 0, scene.terrain.building.shape[0])
     df, dy, dx = vmap(partial(grad_fn, scene))(marks)
-    targets = random.randint(rng, (scene.unit_types.size,), 0, n)
-    return GPS(marks=marks, df=df, dy=dy, dx=dx), targets
+    # targets = random.randint(rng, (scene.unit_types.size,), 0, n)
+    return GPS(marks=marks, df=df, dy=dy, dx=dx)
 
 
 @eqx.filter_jit
@@ -39,7 +39,8 @@ def grad_fn(scene: Scene, target):
     df = jnp.where(front, 0, front.size).squeeze()
     steps = jnp.arange(scene.terrain.building.shape[0] * 2)
     front, df = lax.scan(step_fn, (front, df), steps)[0]
-    return df, *jnp.gradient(df)
+    dy, dx = jnp.gradient(df * ~(target == 0).all())  # 0,0 is an INVLAID target
+    return df, dy, dx
 
 
 def plot_gps(gps):
