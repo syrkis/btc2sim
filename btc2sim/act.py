@@ -59,7 +59,11 @@ def bt_fn(carry: Tuple[Status, Action, Array], input: Tuple[Status, Action, Beha
     return (status, action, passing), flag
 
 
-# %% Atomics
+###################################################################################
+# %% Atomics ######################################################################
+###################################################################################
+
+
 def move_fn(rng: Array, obs: Obs, env: Env, scene: Scene, gps: GPS, target: Array):
     pos = jnp.int32(obs.coords[0])
     coord = -jnp.array((gps.dy[target][*pos], gps.dx[target][*pos]))
@@ -100,4 +104,3 @@ def alive_fn(rng: Array, obs: Obs, env: Env, scene: Scene, gps: GPS, targets: Ar
 # def shoot_nearest(rng: Array, obs: Obs, env: Env, scene: Scene, gps: GPS, targets: Array):
 # status = Status(status=(obs.health[0] > 0))
 # return status, Action()
-#
