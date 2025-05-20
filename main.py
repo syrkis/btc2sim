@@ -29,7 +29,7 @@ obs, state = env.reset(key, scene)
 # bts = b2s.dsl.txt2bts(open("bts.txt", "r").readline())
 bts = b2s.dsl.file2bts("bts.txt")
 idxs = random.randint(rng, (env.num_units,), 0, 2)
-behavior = lax.map(lambda idx: tree.map(lambda x: x[idx], bts), idxs)
+behavior = vmap(lambda idx: tree.map(lambda x: x[idx], bts))(idxs)
 debug.breakpoint()
 exit()
 # behavior = tree.map(,
