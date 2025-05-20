@@ -983,7 +983,7 @@ wheels = [
 
 [[package]]
 name = "esch"
-version = "1.1.14"
+version = "0.0.7"
 source = { directory = "../../esch" }
 dependencies = [
     { name = "chex" },
@@ -2544,7 +2544,7 @@ wheels = [
 
 [[package]]
 name = "parabellum"
-version = "0.6.22"
+version = "0.6.23"
 source = { directory = "../parabellum" }
 dependencies = [
     { name = "brax" },

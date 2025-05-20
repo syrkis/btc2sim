@@ -10,7 +10,7 @@ from jaxtyping import Array
 from parabellum.types import Scene
 
 import btc2sim as b2s
-from btc2sim.types import GPS
+from btc2sim.types import Compass
 from omegaconf import OmegaConf
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -25,11 +25,11 @@ kernel = jnp.float32(jnp.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]]).reshape((1, 1,
 
 
 # %% Functions
-def gps_fn(scene: Scene, n, rng) -> Tuple[GPS, Array]:
+def gps_fn(scene: Scene, n, rng) -> Tuple[Compass, Array]:
     marks = random.randint(rng, (n, 2), 0, scene.terrain.building.shape[0])
     df, dy, dx = vmap(partial(grad_fn, scene))(marks)
     targets = random.randint(rng, (scene.unit_types.size,), 0, n)
-    return GPS(marks=marks, df=df, dy=dy, dx=dx), targets
+    return Compass(marks=marks, df=df, dy=dy, dx=dx), targets
 
 
 @eqx.filter_jit

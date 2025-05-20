@@ -1,3 +1,2 @@
 A move target
 F ( A move target |> A move target )
-F ( A move target |> S ( C is_alive |> A move target ) |> A move target )

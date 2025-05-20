@@ -10,7 +10,7 @@ from jax import vmap, random
 import equinox as eqx
 from functools import partial
 from parabellum.types import Scene
-from btc2sim.types import GPS
+from btc2sim.types import Compass
 from typing import Tuple
 from jaxtyping import Array
 import matplotlib.pyplot as plt
@@ -19,11 +19,11 @@ import matplotlib.pyplot as plt
 kernel = jnp.array([[jnp.sqrt(2), 1, jnp.sqrt(2)], [1, 0, 1], [jnp.sqrt(2), 1, jnp.sqrt(2)]]).reshape((1, 1, 3, 3))
 
 
-def gps_fn(scene: Scene, marks) -> GPS:
+def gps_fn(scene: Scene, marks) -> Compass:
     # marks = random.randint(rng, (n, 2), 0, scene.terrain.building.shape[0])
     df, dy, dx = vmap(partial(grad_fn, scene))(marks)
     # targets = random.randint(rng, (scene.unit_types.size,), 0, n)
-    return GPS(marks=marks, df=df, dy=dy, dx=dx)
+    return Compass(marks=marks, df=df, dy=dy, dx=dx)
 
 
 @eqx.filter_jit

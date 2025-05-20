@@ -10,16 +10,21 @@ from jax import tree
 from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor
 
-from btc2sim.types import Behavior
+from btc2sim.types import BehaviorTree
 
 
 # %% Behavior dataclass
-def txt2bts(txt) -> Behavior:
+def file2bts(fn):
+    with open(fn, "r") as f:
+        return tree.map(lambda *bts: jnp.stack(bts), *tuple(map(lambda x: txt2bts(x.strip()), f.readlines())))
+
+
+def txt2bts(txt) -> BehaviorTree:
     node = BehaviorTreeVisitor().visit(grammar.parse(txt))
     fns = [idxs_fn, parent_fn, skips_fn, prevs_fn]
     # idx, parent, skip, prev = map(lambda x: jnp.pad(x, (0, len(a2i) - x.size)), map(jnp.array, [f(node) for f in fns]))
     idx, parent, skip, prev = map(jnp.array, [f(node) for f in fns])
-    bt = Behavior(idx=idx, parent=parent, skip=skip, prev=prev)
+    bt = BehaviorTree(idx=idx, parent=parent, skip=skip, prev=prev)
     return tree.map(lambda x: jnp.pad(x, (0, len(a2i) - x.size)), bt)
 
 

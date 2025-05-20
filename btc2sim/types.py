@@ -21,7 +21,7 @@ class Status:
 
 
 @dataclass
-class Behavior:
+class BehaviorTree:  # there will be one per unit (called wihth differnt obs)
     idx: Array
     parent: Array
     prev: Array
@@ -29,8 +29,14 @@ class Behavior:
 
 
 @dataclass
-class GPS:
+class Compass:  # groups can have targets
     marks: Array
     df: Array
     dy: Array
     dx: Array
+
+
+# @dataclass
+# class Unit:
+# bt: BehaviorTree
+# target: Array  # int showing which target in the compass to go to

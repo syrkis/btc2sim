@@ -3,13 +3,12 @@
 # by: Noah Syrkis
 
 # Imports
-import sys
-
 import jax.numpy as jnp
+import jraph
 import numpy as np
 import parabellum as pb
 from einops import repeat
-from jax import lax, random, tree, vmap, debug
+from jax import debug, lax, random, tree, vmap
 from jax_tqdm import scan_tqdm
 from omegaconf import OmegaConf
 from PIL import Image
@@ -27,20 +26,24 @@ gps = b2s.gps.gps_fn(scene, marks)  # 6, key)
 rngs = random.split(rng, cfg.steps)
 obs, state = env.reset(key, scene)
 
-bt = b2s.dsl.txt2bts(open("bts.txt", "r").readline())
-bt = tree.map(lambda x: repeat(x, "h -> agents h", agents=env.num_units), bt)
+# bts = b2s.dsl.txt2bts(open("bts.txt", "r").readline())
+bts = b2s.dsl.file2bts("bts.txt")
+idxs = random.randint(rng, (env.num_units,), 0, 2)
+behavior = lax.map(lambda idx: tree.map(lambda x: x[idx], bts), idxs)
+debug.breakpoint()
+exit()
+# behavior = tree.map(,
+# bt = tree.map(lambda x: repeat(x, "h -> agents h", agents=env.num_units), bt)
 action_fn = vmap(b2s.act.action_fn, in_axes=(0, 0, 0, None, None, None, 0))
 
 
 # %% Functions
 @scan_tqdm(n=cfg.steps)
 def step_fn(carry, input):
-    step, rng = input
-    obs, state = carry
-    rngs = random.split(rng, (2, env.num_units))
-    action = action_fn(rngs[0], obs, bt, env, scene, gps, targets)
-    # debug.breakpoint()
-    obs, state = env.step(rngs[1], scene, state, action)
+    (step, rng), (obs, state) = input, carry
+    rngs = random.split(rng, env.num_units)
+    action = action_fn(rngs, obs, bt, env, scene, gps, targets)
+    obs, state = env.step(rng, scene, state, action)
     return (obs, state), state
 
 
@@ -54,5 +57,11 @@ def anim(scene, seq, scale=4):  # animate positions TODO: remove dead units
     imgs[0].save("output.gif", save_all=True, append_images=imgs[1:], duration=10, loop=0)
 
 
-state, seq = lax.scan(step_fn, (obs, state), (jnp.arange(cfg.steps), rngs))
-anim(scene, seq)
+def plan_fn(plan, state):
+    # spits out BT for all units?
+    return
+
+
+print(bt)
+# state, seq = lax.scan(step_fn, (obs, state), (jnp.arange(cfg.steps), rngs))
+# anim(scene, seq)
