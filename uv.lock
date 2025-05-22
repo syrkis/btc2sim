@@ -983,7 +983,7 @@ wheels = [
 
 [[package]]
 name = "esch"
-version = "0.0.7"
+version = "0.0.8"
 source = { directory = "../../esch" }
 dependencies = [
     { name = "chex" },
@@ -2612,7 +2612,10 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "esch", directory = "../../esch" }]
+dev = [
+    { name = "esch", directory = "../../esch" },
+    { name = "ty", specifier = ">=0.0.1a6" },
+]
 
 [[package]]
 name = "parsimonious"

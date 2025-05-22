@@ -1,2 +1,1 @@
 A move target
-F ( A move target |> A move target )

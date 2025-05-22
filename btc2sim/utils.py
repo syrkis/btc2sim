@@ -1,5 +1,8 @@
 # imports
 import jax.numpy as jnp
+import numpy as np
+from einops import repeat
+from PIL import Image
 # def plot_grads(grads):
 # fig, axes = plt.subplots(2, 3, figsize=(12, 8))
 # for i, ax in enumerate(axes.flat):
@@ -21,3 +24,13 @@ def scene_fn(arr):
     arr = arr.at[start_idx + 30 : end_idx + 30, start_idx:end_idx].set(1)
     arr = arr.at[start_idx + 30 + 5 : end_idx + 30 - 5, start_idx + 5 : end_idx].set(0)
     return arr
+
+
+def gif_fn(scene, seq, scale=4):  # animate positions TODO: remove dead units
+    pos = seq.coords.astype(int)
+    cord = jnp.concat((jnp.arange(pos.shape[0]).repeat(pos.shape[1])[..., None], pos.reshape(-1, 2)), axis=1).T
+    idxs = cord[:, seq.health.flatten().astype(bool) > 0]
+    mask = scene.terrain.building  # .at[*jnp.int32(gps.marks.T)].set(1)
+    imgs = np.array(repeat(mask, "... -> a ...", a=len(pos)).at[*idxs].set(1))
+    imgs = [Image.fromarray(img).resize(np.array(img.shape[:2]) * scale, Image.NEAREST) for img in imgs * 255]  # type: ignore
+    imgs[0].save("output.gif", save_all=True, append_images=imgs[1:], duration=10, loop=0)

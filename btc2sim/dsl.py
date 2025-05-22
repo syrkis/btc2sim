@@ -10,21 +10,43 @@ from jax import tree
 from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor
 
-from btc2sim.types import BehaviorTree
+from btc2sim.types import Behavior
+from btc2sim.act import atomics
 
 
-# %% Behavior dataclass
+# %% Grammar
+a2i = {var: i for i, var in enumerate(atomics)}
+grammar = Grammar("""
+tree        = node (sep node)*
+node        = fallback / sequence / action / condition
+
+fallback    = "F" ws "(" ws tree ws ")" ws
+sequence    = "S" ws "(" ws tree ws ")" ws
+action      = "A" ws (move / stand) ws
+condition   = "C" ws cond ws
+
+move        = "move" ws (target)
+stand       = "stand"
+target      = "target"
+
+cond        = "is_alive"
+
+sep         = ws "|>" ws
+ws          = ~r"\s*"
+""")
+
+
+# %% Functions
 def file2bts(fn):
     with open(fn, "r") as f:
         return tree.map(lambda *bts: jnp.stack(bts), *tuple(map(lambda x: txt2bts(x.strip()), f.readlines())))
 
 
-def txt2bts(txt) -> BehaviorTree:
+def txt2bts(txt) -> Behavior:
     node = BehaviorTreeVisitor().visit(grammar.parse(txt))
     fns = [idxs_fn, parent_fn, skips_fn, prevs_fn]
-    # idx, parent, skip, prev = map(lambda x: jnp.pad(x, (0, len(a2i) - x.size)), map(jnp.array, [f(node) for f in fns]))
     idx, parent, skip, prev = map(jnp.array, [f(node) for f in fns])
-    bt = BehaviorTree(idx=idx, parent=parent, skip=skip, prev=prev)
+    bt = Behavior(idx=idx, parent=parent, skip=skip, prev=prev)
     return tree.map(lambda x: jnp.pad(x, (0, len(a2i) - x.size)), bt)
 
 
@@ -180,10 +202,3 @@ class BehaviorTreeVisitor(NodeVisitor):
         if visited_children and len(visited_children) == 1:
             return visited_children[0]
         return visited_children or node.text
-
-
-# %% Grammar stuff
-with open("grammar.peg", "r") as f:
-    grammar = Grammar(f.read())
-    atomics = [("stand",), ("is_alive",), ("move", "target")]
-    a2i = {var: i for i, var in enumerate(atomics)}

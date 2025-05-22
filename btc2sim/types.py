@@ -21,7 +21,7 @@ class Status:
 
 
 @dataclass
-class BehaviorTree:  # there will be one per unit (called wihth differnt obs)
+class Behavior:  # there will be one per unit (called wihth differnt obs)
     idx: Array
     parent: Array
     prev: Array
@@ -36,7 +36,8 @@ class Compass:  # groups can have targets
     dx: Array
 
 
-# @dataclass
-# class Unit:
-# bt: BehaviorTree
-# target: Array  # int showing which target in the compass to go to
+@dataclass
+class Battalion:
+    units: Array  # bool array in batalion else 0
+    target: Array  # 0 to 6
+    bt_idx: Array  # 0 to num bts
