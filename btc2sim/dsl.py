@@ -36,10 +36,14 @@ ws          = ~r"\s*"
 """)
 
 
+bts = """
+A move target
+"""
+
+
 # %% Functions
 def file2bts(fn):
-    with open(fn, "r") as f:
-        return tree.map(lambda *bts: jnp.stack(bts), *tuple(map(lambda x: txt2bts(x.strip()), f.readlines())))
+    return tree.map(lambda *bts: jnp.stack(bts), *tuple(map(lambda x: txt2bts(x.strip()), bts.strip().split("\n"))))
 
 
 def txt2bts(txt) -> Behavior:
