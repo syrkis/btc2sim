@@ -76,6 +76,42 @@ def alive_fn(rng: Array, obs: Obs, env: Env, scene: Scene, gps: Compass, targets
     return status, Action()
 
 
+def shoot_random_fn(rng: Array, obs: Obs, env: Env, scene: Scene, gps: Compass, targets: Array):
+    status = Status(status=jnp.array(True))
+    action = Action(coord=obs.coords[random.randint(rng, (1,), 1, obs.coords.shape[0] + 1)])
+    return status, action
+
+
+def shoot_closest_fn(rng: Array, obs: Obs, env: Env, scene: Scene, gps: Compass, targets: Array):
+    status = Status(status=jnp.array(True))
+    action = Action(coord=obs.coords[1])
+    return status, action
+
+
+def enemy_in_sight(rng: Array, obs: Obs, env: Env, scene: Scene, gps: Compass, targets: Array):
+    status = Status(status=jnp.array(True))
+    action = Action(coord=obs.coords[1])
+    return status, action
+
+
+def ally_in_sight(rng: Array, obs: Obs, env: Env, scene: Scene, gps: Compass, targets: Array):
+    status = Status(status=jnp.array(True))
+    action = Action(coord=obs.coords[1])
+    return status, action
+
+
+def enemy_in_range(rng: Array, obs: Obs, env: Env, scene: Scene, gps: Compass, targets: Array):
+    status = Status(status=jnp.array(True))
+    action = Action(coord=obs.coords[1])
+    return status, action
+
+
+def ally_in_range(rng: Array, obs: Obs, env: Env, scene: Scene, gps: Compass, targets: Array):
+    status = Status(status=jnp.array(True))
+    action = Action(coord=obs.coords[1])
+    return status, action
+
+
 # %% Grammar stuff
 tuples = ((("stand",), stand_fn), (("is_alive",), alive_fn), (("move", "target"), move_fn))
 atomics = (a[0] for a in sorted(tuples, key=lambda x: x[0]))

@@ -22,12 +22,14 @@ node        = fallback / sequence / action / condition
 
 fallback    = "F" ws "(" ws tree ws ")" ws
 sequence    = "S" ws "(" ws tree ws ")" ws
-action      = "A" ws (move / stand) ws
+action      = "A" ws (move / stand / shoot) ws
 condition   = "C" ws cond ws
 
 move        = "move" ws (target)
+shoot       = "shoot" ws (qualifier)
 stand       = "stand"
 target      = "target"
+qualifier   = "random" / "closest"
 
 cond        = "is_alive"
 
@@ -179,12 +181,22 @@ class BehaviorTreeVisitor(NodeVisitor):
         _, _, target, *_ = visited_children
         return {"name": "move", "target": target}
 
+    def visit_shoot(self, node, visited_children):
+        """Process a shoot action."""
+        # The structure is ["shoot", ws, qualifier]
+        _, _, qualifier, *_ = visited_children
+        return {"name": "shoot", "qualifier": qualifier}
+
     def visit_stand(self, node, visited_children):
         """Process a stand action."""
         return {"name": "stand"}
 
     def visit_target(self, node, visited_children):
         """Process the target."""
+        return node.text
+
+    def visit_qualifier(self, node, visited_children):
+        """Process the qualifier."""
         return node.text
 
     def visit_cond(self, node, visited_children):

@@ -6,7 +6,6 @@
 import esch
 import jax.numpy as jnp
 import numpy as np
-import equinox as eqx
 import parabellum as pb
 from einops import rearrange
 from jax import debug, lax, random, tree, vmap
@@ -54,7 +53,7 @@ def svg_fn(scene, seq):
     esch.grid_fn(np.array(scene.terrain.building).T, dwg)
     arr = np.array(rearrange(seq.coords[:, :, ::-1], "time unit coord -> unit coord time"), dtype=np.float32)
     esch.anim_sims_fn(arr, dwg, fps=24)
-    esch.save(dwg, "test.svg")
+    esch.save(dwg, "/Users/nobr/desk/s3/btc2sim/test.svg")
 
 
 behavior, target = plan_fn(None, state)
