@@ -88,31 +88,41 @@ def shoot_closest_fn(rng: Array, obs: Obs, env: Env, scene: Scene, gps: Compass,
     return status, action
 
 
-def enemy_in_sight(rng: Array, obs: Obs, env: Env, scene: Scene, gps: Compass, targets: Array):
+def foe_in_sight_fn(rng: Array, obs: Obs, env: Env, scene: Scene, gps: Compass, targets: Array):
     status = Status(status=jnp.array(True))
     action = Action(coord=obs.coords[1])
     return status, action
 
 
-def ally_in_sight(rng: Array, obs: Obs, env: Env, scene: Scene, gps: Compass, targets: Array):
+def foe_in_range_fn(rng: Array, obs: Obs, env: Env, scene: Scene, gps: Compass, targets: Array):
     status = Status(status=jnp.array(True))
     action = Action(coord=obs.coords[1])
     return status, action
 
 
-def enemy_in_range(rng: Array, obs: Obs, env: Env, scene: Scene, gps: Compass, targets: Array):
+def friend_in_sight_fn(rng: Array, obs: Obs, env: Env, scene: Scene, gps: Compass, targets: Array):
     status = Status(status=jnp.array(True))
     action = Action(coord=obs.coords[1])
     return status, action
 
 
-def ally_in_range(rng: Array, obs: Obs, env: Env, scene: Scene, gps: Compass, targets: Array):
+def friend_in_range_fn(rng: Array, obs: Obs, env: Env, scene: Scene, gps: Compass, targets: Array):
     status = Status(status=jnp.array(True))
     action = Action(coord=obs.coords[1])
     return status, action
 
 
 # %% Grammar stuff
-tuples = ((("stand",), stand_fn), (("is_alive",), alive_fn), (("move", "target"), move_fn))
+tuples = (
+    (("stand",), stand_fn),
+    (("is_alive",), alive_fn),
+    (("move", "target"), move_fn),
+    (("in_sight", "ally"), friend_in_sight_fn),
+    (("in_range", "ally"), friend_in_range_fn),
+    (("in_sight", "enemy"), foe_in_sight_fn),
+    (("in_range", "enemy"), foe_in_range_fn),
+    (("shoot", "closest"), shoot_closest_fn),
+    (("shoot", "random"), shoot_random_fn),
+)
 atomics = (a[0] for a in sorted(tuples, key=lambda x: x[0]))
 fns = (a[1] for a in sorted(tuples, key=lambda x: x[0]))

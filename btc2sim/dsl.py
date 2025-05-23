@@ -23,15 +23,17 @@ node        = fallback / sequence / action / condition
 fallback    = "F" ws "(" ws tree ws ")" ws
 sequence    = "S" ws "(" ws tree ws ")" ws
 action      = "A" ws (move / stand / shoot) ws
-condition   = "C" ws cond ws
+condition   = "C" ws (in_range / in_sight) ws
 
+in_range    = "in_range" ws team
+in_sight    = "in_sight" ws team
 move        = "move" ws (target)
 shoot       = "shoot" ws (qualifier)
 stand       = "stand"
 target      = "target"
 qualifier   = "random" / "closest"
+team        = "ally" / "enemy"
 
-cond        = "is_alive"
 
 sep         = ws "|>" ws
 ws          = ~r"\s*"
@@ -40,6 +42,7 @@ ws          = ~r"\s*"
 
 bts = """
 A move target
+F (S (C in_range enemy |> A shoot closest) |> A move target)
 """
 
 
@@ -199,8 +202,20 @@ class BehaviorTreeVisitor(NodeVisitor):
         """Process the qualifier."""
         return node.text
 
-    def visit_cond(self, node, visited_children):
-        """Process a condition."""
+    def visit_in_range(self, node, visited_children):
+        """Process an in_range condition."""
+        # The structure is ["in_range", ws, team]
+        _, _, team, *_ = visited_children
+        return {"name": "in_range", "team": team}
+
+    def visit_in_sight(self, node, visited_children):
+        """Process an in_sight condition."""
+        # The structure is ["in_sight", ws, team]
+        _, _, team, *_ = visited_children
+        return {"name": "in_sight", "team": team}
+
+    def visit_team(self, node, visited_children):
+        """Process the team."""
         return node.text
 
     # Handle whitespace and separators (usually just returning them or ignoring them)

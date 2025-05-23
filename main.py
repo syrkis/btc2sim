@@ -28,6 +28,8 @@ obs, state = env.reset(key, scene)
 # bts = b2s.dsl.txt2bts(open("bts.txt", "r").readline())
 bts = b2s.dsl.file2bts("bts.txt")
 action_fn = vmap(b2s.act.action_fn, in_axes=(0, 0, 0, None, None, None, 0))
+debug.breakpoint()
+exit()
 
 
 # %% Functions
