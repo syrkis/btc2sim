@@ -6,11 +6,11 @@ counts:
   allies:
     # Infantry: 0
     # Tank: 0
-    Airplane: 512
+    Airplane: 2
   enemies:
     # Infantry: 0
     # Tank: 0
-    Airplane: 512
+    Airplane: 2
 
 types:
   - name: "Infantry"

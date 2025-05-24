@@ -6,7 +6,7 @@
 from functools import reduce
 
 import jax.numpy as jnp
-from jax import tree
+from jax import tree, debug
 from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor
 
@@ -42,12 +42,12 @@ ws          = ~r"\s*"
 
 bts = """
 A move target
-F (S (C in_range enemy |> A shoot closest) |> A move target)
 """
+# F (S (C in_range enemy |> A shoot closest) |> A move target)
 
 
 # %% Functions
-def file2bts(fn):
+def bts_fn():
     return tree.map(lambda *bts: jnp.stack(bts), *tuple(map(lambda x: txt2bts(x.strip()), bts.strip().split("\n"))))
 
 

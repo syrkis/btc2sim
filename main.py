@@ -25,15 +25,9 @@ gps = b2s.gps.gps_fn(scene, marks)  # 6, key)
 rngs = random.split(rng, cfg.steps)
 obs, state = env.reset(key, scene)
 
-# bts = b2s.dsl.txt2bts(open("bts.txt", "r").readline())
-bts = b2s.dsl.file2bts("bts.txt")
-action_fn = vmap(b2s.act.action_fn, in_axes=(0, 0, 0, None, None, None, 0))
-debug.breakpoint()
-exit()
-
 
 # %% Functions
-def plan_fn(plan, state):  # plan
+def plan_fn(plan, state):  # TODO: Focus on this for now. Currently broken
     target = random.randint(rng, (env.num_units,), 0, marks.shape[0])  # random targets
     idxs = random.randint(rng, (env.num_units,), 0, 2)  # random bt idxs for units
     behavior = tree.map(lambda x: jnp.take(x, idxs, axis=0), bts)  # behavior
@@ -43,7 +37,6 @@ def plan_fn(plan, state):  # plan
 @scan_tqdm(n=cfg.steps)
 def step_fn(carry, input):
     (_, rng), (obs, state) = input, carry
-    # behavior, target = plan_fn(None, state)
     rngs = random.split(rng, env.num_units)
     action = action_fn(rngs, obs, behavior, env, scene, gps, targets)
     obs, state = env.step(rng, scene, state, action)
@@ -58,6 +51,13 @@ def svg_fn(scene, seq):
     esch.save(dwg, "/Users/nobr/desk/s3/btc2sim/test.svg")
 
 
-behavior, target = plan_fn(None, state)
-state, seq = lax.scan(step_fn, (obs, state), (jnp.arange(cfg.steps), rngs))
-svg_fn(scene, seq)
+bts = b2s.dsl.bts_fn()
+action_fn = vmap(b2s.act.action_fn, in_axes=(0, 0, 0, None, None, None, 0))
+behavior, _ = plan_fn(None, state)
+debug.breakpoint()
+
+# exit()
+# debug.breakpoint()
+# behavior, _ = plan_fn(None, state)
+# state, seq = lax.scan(step_fn, (obs, state), (jnp.arange(cfg.steps), rngs))
+# svg_fn(scene, seq)
