@@ -1,8 +1,10 @@
 # imports
 import jax.numpy as jnp
 import numpy as np
-from einops import repeat
+from einops import repeat, rearrange
 from PIL import Image
+import esch
+
 # def plot_grads(grads):
 # fig, axes = plt.subplots(2, 3, figsize=(12, 8))
 # for i, ax in enumerate(axes.flat):
@@ -33,4 +35,16 @@ def gif_fn(scene, seq, scale=4):  # animate positions TODO: remove dead units
     mask = scene.terrain.building  # .at[*jnp.int32(gps.marks.T)].set(1)
     imgs = np.array(repeat(mask, "... -> a ...", a=len(pos)).at[*idxs].set(1))
     imgs = [Image.fromarray(img).resize(np.array(img.shape[:2]) * scale, Image.NEAREST) for img in imgs * 255]  # type: ignore
-    imgs[0].save("output.gif", save_all=True, append_images=imgs[1:], duration=10, loop=0)
+    imgs[0].save("/Users/nobr/desk/s3/btc2sim/output.gif", save_all=True, append_images=imgs[1:], duration=10, loop=0)
+
+
+def svg_fn(scene, seq):
+    dwg = esch.init(100, 100)
+    esch.grid_fn(np.array(scene.terrain.building).T, dwg)
+    arr = np.array(rearrange(seq.coords[:, :, ::-1], "time unit coord -> unit coord time"), dtype=np.float32)
+    esch.anim_sims_fn(arr, dwg, fps=48)
+    esch.save(dwg, "/Users/nobr/desk/s3/btc2sim/test.svg")
+
+
+def typst_fn(bt_str):
+    pass

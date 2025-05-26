@@ -1,36 +1,27 @@
 place: "Tietgenkollegiet, Copenhagen, Denmark"
+steps: 100
 size: 100
-steps: 300
-knn: 2
+knn: 8
 counts:
-  allies:
-    # Infantry: 0
-    # Tank: 0
-    Airplane: 2
-  enemies:
-    # Infantry: 0
-    # Tank: 0
-    Airplane: 2
+  blue:
+    plane: 16
+    soldier: 16
+  red:
+    plane: 16
+    soldier: 16
 
 types:
-  - name: "Infantry"
-    health: 100
-    damage: 100
-    reload: 1
-    reach: 1
-    sight: 5
-    speed: 1
-  - name: "Tank"
-    health: 200
-    damage: 200
-    reload: 2
-    reach: 2
-    sight: 2
-    speed: 0.5
-  - name: "Airplane"
+  - name: "plane"
     health: 500
     damage: 50
     reload: 3
-    reach: 3
-    sight: 3
-    speed: 2
+    reach: 50
+    sight: 100
+    speed: 10
+  - name: "soldier"
+    health: 100
+    damage: 50
+    reload: 3
+    reach: 2
+    sight: 50
+    speed: 5

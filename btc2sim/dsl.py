@@ -11,11 +11,10 @@ from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor
 
 from btc2sim.types import Behavior
-from btc2sim.act import atomics
+from btc2sim.act import a2i
 
 
 # %% Grammar
-a2i = {var: i for i, var in enumerate(atomics)}
 grammar = Grammar("""
 tree        = node (sep node)*
 node        = fallback / sequence / action / condition
@@ -27,8 +26,8 @@ condition   = "C" ws (in_range / in_sight) ws
 
 in_range    = "in_range" ws team
 in_sight    = "in_sight" ws team
-move        = "move" ws (target)
-shoot       = "shoot" ws (qualifier)
+move        = "move" ws target
+shoot       = "shoot" ws qualifier
 stand       = "stand"
 target      = "target"
 qualifier   = "random" / "closest"
@@ -40,15 +39,9 @@ ws          = ~r"\s*"
 """)
 
 
-bts = """
-A move target
-"""
-# F (S (C in_range enemy |> A shoot closest) |> A move target)
-
-
 # %% Functions
-def bts_fn():
-    return tree.map(lambda *bts: jnp.stack(bts), *tuple(map(lambda x: txt2bts(x.strip()), bts.strip().split("\n"))))
+def bts_fn(bt_strs):
+    return tree.map(lambda *bts: jnp.stack(bts), *tuple(map(lambda x: txt2bts(x.strip()), bt_strs.strip().split("\n"))))
 
 
 def txt2bts(txt) -> Behavior:
