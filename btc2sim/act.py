@@ -63,7 +63,7 @@ def stand_fn(rng: Array, obs: Obs, gps: Compass, targets: Array):
 
 def move_fn(rng: Array, obs: Obs, gps: Compass, target: Array):
     pos = jnp.int32(obs.coord[0])
-    coord = -jnp.array((gps.dy[target][*pos], gps.dx[target][*pos]))
+    coord = -jnp.array((gps.dy[target][*pos], gps.dx[target][*pos])) * obs.speed[0]
     action = Action(coord=coord, shoot=jnp.array(False))
     return Status(status=jnp.array(True)), action
 

@@ -6,13 +6,11 @@
 # Imports
 import jax.numpy as jnp
 import jax.lax as lax
-from jax import vmap, random
+from jax import vmap
 import equinox as eqx
 from functools import partial
 from parabellum.types import Scene
 from btc2sim.types import Compass
-from typing import Tuple
-from jaxtyping import Array
 import matplotlib.pyplot as plt
 
 
