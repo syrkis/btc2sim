@@ -1,11 +1,24 @@
 # imports
 from chex import dataclass
 from dataclasses import field
-from jaxtyping import Array
+from jaxtyping import Array, Int32, Bool, Float32
 import jax.numpy as jnp
 
 
 # dataclasses
+@dataclass
+class Node:
+    units: Bool  # one hot of what units are in
+    coord: Float32
+    child: Int32
+    bt_id: Int32
+    move: Bool  # or kill
+
+    @property
+    def kill(self):
+        return ~self.move
+
+
 @dataclass
 class Status:
     status: Array = field(default_factory=lambda: jnp.array(True))  # status
