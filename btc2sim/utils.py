@@ -1,5 +1,6 @@
 # imports
 import jax.numpy as jnp
+from jax import tree
 import numpy as np
 from einops import repeat, rearrange
 from PIL import Image
@@ -43,7 +44,23 @@ def svg_fn(scene, seq):
     esch.grid_fn(np.array(scene.terrain.building).T, dwg)
     arr = np.array(rearrange(seq.coords[:, :, ::-1], "time unit coord -> unit coord time"), dtype=np.float32)
     esch.anim_sims_fn(arr, dwg, fps=48)
-    esch.save(dwg, "/Users/nobr/desk/s3/btc2sim/test.svg")
+    esch.save(dwg, "/Users/nobr/desk/s3/btc2sim/sim.svg")
+
+
+def svgs_fn(scene, seq):
+    size = scene.terrain.building.shape[0]
+    side = jnp.sqrt(seq.coords.shape[0]).astype(int).item()
+    dwg = esch.init(size, size, side, side)
+    for i in range(size):
+        for j in range(size):
+            sub_seq = tree.map(lambda x: x[i * side + j], seq)
+            group = dwg.g()
+            group.translate((size + 1) * i, (size + 1) * j)
+            arr = np.array(rearrange(sub_seq.coords[:, :, ::-1], "t unit coord -> unit coord t"), dtype=np.float32)
+            esch.grid_fn(np.array(scene.terrain.building).T, dwg, group)
+            esch.anim_sims_fn(arr, dwg, group, fps=48)
+            dwg.add(group)
+    esch.save(dwg, "/Users/nobr/desk/s3/btc2sim/sims.svg")
 
 
 def typst_fn(bt_str):
