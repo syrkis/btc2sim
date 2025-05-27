@@ -48,9 +48,17 @@ def step_fn(carry, input):
     return (obs, state), state
 
 
-def plan_fn(rng: Array, plan: b2s.types.Node, state: pb.types.State):  # TODO: Focus on this for now. Currently broken
-    debug.breakpoint()
+def plan_fn(rng: Array, plan: b2s.types.Plan, state: pb.types.State):  # TODO: Focus on this for now. Currently broken
+    def aux(carry, step: b2s.types.Plan):
+        debug.breakpoint()
+        return None, step.btidx
+
+    idxs = lax.scan(aux, None, plan)[1]
+    print(idxs.shape)
     idxs = random.randint(rng, (env.num_units,), 0, bts.idx.shape[0])  # random bt idxs for units
+    print(idxs.shape)
+    debug.breakpoint()
+    # idxs = random.randint(rng, (env.num_units,), 0, bts.idx.shape[0])  # random bt idxs for units
     behavior = tree.map(lambda x: jnp.take(x, idxs, axis=0), bts)  # behavior
     return behavior  # TODO: Maybe add target to behavior
 
@@ -62,9 +70,15 @@ def traj_fn(obs, state, rngs):
 
 
 # Plan stuff
-plan = b2s.types.Node(
-    coord=jnp.ones(2) * 50, units=scene.unit_teams == 1, child=jnp.ones(1), move=jnp.array(True), bt_id=jnp.array(1)
+plan = b2s.types.Plan(
+    coord=jnp.ones((2, 2)) * 50,
+    child=jnp.array((1, 1)),
+    btidx=jnp.array((0, 1)),
+    done=jnp.array((False, False)),
+    move=jnp.array((False, True)),
+    units=jnp.tile(scene.unit_teams == 1, 2).reshape(2, -1),
 )
+
 obs, state = vmap(env.reset, in_axes=(0, None))(random.split(key, num_sim), scene)
 rngs = random.split(rng, (num_sim, cfg.steps))
 state, seq = vmap(traj_fn)(obs, state, rngs)

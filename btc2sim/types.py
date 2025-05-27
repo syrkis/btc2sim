@@ -7,16 +7,21 @@ import jax.numpy as jnp
 
 # dataclasses
 @dataclass
-class Node:
+class Plan:
     units: Bool  # one hot of what units are in
     coord: Float32
     child: Int32
-    bt_id: Int32
+    btidx: Int32
+    done: Bool
     move: Bool  # or kill
 
     @property
     def kill(self):
         return ~self.move
+
+    @property
+    def active(self):
+        return ~self.done
 
 
 @dataclass
