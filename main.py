@@ -42,23 +42,25 @@ gps = b2s.gps.gps_fn(scene, marks)  # 6, key)
 def step_fn(carry, input):
     (_, rng), (obs, state) = input, carry
     rngs = random.split(rng, env.num_units)
-    behavior = plan_fn(rng, plan, state)
+    behavior = plan_fn(rng, plan, state, scene)
     action = action_fn(rngs, obs, behavior, env, scene, gps, targets)
     obs, state = env.step(rng, scene, state, action)
     return (obs, state), state
 
 
-def plan_fn(rng: Array, plan: b2s.types.Plan, state: pb.types.State):  # TODO: Focus on this for now. Currently broken
-    def aux(carry, step: b2s.types.Plan):
-        debug.breakpoint()
-        return None, step.btidx
+def plan_fn(rng: Array, plan: b2s.types.Plan, state: pb.types.State, scene: pb.types.Scene):  # TODO: Focus
+    def move_aux(state, step):  # all units in focus within 10 meters of target position
+        return ((jnp.linalg.norm(state.coords - step.coord) * step.units) < 10).all()  # all units in step
 
-    idxs = lax.scan(aux, None, plan)[1]
-    print(idxs.shape)
-    idxs = random.randint(rng, (env.num_units,), 0, bts.idx.shape[0])  # random bt idxs for units
-    print(idxs.shape)
+    def kill_aux(state, step):  # all enemies dead within 10 meters of target
+        return ((jnp.linalg.norm(state.coords - step.coord) * ~step.units * (state.health == 0)) < 10).any()
+
+    def aux(step: b2s.types.Plan):
+        return lax.select(step.move, move_aux(state, step), kill_aux(state, step))
+
+    cond = lax.map(aux, plan)
     debug.breakpoint()
-    # idxs = random.randint(rng, (env.num_units,), 0, bts.idx.shape[0])  # random bt idxs for units
+    idxs = plan.units[0] * 0
     behavior = tree.map(lambda x: jnp.take(x, idxs, axis=0), bts)  # behavior
     return behavior  # TODO: Maybe add target to behavior
 

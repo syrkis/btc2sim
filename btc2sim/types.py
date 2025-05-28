@@ -10,6 +10,7 @@ import jax.numpy as jnp
 class Plan:
     units: Bool  # one hot of what units are in
     coord: Float32
+    # team: Int32  # -1 or 1
     child: Int32
     btidx: Int32
     done: Bool
@@ -22,6 +23,14 @@ class Plan:
     @property
     def active(self):
         return ~self.done
+
+    # @property
+    # def blue(self):
+    #     return self.team == 1
+
+    # @property
+    # def red(self):
+    #     return self.team == -1
 
 
 @dataclass
