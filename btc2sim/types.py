@@ -10,27 +10,9 @@ import jax.numpy as jnp
 class Plan:
     units: Bool  # one hot of what units are in
     coord: Float32
-    # team: Int32  # -1 or 1
-    child: Int32  # should perhaps be bool array so i can mask truth values of steps
     btidx: Int32
-    done: Bool
+    parent: Int32  #
     move: Bool  # or kill
-
-    @property
-    def kill(self):
-        return ~self.move
-
-    @property
-    def active(self):
-        return ~self.done
-
-    # @property
-    # def blue(self):
-    #     return self.team == 1
-
-    # @property
-    # def red(self):
-    #     return self.team == -1
 
 
 @dataclass

@@ -9,6 +9,8 @@ from jax import debug, lax, random, tree, vmap
 from jax_tqdm import scan_tqdm
 from omegaconf import DictConfig
 from jaxtyping import Array
+import networkx as nx
+import pydot
 
 import btc2sim as b2s
 
@@ -23,8 +25,31 @@ cfg = DictConfig(dict(steps=300, knn=4, blue=blue, red=red) | loc)
 
 # %% Behavior trees ( in range should be in reach )
 bt_strs = """
-F ( S ( C in_range enemy |> A shoot closest ) |> A move target )
+F ( S ( C in_range enemy |> A shoot random ) |> A move target )
 """
+
+dot_str = """
+digraph G {
+    A [alpha move knight calm]
+    B [beta move queen calm]
+    C [alpha attack king calm]
+
+    A -> C
+    B -> C
+}
+"""
+# %%
+G = nx.DiGraph(nx.nx_pydot.from_pydot(pydot.graph_from_dot_data(dot_str)[0]))  # type: ignore
+nodes = {node: tuple(data.keys()) for node, data in G.nodes(data=True)}
+for node, desc in nodes.items():
+    units = desc[0]
+    move = desc[1] == "move"
+    coord = desc[2]
+    btidx = desc[3]
+    parent = [e for e in G.edges() if e[1] == node]
+    print(units, move, coord, btidx, parent)
+    # print(node, desc)
+
 
 # %% Constants
 env, scene = pb.env.Env(cfg=cfg), pb.env.scene_fn(cfg)
@@ -49,17 +74,19 @@ def step_fn(carry, input):
 
 
 def plan_fn(rng: Array, plan: b2s.types.Plan, state: pb.types.State, scene: pb.types.Scene):  # TODO: Focus
-    def move_aux(state, step):  # all units in focus within 10 meters of target position
-        return ((jnp.linalg.norm(state.coords - step.coord) * step.units) < 10).all()  # all units in step
+    def move(step):  # all units in focus within 10 meters of target position
+        return ((jnp.linalg.norm(state.coords - step.coord) * step.units) < 10).all()
 
-    def kill_aux(state, step):  # all enemies dead within 10 meters of target
+    def kill(step):  # all enemies dead within 10 meters of target
         return ((jnp.linalg.norm(state.coords - step.coord) * ~step.units * (state.health == 0)) < 10).any()
 
-    def aux(step: b2s.types.Plan):
-        return lax.select(step.move, move_aux(state, step), kill_aux(state, step))
+    def aux(plan: b2s.types.Plan):
+        idx = lax.map(lambda step: lax.cond(step.move, move, kill, step), plan)
+        idxs = plan.btidx[idx.argmin()] * plan.units[idx.argmin()]
+        debug.breakpoint()
+        return idxs
 
-    idx = jnp.argmin(lax.map(aux, plan))  # first failed condition.
-    idxs = plan.btidx[idx] * plan.units[idx]  # use below to look up bt of units
+    idxs = lax.map(aux, plan).sum(0)  # mapping across teams (2 for now, but supports any number)
     return tree.map(lambda x: jnp.take(x, idxs, axis=0), bts)  # behavior
 
 
@@ -70,14 +97,18 @@ def traj_fn(obs, state, rngs):
 
 
 # Plan stuff
-plan = b2s.types.Plan(
-    coord=jnp.ones((2, 2)) * 50,
-    child=jnp.array((1, 1)),
-    btidx=jnp.array((0, 1)),
-    done=jnp.array((False, False)),
-    move=jnp.array((False, True)),
-    units=jnp.tile(scene.unit_teams == 1, 2).reshape(2, -1),
+plan = tree.map(
+    lambda x: jnp.tile(x, (2,) + (1,) * x.ndim),
+    b2s.types.Plan(
+        parent=jnp.array((1, 1)),
+        btidx=jnp.array((0, 1)),
+        units=jnp.tile(scene.unit_teams == 1, 2).reshape(2, -1),
+        coord=jnp.ones((2, 2)) * 50,
+        move=jnp.array((False, True)),
+    ),
 )
+# plan = tree.map(lambda x: x[0], plan)
+
 
 obs, state = vmap(env.reset, in_axes=(0, None))(random.split(key, num_sim), scene)
 rngs = random.split(rng, (num_sim, cfg.steps))

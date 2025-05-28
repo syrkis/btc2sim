@@ -68,16 +68,16 @@ def move_fn(rng: Array, obs: Obs, gps: Compass, target: Array):
     return Status(status=jnp.array(True)), action
 
 
-def shoot_random_fn(rng: Array, obs: Obs, gps: Compass, targets: Array):
+def attack_fn(rng: Array, obs: Obs, gps: Compass, targets: Array):
     status = Status(status=jnp.array(True))
     action = Action(coord=random.uniform(rng, (2,)), shoot=jnp.array(True))
     return status, action
 
 
-def shoot_closest_fn(rng: Array, obs: Obs, gps: Compass, targets: Array):
-    status = Status(status=jnp.array(True))
-    action = Action(coord=obs.coord[(obs.coord**2).sum(axis=1).argmin()], shoot=jnp.array(True))
-    return status, action
+# def shoot_closest_fn(rng: Array, obs: Obs, gps: Compass, targets: Array):  # preferably target rock paper sissor dynamic
+# status = Status(status=jnp.array(True))
+# action = Action(coord=obs.coord[(obs.coord**2).sum(axis=1).argmin()], shoot=jnp.array(True))
+# return status, action
 
 
 ###################################################################################
@@ -118,8 +118,8 @@ tuples = sorted(
         (("in_range", "ally"), ally_in_reach_fn),
         (("in_sight", "enemy"), enemy_in_sight_fn),
         (("in_range", "enemy"), enemy_in_reach_fn),
-        (("shoot", "closest"), shoot_closest_fn),
-        (("shoot", "random"), shoot_random_fn),
+        # (("shoot", "closest"), shoot_closest_fn),
+        (("shoot", "random"), attack_fn),
     ],
     key=lambda x: x[0],
 )

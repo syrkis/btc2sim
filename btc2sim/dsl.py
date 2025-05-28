@@ -30,7 +30,7 @@ move        = "move" ws target
 shoot       = "shoot" ws qualifier
 stand       = "stand"
 target      = "target"
-qualifier   = "random" / "closest"
+qualifier   = "random"
 team        = "ally" / "enemy"
 
 
