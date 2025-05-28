@@ -58,11 +58,8 @@ def plan_fn(rng: Array, plan: b2s.types.Plan, state: pb.types.State, scene: pb.t
     def aux(step: b2s.types.Plan):
         return lax.select(step.move, move_aux(state, step), kill_aux(state, step))
 
-    cond = lax.map(aux, plan)
-    debug.breakpoint()
-    idxs = plan.units[0] * 0
-    behavior = tree.map(lambda x: jnp.take(x, idxs, axis=0), bts)  # behavior
-    return behavior  # TODO: Maybe add target to behavior
+    idx = jnp.argmin(lax.map(aux, plan))  # first failed condition. use below to look up bt of units
+    return tree.map(lambda x: jnp.take(x, plan.btidx[idx] * plan.units[idx], axis=0), bts)  # behavior
 
 
 # maybe vmap here
