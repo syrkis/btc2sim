@@ -11,7 +11,7 @@ class Plan:
     units: Bool  # one hot of what units are in
     coord: Float32
     # team: Int32  # -1 or 1
-    child: Int32
+    child: Int32  # should perhaps be bool array so i can mask truth values of steps
     btidx: Int32
     done: Bool
     move: Bool  # or kill

@@ -42,7 +42,7 @@ gps = b2s.gps.gps_fn(scene, marks)  # 6, key)
 def step_fn(carry, input):
     (_, rng), (obs, state) = input, carry
     rngs = random.split(rng, env.num_units)
-    behavior = plan_fn(rng, plan, state, scene)
+    behavior = plan_fn(rng, plan, state, scene)  # perhaps only update plan every m steps
     action = action_fn(rngs, obs, behavior, env, scene, gps, targets)
     obs, state = env.step(rng, scene, state, action)
     return (obs, state), state
@@ -58,8 +58,9 @@ def plan_fn(rng: Array, plan: b2s.types.Plan, state: pb.types.State, scene: pb.t
     def aux(step: b2s.types.Plan):
         return lax.select(step.move, move_aux(state, step), kill_aux(state, step))
 
-    idx = jnp.argmin(lax.map(aux, plan))  # first failed condition. use below to look up bt of units
-    return tree.map(lambda x: jnp.take(x, plan.btidx[idx] * plan.units[idx], axis=0), bts)  # behavior
+    idx = jnp.argmin(lax.map(aux, plan))  # first failed condition.
+    idxs = plan.btidx[idx] * plan.units[idx]  # use below to look up bt of units
+    return tree.map(lambda x: jnp.take(x, idxs, axis=0), bts)  # behavior
 
 
 # maybe vmap here
