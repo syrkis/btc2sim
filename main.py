@@ -4,16 +4,15 @@
 
 # Imports
 import jax.numpy as jnp
+import networkx as nx
 import parabellum as pb
+import pydot
 from jax import debug, lax, random, tree, vmap
 from jax_tqdm import scan_tqdm
-from omegaconf import DictConfig
 from jaxtyping import Array
-import networkx as nx
-import pydot
+from omegaconf import DictConfig
 
 import btc2sim as b2s
-
 
 # %% Config #####################################################
 num_sim = 9
@@ -30,9 +29,9 @@ F ( S ( C in_range enemy |> A shoot random ) |> A move target )
 
 dot_str = """
 digraph G {
-    A [alpha move knight calm]
-    B [beta move queen calm]
-    C [alpha attack king calm]
+    A [alpha move knight scout]
+    B [bravo move queen scout]
+    C [alpha attack king scout]
 
     A -> C
     B -> C
@@ -41,17 +40,20 @@ digraph G {
 # TODO: add batallions and unit type selectors.
 G = nx.DiGraph(nx.nx_pydot.from_pydot(pydot.graph_from_dot_data(dot_str)[0]))  # type: ignore
 nodes = {node: tuple(data.keys()) for node, data in G.nodes(data=True)}
-for node, desc in nodes.items():
-    move = jnp.array(desc[1] == "move")
-    # step = b2s.types.Plan(units=desc[0], move=move, coord=desc[2], btidx=desc[3], parent=desc[4])
-    units = desc[0]
-    print(units)
-    move = desc[1] == "move"
-    coord = desc[2]
-    btidx = desc[3]
-    parent = [e for e in G.edges() if e[1] == node]
-    print(units, move, coord, btidx, parent)
-    # print(node, desc)
+
+
+# %%
+def node_to_step(args):
+    move = jnp.array(args[1][1] == "move")
+    units = jnp.tile(jnp.int32(jnp.eye(3)), jnp.array((sum(cfg.red.values()) // 3)))[b2s.utils.nato_to_int[args[1][0]]]
+    coord = jnp.array(b2s.utils.chess_to_int[args[1][2]])
+    btidx = jnp.array(b2s.utils.bt_to_int[args[1][3]])
+    idxs = jnp.int8([b2s.utils.alpha_to_int[e[0]] for e in G.edges() if e[1] == args[0]])
+    parent = jnp.zeros(len(G)).at[idxs].set(1)
+    return b2s.types.Plan(units=units, move=move, coord=coord, btidx=btidx, parent=jnp.int32(parent))
+
+
+plan = tree.map(lambda *x: jnp.stack(x), *tuple(map(node_to_step, nodes.items())))
 
 
 # %% Constants

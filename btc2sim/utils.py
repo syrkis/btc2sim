@@ -1,23 +1,34 @@
 # imports
-import jax.numpy as jnp
-from jax import tree
-import numpy as np
-from einops import repeat, rearrange
-from PIL import Image
 import esch
+import jax.numpy as jnp
+import numpy as np
+from einops import rearrange, repeat
+from jax import tree
+from PIL import Image
 
-# def plot_grads(grads):
-# fig, axes = plt.subplots(2, 3, figsize=(12, 8))
-# for i, ax in enumerate(axes.flat):
-# grad = grads[i]
-# sns.heatmap(grad, ax=ax, cbar=False, cmap="twilight")
-# sns.heatmap(scene.terrain.building, ax=ax, cbar=False, cmap="grey", alpha=0.01)
-# ax.scatter(*gps.marks[targets[i]], c="red", marker="x", s=50)
-# ax.set_title(f"Gradient {i + 1}")
-# ax.axis("off")
-# plt.tight_layout()
-# plt.show()
-#
+# %% Dicts
+nato_to_int = dict(alpha=0, bravo=1, charlie=2, delta=3, echo=4, foxtrot=5)
+int_to_nato = {v: k for k, v in nato_to_int.items()}
+
+chess_to_int = dict(pawn=0, rook=1, knight=2, bishop=3, queen=4, king=5)
+int_to_chess = {v: k for k, v in chess_to_int.items()}
+
+bt_to_int = dict(scout=0, patrol=1, assault=2, defend=3, flank=4, retreat=5, ambush=6, support=7, recon=8, siege=9)
+int_to_bt = {v: k for k, v in bt_to_int.items()}
+
+alpha_to_int = dict(A=0, B=1, C=2, D=3, E=4, F=5)
+int_to_alpha = {v: k for k, v in alpha_to_int.items()}
+
+
+# %% Functions
+def node_to_step(args):
+    move = jnp.array(args[1][1] == "move")
+    units = jnp.tile(jnp.int32(jnp.eye(3)), jnp.array((sum(cfg.red.values()) // 3)))[b2s.utils.nato_to_int[args[1][0]]]
+    coord = jnp.array(chess_to_int[args[1][2]])
+    btidx = jnp.array(bt_to_int[args[1][3]])
+    idxs = jnp.int8([alpha_to_int[e[0]] for e in G.edges() if e[1] == args[0]])
+    parent = jnp.zeros(len(G)).at[idxs].set(1)
+    return b2s.types.Plan(units=units, move=move, coord=coord, btidx=btidx, parent=jnp.int32(parent))
 
 
 def scene_fn(arr):
