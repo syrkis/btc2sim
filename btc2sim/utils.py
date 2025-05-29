@@ -21,16 +21,6 @@ int_to_alpha = {v: k for k, v in alpha_to_int.items()}
 
 
 # %% Functions
-def node_to_step(args):
-    move = jnp.array(args[1][1] == "move")
-    units = jnp.tile(jnp.int32(jnp.eye(3)), jnp.array((sum(cfg.red.values()) // 3)))[b2s.utils.nato_to_int[args[1][0]]]
-    coord = jnp.array(chess_to_int[args[1][2]])
-    btidx = jnp.array(bt_to_int[args[1][3]])
-    idxs = jnp.int8([alpha_to_int[e[0]] for e in G.edges() if e[1] == args[0]])
-    parent = jnp.zeros(len(G)).at[idxs].set(1)
-    return b2s.types.Plan(units=units, move=move, coord=coord, btidx=btidx, parent=jnp.int32(parent))
-
-
 def scene_fn(arr):
     arr = jnp.zeros_like(arr)
     start_idx = arr.shape[0] // 6

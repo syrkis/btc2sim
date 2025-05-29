@@ -53,9 +53,6 @@ def node_to_step(args):
     return b2s.types.Plan(units=units, move=move, coord=coord, btidx=btidx, parent=jnp.int32(parent))
 
 
-plan = tree.map(lambda *x: jnp.stack(x), *tuple(map(node_to_step, nodes.items())))
-
-
 # %% Constants
 env, scene = pb.env.Env(cfg=cfg), pb.env.scene_fn(cfg)
 bts = b2s.dsl.bts_fn(bt_strs)
@@ -102,19 +99,7 @@ def traj_fn(obs, state, rngs):
 
 
 # Plan stuff
-plan = tree.map(
-    lambda x: jnp.tile(x, (2,) + (1,) * x.ndim),
-    b2s.types.Plan(
-        parent=jnp.array((1, 1)),
-        btidx=jnp.array((0, 1)),
-        units=jnp.tile(scene.unit_teams == 1, 2).reshape(2, -1),
-        coord=jnp.ones((2, 2)) * 50,
-        move=jnp.array((False, True)),
-    ),
-)
-# plan = tree.map(lambda x: x[0], plan)
-
-
+plan = tree.map(lambda *x: jnp.stack(x), *tuple(map(node_to_step, nodes.items())))
 obs, state = vmap(env.reset, in_axes=(0, None))(random.split(key, num_sim), scene)
 rngs = random.split(rng, (num_sim, cfg.steps))
 state, seq = vmap(traj_fn)(obs, state, rngs)
