@@ -18,8 +18,8 @@ import btc2sim as b2s
 # %% Config #####################################################
 num_sim = 9
 loc = dict(place="Palazzo della Civiltà Italiana, Rome, Italy", size=128)
-red = dict(plane=16, soldier=16)
-blue = dict(plane=16, soldier=16)
+red = dict(infantry=24, armor=24, airplane=24)
+blue = dict(infantry=24, armor=24, airplane=24)
 cfg = DictConfig(dict(steps=300, knn=4, blue=blue, red=red) | loc)
 
 
@@ -39,12 +39,13 @@ digraph G {
 }
 """
 # TODO: add batallions and unit type selectors.
-#
-# %%
 G = nx.DiGraph(nx.nx_pydot.from_pydot(pydot.graph_from_dot_data(dot_str)[0]))  # type: ignore
 nodes = {node: tuple(data.keys()) for node, data in G.nodes(data=True)}
 for node, desc in nodes.items():
+    move = jnp.array(desc[1] == "move")
+    # step = b2s.types.Plan(units=desc[0], move=move, coord=desc[2], btidx=desc[3], parent=desc[4])
     units = desc[0]
+    print(units)
     move = desc[1] == "move"
     coord = desc[2]
     btidx = desc[3]
