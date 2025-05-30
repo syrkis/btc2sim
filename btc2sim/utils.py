@@ -5,6 +5,7 @@ import numpy as np
 from einops import rearrange, repeat
 from jax import tree
 from PIL import Image
+from tqdm import tqdm
 
 # %% Dicts
 nato_to_int = dict(alpha=0, bravo=1, charlie=2, delta=3, echo=4, foxtrot=5)
@@ -52,9 +53,9 @@ def svg_fn(scene, seq):
 def svgs_fn(scene, seq):
     size = scene.terrain.building.shape[0]
     side = jnp.sqrt(seq.coords.shape[0]).astype(int).item()
-    dwg = esch.init(size, size, side, side)
-    for i in range(size):
-        for j in range(size):
+    dwg = esch.init(size, size, side, side, line=True)
+    for i in range(side):
+        for j in range(side):
             sub_seq = tree.map(lambda x: x[i * side + j], seq)
             group = dwg.g()
             group.translate((size + 1) * i, (size + 1) * j)

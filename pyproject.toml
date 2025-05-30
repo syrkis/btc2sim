@@ -1,6 +1,6 @@
 [project]
 name = "btc2sim"
-version = "0.0.22"
+version = "0.0.23"
 description = ""
 authors = [{ name = "Noah Syrkis", email = "noah@syrkis.com" }]
 requires-python = ">=3.11,<3.12"

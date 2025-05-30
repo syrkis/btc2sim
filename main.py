@@ -15,10 +15,10 @@ from functools import partial
 import btc2sim as b2s
 
 # %% Config #####################################################
-num_sim = 9
-loc = dict(place="Palazzo della Civiltà Italiana, Rome, Italy", size=128)
-red = dict(infantry=24, armor=24, airplane=24)
-blue = dict(infantry=24, armor=24, airplane=24)
+num_sim = 4
+loc = dict(place="Palazzo della Civiltà Italiana, Rome, Italy", size=64)
+red = dict(infantry=6, armor=6, airplane=6)
+blue = dict(infantry=6, armor=6, airplane=6)
 cfg = DictConfig(dict(steps=300, knn=4, blue=blue, red=red) | loc)
 
 
@@ -37,9 +37,6 @@ rng, key = random.split(random.PRNGKey(0))
 marks = jnp.int32(random.uniform(rng, (6, 2), minval=0, maxval=cfg.size))
 targets = random.randint(rng, (env.num_units,), 0, marks.shape[0])
 gps = b2s.gps.gps_fn(scene, marks)  # 6, key)
-
-
-# %%
 
 
 # %% Functions
@@ -91,4 +88,4 @@ plan = tree.map(lambda *x: jnp.stack(x), *tuple(map(partial(b2s.lxm.str_to_plan,
 obs, state = vmap(env.reset, in_axes=(0, None))(random.split(key, num_sim), scene)
 rngs = random.split(rng, (num_sim, cfg.steps))
 state, seq = vmap(traj_fn)(obs, state, rngs)
-# b2s.utils.gif_fn(scene, tree.map(lambda x: x[0], seq))
+b2s.utils.svgs_fn(scene, seq)  # tree.map(lambda x: x[0], seq))
