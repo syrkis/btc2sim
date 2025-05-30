@@ -4,16 +4,15 @@
 
 # Imports
 import jax.numpy as jnp
-import networkx as nx
 import parabellum as pb
-import pydot
 from jax import debug, lax, random, tree, vmap
+import equinox as eqx
 from jax_tqdm import scan_tqdm
 from jaxtyping import Array
 from omegaconf import DictConfig
+from functools import partial
 
 import btc2sim as b2s
-from btc2sim.utils import nato_to_int, alpha_to_int, chess_to_int, bt_to_int
 
 # %% Config #####################################################
 num_sim = 9
@@ -54,6 +53,7 @@ def step_fn(carry, input):
     return (obs, state), state
 
 
+@eqx.filter_jit
 def plan_fn(rng: Array, plan: b2s.types.Plan, state: pb.types.State, scene: pb.types.Scene):  # TODO: Focus
     def move(step):  # all units in focus within 10 meters of target position
         return ((jnp.linalg.norm(state.coords - step.coord) * step.units) < 10).all()
@@ -64,7 +64,6 @@ def plan_fn(rng: Array, plan: b2s.types.Plan, state: pb.types.State, scene: pb.t
     def aux(plan: b2s.types.Plan):
         idx = lax.map(lambda step: lax.cond(step.move, move, kill, step), plan)
         idxs = plan.btidx[idx.argmin()] * plan.units[idx.argmin()]
-        debug.breakpoint()
         return idxs
 
     idxs = lax.map(aux, plan).sum(0)  # mapping across teams (2 for now, but supports any number)
@@ -87,12 +86,9 @@ digraph G {
     B -> C
 }
 """
-# Plan stuff
-print(b2s.lxm.str_to_plan(dot_str, scene, 1))
-# red_plan = tree.map(lambda *x: jnp.stack(x), *tuple(map(node_to_step, nodes.items())))
-# plan = tree.map(lambda x, y: jnp.stack((x, y)), blue_plan, red_plan)
-# print(tree.map(jnp.shape, plan))
-# obs, state = vmap(env.reset, in_axes=(0, None))(random.split(key, num_sim), scene)
-# rngs = random.split(rng, (num_sim, cfg.steps))
-# state, seq = vmap(traj_fn)(obs, state, rngs)
+
+plan = tree.map(lambda *x: jnp.stack(x), *tuple(map(partial(b2s.lxm.str_to_plan, dot_str, scene), (-1, 1))))
+obs, state = vmap(env.reset, in_axes=(0, None))(random.split(key, num_sim), scene)
+rngs = random.split(rng, (num_sim, cfg.steps))
+state, seq = vmap(traj_fn)(obs, state, rngs)
 # b2s.utils.gif_fn(scene, tree.map(lambda x: x[0], seq))

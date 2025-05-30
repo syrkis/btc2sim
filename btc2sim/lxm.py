@@ -15,7 +15,7 @@ def str_to_plan(dot_str, scene, team):  # plan for one team
 
 def node_to_step(scene, team, G, node, desc):
     move = jnp.array(desc[1] == "move")
-    units = jnp.tile(jnp.eye(3) == 1, len(scene.unit_teams) // 3)[nato_to_int[desc[0]]] * scene.unit_teams == team
+    units = (jnp.tile(jnp.eye(3) == 1, len(scene.unit_teams) // 3)[nato_to_int[desc[0]]] * scene.unit_teams == team) * 1
     coord = jnp.array(chess_to_int[desc[2]])
     btidx = jnp.array(bt_to_int[desc[3]])
     idxs = jnp.int8([alpha_to_int[e[0]] for e in G.edges() if e[1] == node])
