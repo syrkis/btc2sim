@@ -13,6 +13,7 @@ from jaxtyping import Array
 from omegaconf import DictConfig
 
 import btc2sim as b2s
+from btc2sim.utils import nato_to_int, alpha_to_int, chess_to_int, bt_to_int
 
 # %% Config #####################################################
 num_sim = 9
@@ -27,31 +28,6 @@ bt_strs = """
 F ( S ( C in_range enemy |> A shoot random ) |> A move target )
 """
 
-dot_str = """
-digraph G {
-    A [alpha move knight scout]
-    B [bravo move queen scout]
-    C [alpha attack king scout]
-
-    A -> C
-    B -> C
-}
-"""
-# TODO: add batallions and unit type selectors.
-G = nx.DiGraph(nx.nx_pydot.from_pydot(pydot.graph_from_dot_data(dot_str)[0]))  # type: ignore
-nodes = {node: tuple(data.keys()) for node, data in G.nodes(data=True)}
-
-
-# %%
-def node_to_step(args):
-    move = jnp.array(args[1][1] == "move")
-    units = jnp.tile(jnp.int32(jnp.eye(3)), jnp.array((sum(cfg.red.values()) // 3)))[b2s.utils.nato_to_int[args[1][0]]]
-    coord = jnp.array(b2s.utils.chess_to_int[args[1][2]])
-    btidx = jnp.array(b2s.utils.bt_to_int[args[1][3]])
-    idxs = jnp.int8([b2s.utils.alpha_to_int[e[0]] for e in G.edges() if e[1] == args[0]])
-    parent = jnp.zeros(len(G)).at[idxs].set(1)
-    return b2s.types.Plan(units=units, move=move, coord=coord, btidx=btidx, parent=jnp.int32(parent))
-
 
 # %% Constants
 env, scene = pb.env.Env(cfg=cfg), pb.env.scene_fn(cfg)
@@ -62,6 +38,9 @@ rng, key = random.split(random.PRNGKey(0))
 marks = jnp.int32(random.uniform(rng, (6, 2), minval=0, maxval=cfg.size))
 targets = random.randint(rng, (env.num_units,), 0, marks.shape[0])
 gps = b2s.gps.gps_fn(scene, marks)  # 6, key)
+
+
+# %%
 
 
 # %% Functions
@@ -98,9 +77,22 @@ def traj_fn(obs, state, rngs):
     return state, seq
 
 
+dot_str = """
+digraph G {
+    A [alpha move knight scout]
+    B [bravo move queen scout]
+    C [alpha attack king scout]
+
+    A -> C
+    B -> C
+}
+"""
 # Plan stuff
-plan = tree.map(lambda *x: jnp.stack(x), *tuple(map(node_to_step, nodes.items())))
-obs, state = vmap(env.reset, in_axes=(0, None))(random.split(key, num_sim), scene)
-rngs = random.split(rng, (num_sim, cfg.steps))
-state, seq = vmap(traj_fn)(obs, state, rngs)
-b2s.utils.gif_fn(scene, tree.map(lambda x: x[0], seq))
+print(b2s.lxm.str_to_plan(dot_str, scene, 1))
+# red_plan = tree.map(lambda *x: jnp.stack(x), *tuple(map(node_to_step, nodes.items())))
+# plan = tree.map(lambda x, y: jnp.stack((x, y)), blue_plan, red_plan)
+# print(tree.map(jnp.shape, plan))
+# obs, state = vmap(env.reset, in_axes=(0, None))(random.split(key, num_sim), scene)
+# rngs = random.split(rng, (num_sim, cfg.steps))
+# state, seq = vmap(traj_fn)(obs, state, rngs)
+# b2s.utils.gif_fn(scene, tree.map(lambda x: x[0], seq))
