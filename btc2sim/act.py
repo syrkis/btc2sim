@@ -5,7 +5,6 @@
 
 # imports
 import jax.numpy as jnp
-import parabellum as pb
 from jaxtyping import Array
 from parabellum.env import Env
 from parabellum.types import Obs, Scene
@@ -17,8 +16,8 @@ from btc2sim.types import Behavior, Status, Compass
 
 
 # %% Globals
-STAND = Action(shoot=jnp.array(False), coord=jnp.zeros(2))
-NONE = Action(shoot=jnp.array(True), coord=jnp.zeros(2))
+STAND = Action(types=jnp.array(1), coord=jnp.zeros(2))
+NONE = Action(types=jnp.array(0), coord=jnp.zeros(2))
 
 
 # %% Behavior Treefunctions
@@ -41,7 +40,7 @@ def bt_fn(carry: Tuple[Status, Action, Array], input: Tuple[Status, Action, Beha
     atom_status, atom_action, bt, idx = input  # load atomics and bt status
     prev_status, prev_action, passing = carry
 
-    search = prev_status.failure | ((prev_action.coord == 0).all() & prev_action.shoot)  # almost certainly right
+    search = prev_status.failure | prev_action.invalid  # almost certainly right
     checks = (bt.prev & ~prev_status.failure) | (~bt.prev & ~prev_status.success) | (idx == 0)  # probably right
 
     status = Status(status=jnp.where(search & checks & (passing <= 0), atom_status.status, prev_status.status))
@@ -49,7 +48,7 @@ def bt_fn(carry: Tuple[Status, Action, Array], input: Tuple[Status, Action, Beha
 
     flag = (bt.parent & status.failure) | (~bt.parent & status.success)  # update passing
     passing = jnp.where(search & checks & (passing <= 0), jnp.where(flag, passing - 1, bt.skip), passing)
-
+    # debug.breakpoint()
     return (status, action, passing), flag
 
 
@@ -64,13 +63,16 @@ def stand_fn(rng: Array, obs: Obs, gps: Compass, targets: Array):
 def move_fn(rng: Array, obs: Obs, gps: Compass, target: Array):
     pos = jnp.int32(obs.coord[0])
     coord = -jnp.array((gps.dy[target][*pos], gps.dx[target][*pos])) * obs.speed[0]
-    action = Action(coord=coord, shoot=jnp.array(False))
+    action = Action(coord=coord, types=jnp.array(1))
     return Status(status=jnp.array(True)), action
 
 
 def attack_fn(rng: Array, obs: Obs, gps: Compass, targets: Array):
+    p = ((obs.type - obs.type[0]) % 3 == 2) & (obs.team != obs.team[0]) & (obs.hp > 0)
+    idx = random.choice(rng, a=jnp.arange(obs.type.size), p=p)
+    # debug.breakpoint()
     status = Status(status=jnp.array(True))
-    action = Action(coord=random.uniform(rng, (2,)), shoot=jnp.array(True))
+    action = Action(coord=obs.coord[idx], types=jnp.array(2))
     return status, action
 
 
@@ -84,7 +86,7 @@ def attack_fn(rng: Array, obs: Obs, gps: Compass, targets: Array):
 # %% Conditions ###################################################################
 ###################################################################################
 def alive_fn(rng: Array, obs: Obs, gps: Compass, targets: Array):
-    status = Status(status=(obs.health[0] > 0))
+    status = Status(status=(obs.hp[0] > 0))
     return status, NONE
 
 
