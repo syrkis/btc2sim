@@ -5,10 +5,8 @@
 # Imports
 import jax.numpy as jnp
 import parabellum as pb
-from jax import debug, lax, random, tree, vmap
-import equinox as eqx
+from jax import lax, random, tree, vmap
 from jax_tqdm import scan_tqdm
-from jaxtyping import Array
 from omegaconf import DictConfig
 from functools import partial
 import btc2sim as b2s
@@ -41,38 +39,19 @@ gps = b2s.gps.gps_fn(scene, marks)  # 6, key)
 
 
 # %% Functions
-@scan_tqdm(n=cfg.steps)
 def step_fn(carry, input):
     (_, rng), (obs, state) = input, carry
     rngs = random.split(rng, env.num_units)
-    behavior = plan_fn(rng, plan, state, scene)  # perhaps only update plan every m steps
+    behavior = b2s.lxm.plan_fn(rng, bts, plan, state, scene)  # perhaps only update plan every m steps
     action = action_fn(rngs, obs, behavior, env, scene, gps, targets)
     obs, state = env.step(rng, scene, state, action)
-    # debug.breakpoint()
     return (obs, state), (state, action)
-
-
-@eqx.filter_jit
-def plan_fn(rng: Array, plan: b2s.types.Plan, state: pb.types.State, scene: pb.types.Scene):  # TODO: Focus
-    def move(step):  # all units in focus within 10 meters of target position
-        return ((jnp.linalg.norm(state.coord - step.coord) * step.units) < 10).all()
-
-    def kill(step):  # all enemies dead within 10 meters of target
-        return ((jnp.linalg.norm(state.coord - step.coord) * ~step.units * (state.hp == 0)) < 10).any()
-
-    def aux(plan: b2s.types.Plan):
-        idx = lax.map(lambda step: lax.cond(step.move, move, kill, step), plan)
-        idxs = plan.btidx[idx.argmin()] * plan.units[idx.argmin()]
-        return idxs
-
-    idxs = lax.map(aux, plan).sum(0) * 0   # mapping across teams (2 for now, but supports any number)
-    return tree.map(lambda x: jnp.take(x, idxs, axis=0), bts)  # behavior
 
 
 # maybe vmap here
 def traj_fn(obs, state, rngs):
-    state, (seq, action) = lax.scan(step_fn, (obs, state), (jnp.arange(cfg.steps), rngs))
-    return state, seq, action
+    step = scan_tqdm(cfg.steps)(step_fn)
+    return lax.scan(step, (obs, state), (jnp.arange(cfg.steps), rngs))
 
 
 dot_str = """
@@ -86,8 +65,8 @@ digraph G {
 }
 """
 
-plan = tree.map(lambda *x: jnp.stack(x), *tuple(map(partial(b2s.lxm.str_to_plan, dot_str, scene), (-1, 1))))
+plan = tree.map(lambda *x: jnp.stack(x), *tuple(map(partial(b2s.lxm.str_to_plan, dot_str, scene), (-1, 1))))  # type: ignore
 obs, state = vmap(env.reset, in_axes=(0, None))(random.split(key, num_sim), scene)
 rngs = random.split(rng, (num_sim, cfg.steps))
-state, seq, action = vmap(traj_fn)(obs, state, rngs)
-pb.utils.svg_fn(scene, tree.map(lambda x: x[0], seq), tree.map(lambda x: x[0], action))
+state, (seq, action) = vmap(traj_fn)(obs, state, rngs)
+pb.utils.svg_fn(scene, tree.map(lambda x: x[0], seq), tree.map(lambda x: x[0], action), fps=10)

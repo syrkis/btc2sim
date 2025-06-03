@@ -10,7 +10,7 @@ from parabellum.env import Env
 from parabellum.types import Obs, Scene
 from typing import Tuple
 import equinox as eqx
-from jax import lax, tree, debug, random
+from jax import lax, tree, random
 from parabellum.types import Action
 from btc2sim.types import Behavior, Status, Compass
 
@@ -25,7 +25,7 @@ NONE = Action(types=jnp.array(0), coord=jnp.zeros(2))
 def fmap(fns, rng: Array, obs: Obs, gps: Compass, target: Array, bt: Behavior):
     status, action = zip(*(f(rng, obs, gps, target) for f, rng in zip(fns, random.split(rng, len(fns)))))
     select = lambda *xs: jnp.stack(xs).take(bt.idx, axis=0)  # noqa # .take() is reodering the bt to leaf order
-    return tree.map(select, *status), tree.map(select, *action)
+    return tree.map(select, *status), tree.map(select, *action)  # type: ignore
 
 
 def action_fn(rng, obs: Obs, bt: Behavior, env: Env, scene: Scene, gps: Compass, target: Array):
@@ -48,7 +48,6 @@ def bt_fn(carry: Tuple[Status, Action, Array], input: Tuple[Status, Action, Beha
 
     flag = (bt.parent & status.failure) | (~bt.parent & status.success)  # update passing
     passing = jnp.where(search & checks & (passing <= 0), jnp.where(flag, passing - 1, bt.skip), passing)
-    # debug.breakpoint()
     return (status, action, passing), flag
 
 
@@ -70,16 +69,9 @@ def move_fn(rng: Array, obs: Obs, gps: Compass, target: Array):
 def attack_fn(rng: Array, obs: Obs, gps: Compass, targets: Array):
     p = ((obs.type - obs.type[0]) % 3 == 2) & (obs.team != obs.team[0]) & (obs.hp > 0)
     idx = random.choice(rng, a=jnp.arange(obs.type.size), p=p)
-    # debug.breakpoint()
     status = Status(status=jnp.array(True))
     action = Action(coord=obs.coord[idx], types=jnp.array(2))
     return status, action
-
-
-# def shoot_closest_fn(rng: Array, obs: Obs, gps: Compass, targets: Array):  # preferably target rock paper sissor dynamic
-# status = Status(status=jnp.array(True))
-# action = Action(coord=obs.coord[(obs.coord**2).sum(axis=1).argmin()], shoot=jnp.array(True))
-# return status, action
 
 
 ###################################################################################
