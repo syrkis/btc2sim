@@ -12,7 +12,7 @@ from typing import Tuple
 import equinox as eqx
 from jax import lax, tree, random
 from parabellum.types import Action
-from btc2sim.types import Behavior, Status, Compass
+from aic2sim.types import Behavior, Status, Compass
 
 
 # %% Globals

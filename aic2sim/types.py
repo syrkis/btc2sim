@@ -1,18 +1,18 @@
 # imports
 from chex import dataclass
 from dataclasses import field
-from jaxtyping import Array, Int32, Bool, Float32
+from jaxtyping import Array
 import jax.numpy as jnp
 
 
 # dataclasses
 @dataclass
 class Plan:
-    units: Bool  # one hot of what units are in
-    coord: Float32
-    btidx: Int32
-    parent: Int32  #
-    move: Bool  # or kill
+    units: Array  # Bool  # one hot of what units are in
+    coord: Array
+    btidx: Array
+    parent: Array  #
+    move: Array  # or kill
 
 
 @dataclass

@@ -10,7 +10,7 @@ from jax import vmap
 import equinox as eqx
 from functools import partial
 from parabellum.types import Scene
-from btc2sim.types import Compass
+from aic2sim.types import Compass
 import matplotlib.pyplot as plt
 
 
@@ -29,7 +29,7 @@ def grad_fn(scene: Scene, target):
     def step_fn(carry, step):
         front, df = carry
         front = (lax.conv(front, kernel, (1, 1), "SAME") > 0) * (df[None, None, ...] == front.size) * mask
-        df = jnp.where(front, step, df).squeeze()
+        df = jnp.where(front, step, df).squeeze()  # type: ignore
         return (front, df), None
 
     mask = jnp.float32(jnp.abs(scene.terrain.building - 1))

@@ -1,11 +1,5 @@
 # imports
-import esch
 import jax.numpy as jnp
-import numpy as np
-from einops import rearrange, repeat
-from jax import tree
-from PIL import Image
-from tqdm import tqdm
 
 # %% Dicts
 nato_to_int = dict(alpha=0, bravo=1, charlie=2, delta=3, echo=4, foxtrot=5)
@@ -29,6 +23,7 @@ def scene_fn(arr):
     arr = arr.at[start_idx + 30 : end_idx + 30, start_idx:end_idx].set(1)
     arr = arr.at[start_idx + 30 + 5 : end_idx + 30 - 5, start_idx + 5 : end_idx].set(0)
     return arr
+
 
 def typst_fn(bt_str):
     pass

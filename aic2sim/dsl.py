@@ -6,12 +6,12 @@
 from functools import reduce
 
 import jax.numpy as jnp
-from jax import tree, debug
+from jax import tree
 from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor
 
-from btc2sim.types import Behavior
-from btc2sim.act import a2i
+from aic2sim.types import Behavior
+from aic2sim.act import a2i
 
 
 # %% Grammar
@@ -41,7 +41,7 @@ ws          = ~r"\s*"
 
 # %% Functions
 def bts_fn(bt_strs):
-    return tree.map(lambda *bts: jnp.stack(bts), *tuple(map(lambda x: txt2bts(x.strip()), bt_strs.strip().split("\n"))))
+    return tree.map(lambda *bts: jnp.stack(bts), *tuple(map(lambda x: txt2bts(x.strip()), bt_strs.strip().split("\n"))))  # type: ignore
 
 
 def txt2bts(txt) -> Behavior:
