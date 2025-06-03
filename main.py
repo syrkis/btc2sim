@@ -9,7 +9,7 @@ from jax import lax, random, tree, vmap
 from jax_tqdm import scan_tqdm
 from omegaconf import DictConfig
 from functools import partial
-import btc2sim as b2s
+import aic2sim as a2s
 
 
 # %% Config #####################################################
@@ -29,20 +29,20 @@ F ( S ( C in_range enemy |> A shoot random ) |> A move target )
 
 # %% Constants
 env, scene = pb.env.Env(cfg=cfg), pb.env.scene_fn(cfg)
-bts = b2s.dsl.bts_fn(bt_strs)
-action_fn = vmap(b2s.act.action_fn, in_axes=(0, 0, 0, None, None, None, 0))
+bts = a2s.dsl.bts_fn(bt_strs)
+action_fn = vmap(a2s.act.action_fn, in_axes=(0, 0, 0, None, None, None, 0))
 
 rng, key = random.split(random.PRNGKey(0))
 marks = jnp.int32(random.uniform(rng, (1, 2), minval=0, maxval=cfg.size))
 targets = random.randint(rng, (env.num_units,), 0, marks.shape[0])
-gps = b2s.gps.gps_fn(scene, marks)  # 6, key)
+gps = a2s.gps.gps_fn(scene, marks)  # 6, key)
 
 
 # %% Functions
 def step_fn(carry, input):
     (_, rng), (obs, state) = input, carry
     rngs = random.split(rng, env.num_units)
-    behavior = b2s.lxm.plan_fn(rng, bts, plan, state, scene)  # perhaps only update plan every m steps
+    behavior = a2s.lxm.plan_fn(rng, bts, plan, state, scene)  # perhaps only update plan every m steps
     action = action_fn(rngs, obs, behavior, env, scene, gps, targets)
     obs, state = env.step(rng, scene, state, action)
     return (obs, state), (state, action)
@@ -65,7 +65,7 @@ digraph G {
 }
 """
 
-plan = tree.map(lambda *x: jnp.stack(x), *tuple(map(partial(b2s.lxm.str_to_plan, dot_str, scene), (-1, 1))))  # type: ignore
+plan = tree.map(lambda *x: jnp.stack(x), *tuple(map(partial(a2s.lxm.str_to_plan, dot_str, scene), (-1, 1))))  # type: ignore
 obs, state = vmap(env.reset, in_axes=(0, None))(random.split(key, num_sim), scene)
 rngs = random.split(rng, (num_sim, cfg.steps))
 state, (seq, action) = vmap(traj_fn)(obs, state, rngs)

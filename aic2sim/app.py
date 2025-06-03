@@ -8,7 +8,7 @@ from dataclasses import asdict, dataclass
 from functools import partial
 from typing import List
 
-import btc2sim as b2s
+import aic2sim as a2s
 import cv2
 import jax.numpy as jnp
 import numpy as np
@@ -35,7 +35,7 @@ class Game:
     env: pb.env.Env
     scene: pb.env.Scene
     step_fn: pb.env.step_fn
-    gps: b2s.types.Compass
+    gps: a2s.types.Compass
     step_seq: List[Step]
 
 
@@ -66,14 +66,14 @@ cfg = DictConfig(dict(steps=100, knn=4, blue=blue, red=red) | loc)
 
 env, scene = pb.env.Env(cfg=cfg), pb.env.scene_fn(cfg)
 rng, key = random.split(random.PRNGKey(0))
-bts = b2s.dsl.bts_fn(bt_strs)
-action_fn = vmap(b2s.act.action_fn, in_axes=(0, 0, 0, None, None, None, 0))
+bts = a2s.dsl.bts_fn(bt_strs)
+action_fn = vmap(a2s.act.action_fn, in_axes=(0, 0, 0, None, None, None, 0))
 targets = jnp.int32(jnp.arange(6).repeat(env.num_units // 6)).flatten()
 
 
-def step_fn(rng: Array, obs: pb.types.Obs, state: pb.types.State, plan: b2s.types.Plan, gps: b2s.types.Compass):
+def step_fn(rng: Array, obs: pb.types.Obs, state: pb.types.State, plan: a2s.types.Plan, gps: a2s.types.Compass):
     rngs = random.split(rng, env.num_units)
-    behavior = b2s.lxm.plan_fn(rng, bts, plan, state, scene)  # perhaps only update plan every m steps
+    behavior = a2s.lxm.plan_fn(rng, bts, plan, state, scene)  # perhaps only update plan every m steps
     action = action_fn(rngs, obs, behavior, env, scene, gps, targets)
     obs, state = env.step(rng, scene, state, action)
     return (obs, state), (state, action)
@@ -85,11 +85,11 @@ def init(place: str):  # should inlcude settings from frontend
     game_id = str(uuid.uuid4())
     step = partial(step_fn, env, scene)
     rng = random.PRNGKey(0)
-    gps = tree.map(jnp.zeros_like, b2s.gps.gps_fn(scene, jnp.int32(jnp.zeros((6, 2)))))
+    gps = tree.map(jnp.zeros_like, a2s.gps.gps_fn(scene, jnp.int32(jnp.zeros((6, 2)))))
     games[game_id] = Game(rng, env, scene, step, gps, [])  # <- state_seq list
     terrain = cv2.resize(np.array(scene.terrain.building), dsize=(100, 100)).tolist()
     teams = scene.unit_teams.tolist()
-    marks = {k: v for k, v in zip(b2s.utils.int_to_chess, gps.marks.tolist())}
+    marks = {k: v for k, v in zip(a2s.utils.int_to_chess, gps.marks.tolist())}
     return {"game_id": game_id, "terrain": terrain, "size": cfg.size, "teams": teams, "marks": marks}
 
 
@@ -119,5 +119,5 @@ async def close(game_id: str):
 
 @app.post("/marks/{game_id}")
 async def marks(game_id: str, marks: list = Body(...)):
-    gps = b2s.gps.gps_fn(scene, jnp.int32(jnp.array(marks))[:, ::-1])
+    gps = a2s.gps.gps_fn(scene, jnp.int32(jnp.array(marks))[:, ::-1])
     games[game_id] = games[game_id]._replace(gps=gps)
