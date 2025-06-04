@@ -8,12 +8,16 @@ from dataclasses import asdict, replace
 from functools import partial
 
 import aim
+from ollama import chat
 import cv2
 import jax.numpy as jnp
 import numpy as np
 import parabellum as pb
-from fastapi import Body, FastAPI
+from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+import asyncio
+from fastapi import WebSocket, WebSocketDisconnect
 from jax import random, tree, vmap
 from omegaconf import DictConfig
 
@@ -108,3 +112,70 @@ async def close(game_id: str):
 async def marks(game_id: str, marks: list = Body(...)):
     gps = a2s.gps.gps_fn(scene, jnp.int32(jnp.array(marks))[:, ::-1])
     games[game_id] = replace(games[game_id], gps=gps)
+
+
+async def chat_stream_generator(content: str):
+    """Generator function for streaming chat responses"""
+    stream = chat(
+        model="hive",
+        messages=[{"role": "user", "content": content}],
+        stream=True,
+    )
+
+    for chunk in stream:
+        if chunk["message"]["content"]:
+            yield f"data: {chunk['message']['content']}\n\n"
+
+
+# @app.post("/chat/stream")
+# async def chat_stream(request: dict = Body(...)):
+#     """HTTP streaming endpoint for chat"""
+#     content = request.get("content", "")
+#     if not content:
+#         return {"error": "No content provided"}
+
+#     return StreamingResponse(
+#         chat_stream_generator(content),
+#         media_type="text/plain",
+#         headers={
+#             "Cache-Control": "no-cache",
+#             "Connection": "keep-alive",
+#         },
+#     )
+
+
+@app.websocket("/chat/ws")
+async def chat_websocket(websocket: WebSocket):
+    """WebSocket endpoint for real-time chat streaming"""
+    await websocket.accept()
+
+    try:
+        while True:
+            # Receive message from client
+            data = await websocket.receive_text()
+            print(f"Received: {data}")
+
+            # Stream response back to client
+            stream = chat(
+                model="hive",
+                messages=[{"role": "user", "content": data}],
+                stream=True,
+            )
+
+            for chunk in stream:
+                content = chunk["message"]["content"]
+                if content:
+                    print(f"Chunk: '{content}'")
+
+                    # Send chunk immediately
+                    await websocket.send_text(content)
+
+                    # Force processing of the send
+                    await asyncio.gather(asyncio.sleep(0))
+
+            # Send completion signal
+            await websocket.send_text("")
+            print("Stream complete")
+
+    except WebSocketDisconnect:
+        print("Disconnected")

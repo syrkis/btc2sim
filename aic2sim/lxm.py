@@ -12,6 +12,10 @@ import ollama
 
 
 # evaluate plan
+def obs_fn(scene: pb.types.Scene, state: pb.types.State, marks):  # obs function for lxm (NOT units)
+    return f"raster_map: {scene.terrain.building}\nunit_coord: {state.coord}\nunit_teams: {scene.unit_teams}"
+
+
 @eqx.filter_jit
 def plan_fn(rng: Array, bts, plan: Plan, state: pb.types.State, scene: pb.types.Scene):  # TODO: Focus
     def move(step):  # all units in focus within 10 meters of target position (fix quadratic)

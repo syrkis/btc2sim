@@ -10,22 +10,28 @@ from jax_tqdm import scan_tqdm
 from omegaconf import DictConfig
 from functools import partial
 import aic2sim as a2s
-from ollama import chat
-import ollama
+# from ollama import chat
+# import ollama
 
 
-model = "hive"
-print(ollama.show(model))
-stream = chat(
-    model=model,
-    messages=[{"role": "user", "content": "what are you?"}],
-    stream=True,
-)
+# evaluate plan
+def obs_fn(scene: pb.types.Scene, state: pb.types.State, marks):  # obs function for lxm (NOT units)
+    return f"raster_map: {scene.terrain.building}\nunit_coord: {state.coord}\nunit_teams: {scene.unit_teams}"
 
-for chunk in stream:
-    print(chunk["message"]["content"], end="", flush=True)
 
-exit()
+# %%
+# model = "hive"
+# print(ollama.show(model))
+# stream = chat(
+# model=model,
+# messages=[{"role": "user", "content": "what are you?"}],
+# stream=True,
+# )
+
+# for chunk in stream:
+# print(chunk["message"]["content"], end="", flush=True)
+#
+# exit()
 
 # %% Config #####################################################
 num_sim = 4
@@ -79,7 +85,8 @@ def log_fn(seq):
 
 
 plan = tree.map(lambda *x: jnp.stack(x), *tuple(map(partial(a2s.lxm.str_to_plan, dot_str, scene), (-1, 1))))  # type: ignore
-# obs, state = vmap(env.reset, in_axes=(0, None))(random.split(key, num_sim), scene)
+obs, state = vmap(env.reset, in_axes=(0, None))(random.split(key, num_sim), scene)
+print(obs_fn(scene, state, marks))
 # rngs = random.split(rng, (num_sim, cfg.steps))
 # state, (seq, action) = vmap(traj_fn)(obs, state, rngs)
 # log_fn(seq)

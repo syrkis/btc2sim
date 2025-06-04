@@ -11,6 +11,7 @@ Each step (node) consists of four things: A battalion (alpha, bravo, charlie),
 a condition kind (move, attack),
 a target location specified by a chess piece (pawn, rook, bishop, knight, queen, king),
 and lastly a tactical behavior tree assigned to each unit in the battalion.
+Units of your team are denoted by 1. Units of the oposing team is denoted by -1.
 
 An example of a plan is:
 
