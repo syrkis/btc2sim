@@ -4,7 +4,7 @@
 
 # Imports
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, replace
 from functools import partial
 from typing import List
 
@@ -52,7 +52,7 @@ sleep_time = 0.1
 n_steps = 100
 
 # Config
-loc = dict(place="Palazzo della Civiltà Italiana, Rome, Italy", size=128)
+loc = dict(place="Palazzo della Civiltà Italiana, Rome, Italy", size=64)
 red = dict(infantry=2, armor=0, airplane=0)
 blue = dict(infantry=2, armor=0, airplane=0)
 cfg = DictConfig(dict(steps=100, knn=4, blue=blue, red=red) | loc)
@@ -115,4 +115,4 @@ async def close(game_id: str):
 @app.post("/marks/{game_id}")
 async def marks(game_id: str, marks: list = Body(...)):
     gps = a2s.gps.gps_fn(scene, jnp.int32(jnp.array(marks))[:, ::-1])
-    games[game_id] = games[game_id]._replace(gps=gps)
+    games[game_id] = replace(games[game_id], gps=gps)
