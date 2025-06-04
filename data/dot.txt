@@ -1,0 +1,19 @@
+digraph G {
+    A [alpha move knight scout]
+    B [bravo move queen scout]
+    C [alpha attack king scout]
+
+    A -> C
+    B -> C
+}
+
+---
+
+digraph G {
+    A [alpha move knight scout]
+    B [bravo move queen scout]
+    C [alpha attack king scout]
+
+    A -> C
+    B -> C
+}

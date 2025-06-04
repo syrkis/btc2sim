@@ -6,9 +6,8 @@
 import uuid
 from dataclasses import asdict, replace
 from functools import partial
-from typing import List
 
-import aic2sim as a2s
+import aim
 import cv2
 import jax.numpy as jnp
 import numpy as np
@@ -18,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from jax import random, tree, vmap
 from omegaconf import DictConfig
 
+import aic2sim as a2s
 
 # Configure CORS
 app = FastAPI()
@@ -30,26 +30,18 @@ app.add_middleware(
 )
 
 
-bt_strs = """
-F ( S ( C in_range enemy |> A shoot random ) |> A move target )
-"""
+with open("data/roe.txt", "r") as f:
+    roe_str = f.read().strip()  # rules of engagement
 
-dot_str = """
-digraph G {
-    A [alpha move knight scout]
-    B [bravo move queen scout]
-    C [alpha attack king scout]
-
-    A -> C
-    B -> C
-}
-"""
+with open("data/dot.txt", "r") as f:
+    dot_str = f.read().strip().split("---")[0].strip()
 
 
 # %% Globals
 games = {}
-sleep_time = 0.1
+fps = 10
 n_steps = 100
+sleep_time = 1 / fps
 
 # Config
 loc = dict(place="Palazzo della Civiltà Italiana, Rome, Italy", size=64)
@@ -59,7 +51,7 @@ cfg = DictConfig(dict(steps=100, knn=4, blue=blue, red=red) | loc)
 
 env, scene = pb.env.Env(cfg=cfg), pb.env.scene_fn(cfg)
 rng, key = random.split(random.PRNGKey(0))
-bts = a2s.dsl.bts_fn(bt_strs)
+bts = a2s.dsl.bts_fn(roe_str)
 action_fn = vmap(a2s.act.action_fn, in_axes=(0, 0, 0, None, None, None, 0))
 # targets = jnp.int32(jnp.arange(6).repeat(env.num_units // 6)).flatten()
 targets = random.randint(rng, (env.num_units,), 0, 6)

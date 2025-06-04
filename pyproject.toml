@@ -1,6 +1,6 @@
 [project]
 name = "aic2sim"
-version = "0.0.25"
+version = "0.0.28"
 description = ""
 authors = [{ name = "Noah Syrkis", email = "noah@syrkis.com" }]
 requires-python = ">=3.11,<3.12"
@@ -15,7 +15,6 @@ dependencies = [
     "tqdm>=4.66.5,<5",
     "jax>=0.6.0,<0.7",
     "chex>=0.1.89,<0.2",
-    "equinox>=0.11.12,<0.12",
     "flax>=0.10.4,<0.11",
     "aim>=3.27.0,<4",
     "jraph>=0.0.6.dev0,<0.0.7",
@@ -25,6 +24,8 @@ dependencies = [
     "pydot<4",
     "opencv-python>=4.11.0.86",
     "fastapi[standard]>=0.115.12",
+    "equinox>=0.12.2",
+    "ollama>=0.5.1",
 ]
 
 [dependency-groups]

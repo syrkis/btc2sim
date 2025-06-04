@@ -28,7 +28,7 @@ wheels = [
 
 [[package]]
 name = "aic2sim"
-version = "0.0.25"
+version = "0.0.28"
 source = { editable = "." }
 dependencies = [
     { name = "aim" },
@@ -45,6 +45,7 @@ dependencies = [
     { name = "lark" },
     { name = "networkx" },
     { name = "notebook" },
+    { name = "ollama" },
     { name = "opencv-python" },
     { name = "parsimonious" },
     { name = "pydot" },
@@ -63,7 +64,7 @@ requires-dist = [
     { name = "aim", specifier = ">=3.27.0,<4" },
     { name = "chex", specifier = ">=0.1.89,<0.2" },
     { name = "einops", specifier = ">=0.8.0,<0.9" },
-    { name = "equinox", specifier = ">=0.11.12,<0.12" },
+    { name = "equinox", specifier = ">=0.12.2" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.115.12" },
     { name = "flax", specifier = ">=0.10.4,<0.11" },
     { name = "functional", specifier = ">=0.4,<0.5" },
@@ -74,6 +75,7 @@ requires-dist = [
     { name = "lark", specifier = ">=1.1.9,<2" },
     { name = "networkx", specifier = ">=3.4.2" },
     { name = "notebook", specifier = ">=7.2.1,<8" },
+    { name = "ollama", specifier = ">=0.5.1" },
     { name = "opencv-python", specifier = ">=4.11.0.86" },
     { name = "parsimonious", specifier = ">=0.10.0,<0.11" },
     { name = "pydot", specifier = "<4" },
@@ -1000,7 +1002,7 @@ wheels = [
 
 [[package]]
 name = "equinox"
-version = "0.11.12"
+version = "0.12.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jax" },
@@ -1008,9 +1010,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "wadler-lindig" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3e/b3/91145067dbbc2c5cba3e779c490fbc45aa71dfdde499af83ea437027b479/equinox-0.11.12.tar.gz", hash = "sha256:bee22aabaf7ee0cde6f2ae58cf3b981dea73d47e297361a0203e299208ef1739", size = 139527, upload-time = "2025-02-25T18:57:52.933Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4c/1c/da174caa2902cee108a542cfb801bd4366a5e44541b625d5a0984c9238e0/equinox-0.12.2.tar.gz", hash = "sha256:648e4206bbc53b228922e8f18cd3cffe543ddda1172c0002f8954e484bab0023", size = 139007, upload-time = "2025-05-14T09:31:00.072Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4f/ec/083aecd364f7b85ae724ffe8ea5b4e23b6003b1f119179cbd1c586875586/equinox-0.11.12-py3-none-any.whl", hash = "sha256:63f7c910b037f9abb2b8942ab4ac1720d465c275b70e95dc42dd57080a0e1757", size = 177979, upload-time = "2025-02-25T18:57:50.764Z" },
+    { url = "https://files.pythonhosted.org/packages/8e/a7/5961a7cad10df1e165a8b9c4ba0661aaec9497861e53682effa1787d97aa/equinox-0.12.2-py3-none-any.whl", hash = "sha256:0d9c09c077e7895a5334930ddb9ecd7d39840c3ad252cf8262aa8ddc6bb8ae97", size = 177247, upload-time = "2025-05-14T09:30:58.252Z" },
 ]
 
 [[package]]
@@ -2492,6 +2494,19 @@ wheels = [
 ]
 
 [[package]]
+name = "ollama"
+version = "0.5.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8d/96/c7fe0d2d1b3053be614822a7b722c7465161b3672ce90df71515137580a0/ollama-0.5.1.tar.gz", hash = "sha256:5a799e4dc4e7af638b11e3ae588ab17623ee019e496caaf4323efbaa8feeff93", size = 41112, upload-time = "2025-05-30T21:32:48.679Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d6/76/3f96c8cdbf3955d7a73ee94ce3e0db0755d6de1e0098a70275940d1aff2f/ollama-0.5.1-py3-none-any.whl", hash = "sha256:4c8839f35bc173c7057b1eb2cbe7f498c1a7e134eafc9192824c8aecb3617506", size = 13369, upload-time = "2025-05-30T21:32:47.429Z" },
+]
+
+[[package]]
 name = "omegaconf"
 version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2637,7 +2652,7 @@ wheels = [
 
 [[package]]
 name = "parabellum"
-version = "0.0.49"
+version = "0.0.50"
 source = { directory = "../parabellum" }
 dependencies = [
     { name = "brax" },
@@ -2679,7 +2694,7 @@ requires-dist = [
     { name = "contextily", specifier = ">=1.6.0,<2" },
     { name = "distrax", specifier = ">=0.1.5,<0.2" },
     { name = "einops", specifier = ">=0.8.0,<0.9" },
-    { name = "equinox", specifier = ">=0.11.11,<0.12" },
+    { name = "equinox", specifier = ">=0.12.2" },
     { name = "evosax", specifier = ">=0.1.6,<0.2" },
     { name = "flashbax", specifier = ">=0.1.2,<0.2" },
     { name = "flax", specifier = ">=0.10.4,<0.11" },

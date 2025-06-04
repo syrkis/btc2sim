@@ -10,26 +10,43 @@ from jax_tqdm import scan_tqdm
 from omegaconf import DictConfig
 from functools import partial
 import aic2sim as a2s
+from ollama import chat
+import ollama
 
+
+model = "hive"
+print(ollama.show(model))
+stream = chat(
+    model=model,
+    messages=[{"role": "user", "content": "what are you?"}],
+    stream=True,
+)
+
+for chunk in stream:
+    print(chunk["message"]["content"], end="", flush=True)
+
+exit()
 
 # %% Config #####################################################
 num_sim = 4
 loc = dict(place="Palazzo della Civiltà Italiana, Rome, Italy", size=64)
-red = dict(infantry=2, armor=0, airplane=0)
-blue = dict(infantry=2, armor=0, airplane=0)
+red = dict(infantry=6, armor=6, airplane=6)
+blue = dict(infantry=6, armor=6, airplane=6)
 cfg = DictConfig(dict(steps=100, knn=4, blue=blue, red=red) | loc)
 
 
 # %% Behavior trees ( in range should be in reach )
-bt_strs = """
-F ( S ( C in_range enemy |> A shoot random ) |> A move target )
-"""
+with open("data/roe.txt", "r") as f:
+    roe_str = f.read().strip()
 
-# A move target
+
+with open("data/dot.txt", "r") as f:
+    dot_str = f.read().strip().split("---")[0].strip()
+
 
 # %% Constants
 env, scene = pb.env.Env(cfg=cfg), pb.env.scene_fn(cfg)
-bts = a2s.dsl.bts_fn(bt_strs)
+bts = a2s.dsl.bts_fn(roe_str)
 action_fn = vmap(a2s.act.action_fn, in_axes=(0, 0, 0, None, None, None, 0))
 
 rng, key = random.split(random.PRNGKey(0))
@@ -40,7 +57,7 @@ gps = a2s.gps.gps_fn(scene, marks)  # 6, key)
 
 # %% Functions
 def step_fn(carry, input):
-    (_, rng), (obs, state) = input, carry
+    (obs, state), (_, rng) = carry, input
     rngs = random.split(rng, env.num_units)
     behavior = a2s.lxm.plan_fn(rng, bts, plan, state, scene)  # perhaps only update plan every m steps
     action = action_fn(rngs, obs, behavior, env, scene, gps, targets)
@@ -54,19 +71,16 @@ def traj_fn(obs, state, rngs):
     return lax.scan(step, (obs, state), (jnp.arange(cfg.steps), rngs))
 
 
-dot_str = """
-digraph G {
-    A [alpha move knight scout]
-    B [bravo move queen scout]
-    C [alpha attack king scout]
+def log_fn(seq):
+    # print(tree.map(jnp.shape, seq))
+    print(tree.map(lambda x: lax.map(jnp.shape, x), seq))
+    # run = aim.Run()
+    pass
 
-    A -> C
-    B -> C
-}
-"""
 
 plan = tree.map(lambda *x: jnp.stack(x), *tuple(map(partial(a2s.lxm.str_to_plan, dot_str, scene), (-1, 1))))  # type: ignore
-obs, state = vmap(env.reset, in_axes=(0, None))(random.split(key, num_sim), scene)
-rngs = random.split(rng, (num_sim, cfg.steps))
-state, (seq, action) = vmap(traj_fn)(obs, state, rngs)
-pb.utils.svg_fn(scene, tree.map(lambda x: x[0], seq), tree.map(lambda x: x[0], action), fps=10)
+# obs, state = vmap(env.reset, in_axes=(0, None))(random.split(key, num_sim), scene)
+# rngs = random.split(rng, (num_sim, cfg.steps))
+# state, (seq, action) = vmap(traj_fn)(obs, state, rngs)
+# log_fn(seq)
+# pb.utils.svg_fn(scene, tree.map(lambda x: x[0], seq), tree.map(lambda x: x[0], action), fps=10)
