@@ -1,7 +1,7 @@
 # %% Imports
 import networkx as nx
 import jax.numpy as jnp
-from jax import tree, lax
+from jax import tree, lax, debug
 from jaxtyping import Array
 import equinox as eqx
 import parabellum as pb
@@ -13,18 +13,20 @@ from aic2sim.types import Plan
 # evaluate plan
 @eqx.filter_jit
 def plan_fn(rng: Array, bts, plan: Plan, state: pb.types.State, scene: pb.types.Scene):  # TODO: Focus
-    def move(step):  # all units in focus within 10 meters of target position
+    def move(step):  # all units in focus within 10 meters of target position (fix quadratic)
         return ((jnp.linalg.norm(state.coord - step.coord) * step.units) < 10).all()
 
-    def kill(step):  # all enemies dead within 10 meters of target
+    def kill(step):  # all enemies dead within 10 meters of target  (this is quadratric and should be made smart)
         return ((jnp.linalg.norm(state.coord - step.coord) * ~step.units * (state.hp == 0)) < 10).any()
 
     def aux(plan: Plan):
-        idx = lax.map(lambda step: lax.cond(step.move, move, kill, step), plan)
-        idxs = plan.btidx[idx.argmin()] * plan.units[idx.argmin()]
-        return idxs
+        cond = lax.map(lambda step: lax.cond(step.move, move, kill, step), plan)
+        # debug.breakpoint()
+        # process cond better than argmin by scanning, through children.
+        # idx = scan and mask through children (use instead of cond.argmin())
+        return plan.btidx[cond.argmin()] * plan.units[cond.argmin()]
 
-    idxs = lax.map(aux, plan).sum(0) * 0  # mapping across teams (2 for now, but supports any number)
+    idxs = lax.map(aux, plan).sum(0)  # mapping across teams (2 for now, but supports any number)
     return tree.map(lambda x: jnp.take(x, idxs, axis=0), bts)  # behavior
 
 

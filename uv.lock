@@ -27,6 +27,67 @@ wheels = [
 ]
 
 [[package]]
+name = "aic2sim"
+version = "0.0.25"
+source = { editable = "." }
+dependencies = [
+    { name = "aim" },
+    { name = "chex" },
+    { name = "einops" },
+    { name = "equinox" },
+    { name = "fastapi", extra = ["standard"] },
+    { name = "flax" },
+    { name = "functional" },
+    { name = "ipykernel" },
+    { name = "jax" },
+    { name = "jraph" },
+    { name = "jupyterlab" },
+    { name = "lark" },
+    { name = "networkx" },
+    { name = "notebook" },
+    { name = "opencv-python" },
+    { name = "parsimonious" },
+    { name = "pydot" },
+    { name = "textx" },
+    { name = "tqdm" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "esch" },
+    { name = "parabellum" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aim", specifier = ">=3.27.0,<4" },
+    { name = "chex", specifier = ">=0.1.89,<0.2" },
+    { name = "einops", specifier = ">=0.8.0,<0.9" },
+    { name = "equinox", specifier = ">=0.11.12,<0.12" },
+    { name = "fastapi", extras = ["standard"], specifier = ">=0.115.12" },
+    { name = "flax", specifier = ">=0.10.4,<0.11" },
+    { name = "functional", specifier = ">=0.4,<0.5" },
+    { name = "ipykernel", specifier = ">=6.29.5,<7" },
+    { name = "jax", specifier = ">=0.6.0,<0.7" },
+    { name = "jraph", specifier = ">=0.0.6.dev0,<0.0.7" },
+    { name = "jupyterlab", specifier = ">=4.2.4,<5" },
+    { name = "lark", specifier = ">=1.1.9,<2" },
+    { name = "networkx", specifier = ">=3.4.2" },
+    { name = "notebook", specifier = ">=7.2.1,<8" },
+    { name = "opencv-python", specifier = ">=4.11.0.86" },
+    { name = "parsimonious", specifier = ">=0.10.0,<0.11" },
+    { name = "pydot", specifier = "<4" },
+    { name = "textx", specifier = ">=4.1.0,<5" },
+    { name = "tqdm", specifier = ">=4.66.5,<5" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "esch", directory = "../../esch" },
+    { name = "parabellum", directory = "../parabellum" },
+]
+
+[[package]]
 name = "aim"
 version = "3.28.0"
 source = { registry = "https://pypi.org/simple" }
@@ -399,67 +460,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/6f/2d/93309e1cc1cfb365990482b84540fe19160c64f56b92c6583fee7c700496/brax-0.12.3.tar.gz", hash = "sha256:8bd1a031379d48f976dab42f303d9de2ccf4a9016159e41d528e40712d12ed47", size = 397470, upload-time = "2025-04-11T22:18:00.151Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ff/85/f5316a532308b771efad84165c3e142774f1248bbdf8630a1e137a00a1f5/brax-0.12.3-py3-none-any.whl", hash = "sha256:acf110e9df394c5f5e85709692d8ee6ad6d67aca7379b8f64239bd7799d1ccc2", size = 14159049, upload-time = "2025-04-11T21:56:44.153Z" },
-]
-
-[[package]]
-name = "btc2sim"
-version = "0.0.25"
-source = { editable = "." }
-dependencies = [
-    { name = "aim" },
-    { name = "chex" },
-    { name = "einops" },
-    { name = "equinox" },
-    { name = "fastapi", extra = ["standard"] },
-    { name = "flax" },
-    { name = "functional" },
-    { name = "ipykernel" },
-    { name = "jax" },
-    { name = "jraph" },
-    { name = "jupyterlab" },
-    { name = "lark" },
-    { name = "networkx" },
-    { name = "notebook" },
-    { name = "opencv-python" },
-    { name = "parsimonious" },
-    { name = "pydot" },
-    { name = "textx" },
-    { name = "tqdm" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "esch" },
-    { name = "parabellum" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aim", specifier = ">=3.27.0,<4" },
-    { name = "chex", specifier = ">=0.1.89,<0.2" },
-    { name = "einops", specifier = ">=0.8.0,<0.9" },
-    { name = "equinox", specifier = ">=0.11.12,<0.12" },
-    { name = "fastapi", extras = ["standard"], specifier = ">=0.115.12" },
-    { name = "flax", specifier = ">=0.10.4,<0.11" },
-    { name = "functional", specifier = ">=0.4,<0.5" },
-    { name = "ipykernel", specifier = ">=6.29.5,<7" },
-    { name = "jax", specifier = ">=0.6.0,<0.7" },
-    { name = "jraph", specifier = ">=0.0.6.dev0,<0.0.7" },
-    { name = "jupyterlab", specifier = ">=4.2.4,<5" },
-    { name = "lark", specifier = ">=1.1.9,<2" },
-    { name = "networkx", specifier = ">=3.4.2" },
-    { name = "notebook", specifier = ">=7.2.1,<8" },
-    { name = "opencv-python", specifier = ">=4.11.0.86" },
-    { name = "parsimonious", specifier = ">=0.10.0,<0.11" },
-    { name = "pydot", specifier = "<4" },
-    { name = "textx", specifier = ">=4.1.0,<5" },
-    { name = "tqdm", specifier = ">=4.66.5,<5" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "esch", directory = "../../esch" },
-    { name = "parabellum", directory = "../parabellum" },
 ]
 
 [[package]]

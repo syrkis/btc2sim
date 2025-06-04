@@ -16,27 +16,7 @@ import parabellum as pb
 from fastapi import Body, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from jax import random, tree, vmap
-from jaxtyping import Array
 from omegaconf import DictConfig
-
-
-# %% Types
-@dataclass
-class Step:
-    rng: Array
-    obs: pb.types.Obs
-    state: pb.types.State
-    action: pb.types.Action | None
-
-
-@dataclass
-class Game:
-    rng: Array
-    env: pb.env.Env
-    scene: pb.env.Scene
-    step_fn: pb.env.step_fn
-    gps: a2s.types.Compass
-    step_seq: List[Step]
 
 
 # Configure CORS
@@ -49,9 +29,22 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
+
 bt_strs = """
 F ( S ( C in_range enemy |> A shoot random ) |> A move target )
 """
+
+dot_str = """
+digraph G {
+    A [alpha move knight scout]
+    B [bravo move queen scout]
+    C [alpha attack king scout]
+
+    A -> C
+    B -> C
+}
+"""
+
 
 # %% Globals
 games = {}
@@ -59,7 +52,7 @@ sleep_time = 0.1
 n_steps = 100
 
 # Config
-loc = dict(place="Palazzo della Civiltà Italiana, Rome, Italy", size=64)
+loc = dict(place="Palazzo della Civiltà Italiana, Rome, Italy", size=128)
 red = dict(infantry=2, armor=0, airplane=0)
 blue = dict(infantry=2, armor=0, airplane=0)
 cfg = DictConfig(dict(steps=100, knn=4, blue=blue, red=red) | loc)
@@ -68,10 +61,12 @@ env, scene = pb.env.Env(cfg=cfg), pb.env.scene_fn(cfg)
 rng, key = random.split(random.PRNGKey(0))
 bts = a2s.dsl.bts_fn(bt_strs)
 action_fn = vmap(a2s.act.action_fn, in_axes=(0, 0, 0, None, None, None, 0))
-targets = jnp.int32(jnp.arange(6).repeat(env.num_units // 6)).flatten()
+# targets = jnp.int32(jnp.arange(6).repeat(env.num_units // 6)).flatten()
+targets = random.randint(rng, (env.num_units,), 0, 6)
+plan = tree.map(lambda *x: jnp.stack(x), *tuple(map(partial(a2s.lxm.str_to_plan, dot_str, scene), (-1, 1))))  # type: ignore
 
 
-def step_fn(rng: Array, obs: pb.types.Obs, state: pb.types.State, plan: a2s.types.Plan, gps: a2s.types.Compass):
+def step_fn(rng, env, scene, obs: pb.types.Obs, state: pb.types.State, plan: a2s.types.Plan, gps, targets):
     rngs = random.split(rng, env.num_units)
     behavior = a2s.lxm.plan_fn(rng, bts, plan, state, scene)  # perhaps only update plan every m steps
     action = action_fn(rngs, obs, behavior, env, scene, gps, targets)
@@ -83,13 +78,14 @@ def step_fn(rng: Array, obs: pb.types.Obs, state: pb.types.State, plan: a2s.type
 @app.get("/init/{place}")
 def init(place: str):  # should inlcude settings from frontend
     game_id = str(uuid.uuid4())
-    step = partial(step_fn, env, scene)
     rng = random.PRNGKey(0)
+    step = partial(step_fn, rng, env, scene)
     gps = tree.map(jnp.zeros_like, a2s.gps.gps_fn(scene, jnp.int32(jnp.zeros((6, 2)))))
-    games[game_id] = Game(rng, env, scene, step, gps, [])  # <- state_seq list
+    games[game_id] = a2s.types.Game([rng], env, scene, step, gps, [])  # <- state_seq list
     terrain = cv2.resize(np.array(scene.terrain.building), dsize=(100, 100)).tolist()
     teams = scene.unit_teams.tolist()
-    marks = {k: v for k, v in zip(a2s.utils.int_to_chess, gps.marks.tolist())}
+    marks = {k: v for k, v in zip(a2s.utils.chess_to_int, gps.marks.tolist())}
+    # print(marks)
     return {"game_id": game_id, "terrain": terrain, "size": cfg.size, "teams": teams, "marks": marks}
 
 
@@ -97,7 +93,7 @@ def init(place: str):  # should inlcude settings from frontend
 def reset(game_id: str):
     rng, key = random.split(games[game_id].rng[-1])
     obs, state = games[game_id].env.reset(rng=key, scene=games[game_id].scene)
-    games[game_id].step_seq.append(Step(rng, obs, state, None))
+    games[game_id].step_seq.append(a2s.types.Step(rng, obs, state, None))
     games[game_id].rng.append(rng)
     return {"state": asdict(tree.map(lambda x: x.tolist(), state)) | {"step": len(games[game_id].step_seq)}}
 
@@ -106,9 +102,8 @@ def reset(game_id: str):
 def step(game_id: str):
     rng, key = random.split(games[game_id].step_seq[-1].rng)
     obs, state = games[game_id].step_seq[-1].obs, games[game_id].step_seq[-1].state
-    gps = games[game_id].gps
-    action, obs, state = games[game_id].step_fn(obs, state, gps, targets, key)
-    games[game_id].step_seq.append(Step(rng, obs, state, action))
+    (obs, state), (state, action) = games[game_id].step_fn(obs, state, plan, games[game_id].gps, targets)
+    games[game_id].step_seq.append(a2s.types.Step(rng, obs, state, action))
     return {"state": asdict(tree.map(lambda x: x.tolist(), state)) | {"step": len(games[game_id].step_seq)}}
 
 

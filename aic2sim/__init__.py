@@ -1,10 +1,11 @@
 # imports
-from btc2sim import dsl
-from btc2sim import act
-from btc2sim import gps
-from btc2sim import lxm
-from btc2sim import types
-from btc2sim import utils
+# from . import app
+from . import dsl
+from . import act
+from . import gps
+from . import lxm
+from . import types
+from . import utils
 
 # exports
 __all__ = ["act", "dsl", "gps", "lxm", "types", "utils"]

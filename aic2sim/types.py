@@ -1,8 +1,11 @@
 # imports
 from chex import dataclass
+from dataclasses import dataclass as _dataclass
 from dataclasses import field
 from jaxtyping import Array
+from typing import List
 import jax.numpy as jnp
+import parabellum as pb
 
 
 # dataclasses
@@ -50,3 +53,22 @@ class Battalion:
     units: Array  # bool array in batalion else 0
     target: Array  # 0 to 6
     bt_idx: Array  # 0 to num bts
+
+
+# %% Types
+@_dataclass
+class Step:
+    rng: Array
+    obs: pb.types.Obs
+    state: pb.types.State
+    action: pb.types.Action | None
+
+
+@_dataclass
+class Game:
+    rng: List[Array]
+    env: pb.env.Env
+    scene: pb.env.Scene
+    step_fn: pb.env.step_fn
+    gps: Compass
+    step_seq: List[Step]
