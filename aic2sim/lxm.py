@@ -8,7 +8,28 @@ import parabellum as pb
 import pydot
 from aic2sim.utils import chess_to_int, alpha_to_int, bt_to_int, nato_to_int
 from aic2sim.types import Plan
-import ollama
+from ollama import chat
+
+
+def chat_fn(messages):
+    user_says = input("User: ")
+    messages.append({"role": "user", "content": user_says})
+    response = chat(model="deepseek-r1", messages=messages, stream=True, think=False)  # , system="you're name is hall")
+    assistant_response = ""
+    for chunk in response:
+        content = chunk["message"]["content"]
+        assistant_response += content
+        print(content, end="", flush=True)
+    print()
+    messages.append({"role": "assistant", "content": assistant_response})
+    return messages
+
+
+def play_fn(scene, state, marks, messages):
+    messages = [m for m in messages if m["role"] != "state"]  # remove previous state
+    messages.append({"role": "state", "content": obs_fn(scene, state, marks)})  # add current state
+    messages = chat_fn(messages)
+    return messages
 
 
 # evaluate plan

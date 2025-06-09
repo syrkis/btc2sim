@@ -64,7 +64,7 @@ requires-dist = [
     { name = "aim", specifier = ">=3.27.0,<4" },
     { name = "chex", specifier = ">=0.1.89,<0.2" },
     { name = "einops", specifier = ">=0.8.0,<0.9" },
-    { name = "equinox", specifier = ">=0.12.2" },
+    { name = "equinox", specifier = ">=0.11.12" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.115.12" },
     { name = "flax", specifier = ">=0.10.4,<0.11" },
     { name = "functional", specifier = ">=0.4,<0.5" },
@@ -1002,7 +1002,7 @@ wheels = [
 
 [[package]]
 name = "equinox"
-version = "0.12.2"
+version = "0.11.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jax" },
@@ -1010,9 +1010,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "wadler-lindig" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4c/1c/da174caa2902cee108a542cfb801bd4366a5e44541b625d5a0984c9238e0/equinox-0.12.2.tar.gz", hash = "sha256:648e4206bbc53b228922e8f18cd3cffe543ddda1172c0002f8954e484bab0023", size = 139007, upload-time = "2025-05-14T09:31:00.072Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3e/b3/91145067dbbc2c5cba3e779c490fbc45aa71dfdde499af83ea437027b479/equinox-0.11.12.tar.gz", hash = "sha256:bee22aabaf7ee0cde6f2ae58cf3b981dea73d47e297361a0203e299208ef1739", size = 139527, upload-time = "2025-02-25T18:57:52.933Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8e/a7/5961a7cad10df1e165a8b9c4ba0661aaec9497861e53682effa1787d97aa/equinox-0.12.2-py3-none-any.whl", hash = "sha256:0d9c09c077e7895a5334930ddb9ecd7d39840c3ad252cf8262aa8ddc6bb8ae97", size = 177247, upload-time = "2025-05-14T09:30:58.252Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/ec/083aecd364f7b85ae724ffe8ea5b4e23b6003b1f119179cbd1c586875586/equinox-0.11.12-py3-none-any.whl", hash = "sha256:63f7c910b037f9abb2b8942ab4ac1720d465c275b70e95dc42dd57080a0e1757", size = 177979, upload-time = "2025-02-25T18:57:50.764Z" },
 ]
 
 [[package]]
@@ -2449,7 +2449,7 @@ wheels = [
 
 [[package]]
 name = "notebook"
-version = "7.4.1"
+version = "7.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jupyter-server" },
@@ -2458,9 +2458,9 @@ dependencies = [
     { name = "notebook-shim" },
     { name = "tornado" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/91/89/1b4636280f01ec948c007e700e24921135b9b76221148a405fd5287c3c17/notebook-7.4.1.tar.gz", hash = "sha256:96894962b230013ea0c0a466e4e642c5aace25ba8c86686175b69990ef628ff9", size = 13881349, upload-time = "2025-04-23T06:40:29.147Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ba/55/0a1b8fdf48b6de67b52b23b9670c20b81e649420d6b973c70be14cff99cd/notebook-7.4.2.tar.gz", hash = "sha256:e739defd28c3f615a6bfb0a2564bd75018a9cc6613aa00bbd9c15e68eed2de1b", size = 13881273, upload-time = "2025-05-06T15:08:06.335Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/41/c5/47248ed90d263e4c16f9f6b06f094105ce33f384cf135eab5a6452230d46/notebook-7.4.1-py3-none-any.whl", hash = "sha256:498f12cf567d95b20e780d62d52564ee4310248b3175e996b667b5808028e5d3", size = 14282763, upload-time = "2025-04-23T06:40:25.41Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/16/d3c36a0b1f6dfcf218add8eaf803bf0473ff50681ac4d51acb7ba02bce34/notebook-7.4.2-py3-none-any.whl", hash = "sha256:9ccef602721aaa5530852e3064710b8ae5415c4e2ce26f8896d0433222755259", size = 14285747, upload-time = "2025-05-06T15:08:02.053Z" },
 ]
 
 [[package]]
@@ -2652,7 +2652,7 @@ wheels = [
 
 [[package]]
 name = "parabellum"
-version = "0.0.50"
+version = "0.0.46"
 source = { directory = "../parabellum" }
 dependencies = [
     { name = "brax" },
@@ -2669,11 +2669,13 @@ dependencies = [
     { name = "geopy" },
     { name = "gymnax" },
     { name = "ipykernel" },
+    { name = "ipython" },
     { name = "jax" },
     { name = "jax-tqdm" },
     { name = "jaxtyping" },
     { name = "jupyterlab" },
     { name = "navix" },
+    { name = "notebook" },
     { name = "numpy" },
     { name = "omegaconf" },
     { name = "optax" },
@@ -2694,7 +2696,7 @@ requires-dist = [
     { name = "contextily", specifier = ">=1.6.0,<2" },
     { name = "distrax", specifier = ">=0.1.5,<0.2" },
     { name = "einops", specifier = ">=0.8.0,<0.9" },
-    { name = "equinox", specifier = ">=0.12.2" },
+    { name = "equinox", specifier = ">=0.11.11,<0.12" },
     { name = "evosax", specifier = ">=0.1.6,<0.2" },
     { name = "flashbax", specifier = ">=0.1.2,<0.2" },
     { name = "flax", specifier = ">=0.10.4,<0.11" },
@@ -2702,11 +2704,13 @@ requires-dist = [
     { name = "geopy", specifier = ">=2.4.1,<3" },
     { name = "gymnax", specifier = ">=0.0.8,<0.0.9" },
     { name = "ipykernel", specifier = ">=6.29.5,<7" },
+    { name = "ipython", specifier = ">=8.36.0" },
     { name = "jax", specifier = ">=0.6.0,<0.7" },
     { name = "jax-tqdm", specifier = ">=0.3.1,<0.4" },
     { name = "jaxtyping", specifier = ">=0.2.33,<0.3" },
     { name = "jupyterlab", specifier = ">=4.2.2,<5" },
     { name = "navix", specifier = ">=0.7.0,<0.8" },
+    { name = "notebook", specifier = ">=7.4.2" },
     { name = "numpy", specifier = ">=2.2.3,<3" },
     { name = "omegaconf", specifier = ">=2.3.0,<3" },
     { name = "optax", specifier = ">=0.2.4,<0.3" },
