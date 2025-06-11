@@ -2652,7 +2652,7 @@ wheels = [
 
 [[package]]
 name = "parabellum"
-version = "0.0.46"
+version = "0.0.48"
 source = { directory = "../parabellum" }
 dependencies = [
     { name = "brax" },

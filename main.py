@@ -21,11 +21,11 @@ cfg = DictConfig(dict(steps=100, knn=4, blue=blue, red=red) | loc)
 
 
 # %% Behavior trees ( in range should be in reach )
-with open("data/roe.txt", "r") as f:
-    roe_str = f.read().strip()
+with open("data/bts.txt", "r") as f:
+    bts_str = f.read().strip()
 
-with open("data/dot.txt", "r") as f:
-    dot_str = f.read().strip().split("---")[0].strip()
+with open("data/pln.txt", "r") as f:
+    pln_str = f.read().strip().split("---")[0].strip()
 
 with open("data/llm.txt", "r") as f:
     llm_str = f.read().strip()
@@ -33,7 +33,7 @@ with open("data/llm.txt", "r") as f:
 
 # %% Constants
 env, scene = pb.env.Env(cfg=cfg), pb.env.scene_fn(cfg)
-bts = a2s.dsl.bts_fn(roe_str)
+bts = a2s.dsl.bts_fn(bts_str)
 action_fn = vmap(a2s.act.action_fn, in_axes=(0, 0, 0, None, None, None, 0))
 
 rng, key = random.split(random.PRNGKey(0))
@@ -58,20 +58,15 @@ def traj_fn(obs, state, rngs):
     return lax.scan(step, (obs, state), (jnp.arange(cfg.steps), rngs))
 
 
-# def log_fn(seq):
-# print(tree.map(jnp.shape, seq))
-# print(tree.map(lambda x: lax.map(jnp.shape, x), seq))
-# run = aim.Run()
-# pass
-
-
-messages = [{"role": "system", "content": llm_str}]
-for i in range(10):
-    messages = a2s.lxm.chat_fn(messages)
-
-plan = tree.map(lambda *x: jnp.stack(x), *tuple(map(partial(a2s.lxm.str_to_plan, dot_str, scene), (-1, 1))))  # type: ignore
-obs, state = vmap(env.reset, in_axes=(0, None))(random.split(key, num_sim), scene)
+# %%
+plan = tree.map(lambda *x: jnp.stack(x), *tuple(map(partial(a2s.lxm.str_to_plan, pln_str, scene), (-1, 1))))  # type: ignore
 rngs = random.split(rng, (num_sim, cfg.steps))
+obs, state = vmap(env.reset, in_axes=(0, None))(random.split(key, num_sim), scene)
 state, (seq, action) = vmap(traj_fn)(obs, state, rngs)
+pb.utils.svg_fn(scene, tree.map(lambda x: x[0], seq), tree.map(lambda x: x[0], action), fps=10)
+
+
 # log_fn(seq)
-# pb.utils.svg_fn(scene, tree.map(lambda x: x[0], seq), tree.map(lambda x: x[0], action), fps=10)
+# messages = [{"role": "system", "content": llm_str}]
+# for i in range(10):
+#     messages = a2s.lxm.chat_fn(messages)

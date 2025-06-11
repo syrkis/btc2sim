@@ -8,7 +8,6 @@ digraph G {
 }
 
 ---
-
 digraph G {
     A [alpha move knight scout]
     B [bravo move queen scout]
