@@ -24,10 +24,10 @@ cfg = DictConfig(dict(steps=100, knn=4, blue=blue, red=red) | loc)
 with open("data/bts.txt", "r") as f:
     bts_str = f.read().strip()
 
-with open("data/pln.txt", "r") as f:
+with open("data/plan.txt", "r") as f:
     pln_str = f.read().strip().split("---")[0].strip()
 
-with open("data/llm.txt", "r") as f:
+with open("data/prompt.txt", "r") as f:
     llm_str = f.read().strip()
 
 

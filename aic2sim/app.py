@@ -7,7 +7,6 @@ import uuid
 from dataclasses import asdict, replace
 from functools import partial
 
-import aim
 from ollama import chat
 import cv2
 import jax.numpy as jnp
@@ -15,9 +14,11 @@ import numpy as np
 import parabellum as pb
 from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+
+# from fastapi.responses import StreamingResponse
 import asyncio
-from fastapi import WebSocket, WebSocketDisconnect
+
+# from fastapi import WebSocket, WebSocketDisconnect
 from jax import random, tree, vmap
 from omegaconf import DictConfig
 
@@ -38,11 +39,14 @@ app.add_middleware(
 with open("data/bts.txt", "r") as f:
     roe_str = f.read().strip()  # rules of engagement
 
-with open("data/pln.txt", "r") as f:
+with open("data/plan.txt", "r") as f:
     dot_str = f.read().strip().split("---")[0].strip()
 
-with open("data/llm.txt", "r") as f:
+with open("data/prompt.txt", "r") as f:
     llm_str = f.read().strip()
+
+with open("data/info.txt", "r") as f:
+    info_str = f.read().strip()
 
 
 # %% Globals
@@ -82,11 +86,11 @@ def init(place: str):  # should inlcude settings from frontend
     rng = random.PRNGKey(0)
     step = partial(step_fn, rng, env, scene)
     gps = tree.map(jnp.zeros_like, a2s.gps.gps_fn(scene, jnp.int32(jnp.zeros((6, 2)))))
-    games[game_id] = a2s.types.Game([rng], env, scene, step, gps, [])  # <- state_seq list
+    game = a2s.types.Game([rng], env, scene, step, gps, [], [])  # <- state_seq list
+    games[game_id] = game
     terrain = cv2.resize(np.array(scene.terrain.building), dsize=(100, 100)).tolist()
     teams = scene.unit_teams.tolist()
     marks = {k: v for k, v in zip(a2s.utils.chess_to_int, gps.marks.tolist())}
-    # print(marks)
     return {"game_id": game_id, "terrain": terrain, "size": cfg.size, "teams": teams, "marks": marks}
 
 
@@ -119,38 +123,8 @@ async def marks(game_id: str, marks: list = Body(...)):
     games[game_id] = replace(games[game_id], gps=gps)
 
 
-# async def chat_stream_generator(content: str):
-#     """Generator function for streaming chat responses"""
-#     stream = chat(
-#         model="deepseek-r1",
-#         messages=[{"role": "user", "content": content}],
-#         stream=True,
-#     )
-
-#     for chunk in stream:
-#         if chunk["message"]["content"]:
-#             yield f"data: {chunk['message']['content']}\n\n"
-
-
-# @app.post("/chat/stream")
-# async def chat_stream(request: dict = Body(...)):
-#     """HTTP streaming endpoint for chat"""
-#     content = request.get("content", "")
-#     if not content:
-#         return {"error": "No content provided"}
-
-#     return StreamingResponse(
-#         chat_stream_generator(content),
-#         media_type="text/plain",
-#         headers={
-#             "Cache-Control": "no-cache",
-#             "Connection": "keep-alive",
-#         },
-#     )
-
-
 @app.websocket("/chat/ws")
-async def chat_websocket(websocket: WebSocket):
+async def chat_websocket(websocket: WebSocket, game_id: str | None = None):
     """WebSocket endpoint for real-time chat streaming"""
     await websocket.accept()
 
@@ -160,27 +134,46 @@ async def chat_websocket(websocket: WebSocket):
             data = await websocket.receive_text()
             print(f"Received: {data}")
 
+            # Build message history
+            messages = [
+                {"role": "system", "content": llm_str},
+                {"role": "assistant", "content": info_str},
+            ]
+
+            # Add existing messages from game if game_id is provided and exists
+            if game_id and game_id in games:
+                messages.extend(games[game_id].messages)
+                messages.append(a2s.lxm.obs_fn(scene, games[game_id].state[-1], marks))
+
+            # Add current user message
+            user_message = {"role": "user", "content": data}
+            messages.append(user_message)
+
             # Stream response back to client
             stream = chat(
                 model="deepseek-r1",
-                messages=[
-                    {"role": "system", "content": llm_str},
-                    {"role": "user", "content": data},
-                ],
+                messages=messages,
                 stream=True,
                 think=False,
             )
 
+            # Collect the assistant's response
+            assistant_response = ""
             for chunk in stream:
                 content = chunk["message"]["content"]
                 if content:
                     print(f"Chunk: '{content}'")
+                    assistant_response += content
 
                     # Send chunk immediately
                     await websocket.send_text(content)
 
                     # Force processing of the send
                     await asyncio.gather(asyncio.sleep(0))
+
+            # Store messages in game if game_id is provided and exists
+            if game_id and game_id in games:
+                games[game_id].messages.extend([user_message, {"role": "assistant", "content": assistant_response}])
 
             # Send completion signal
             await websocket.send_text("")

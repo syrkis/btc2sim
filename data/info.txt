@@ -1,0 +1,6 @@
+You are about to play Parabellum, a simulated command and control scenario. You will interact with the simulation through _1)_ placing the chess pieces below on the map by clicking a location, _2)_ developing a plan in natural langauge with me, and _3)_ typing out commands. Commands start with a vertical bar:
+
+| i — initialize a game
+| r — reset a game (assume it to be initialized)
+| s — step a game (assumes it is reset)
+| p — begin or pause auto game loop

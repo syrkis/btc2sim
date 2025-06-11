@@ -72,3 +72,4 @@ class Game:
     step_fn: pb.env.step_fn
     gps: Compass
     step_seq: List[Step]
+    messages: List[dict]
