@@ -23,6 +23,7 @@ from omegaconf import DictConfig
 
 import aic2sim as a2s
 
+
 # Configure CORS
 app = FastAPI()
 app.add_middleware(
@@ -34,11 +35,14 @@ app.add_middleware(
 )
 
 
-with open("data/roe.txt", "r") as f:
+with open("data/bts.txt", "r") as f:
     roe_str = f.read().strip()  # rules of engagement
 
-with open("data/dot.txt", "r") as f:
+with open("data/pln.txt", "r") as f:
     dot_str = f.read().strip().split("---")[0].strip()
+
+with open("data/llm.txt", "r") as f:
+    llm_str = f.read().strip()
 
 
 # %% Globals
@@ -52,6 +56,7 @@ loc = dict(place="Palazzo della Civiltà Italiana, Rome, Italy", size=64)
 red = dict(infantry=2, armor=0, airplane=0)
 blue = dict(infantry=2, armor=0, airplane=0)
 cfg = DictConfig(dict(steps=100, knn=4, blue=blue, red=red) | loc)
+
 
 env, scene = pb.env.Env(cfg=cfg), pb.env.scene_fn(cfg)
 rng, key = random.split(random.PRNGKey(0))
@@ -114,17 +119,17 @@ async def marks(game_id: str, marks: list = Body(...)):
     games[game_id] = replace(games[game_id], gps=gps)
 
 
-async def chat_stream_generator(content: str):
-    """Generator function for streaming chat responses"""
-    stream = chat(
-        model="hive",
-        messages=[{"role": "user", "content": content}],
-        stream=True,
-    )
+# async def chat_stream_generator(content: str):
+#     """Generator function for streaming chat responses"""
+#     stream = chat(
+#         model="deepseek-r1",
+#         messages=[{"role": "user", "content": content}],
+#         stream=True,
+#     )
 
-    for chunk in stream:
-        if chunk["message"]["content"]:
-            yield f"data: {chunk['message']['content']}\n\n"
+#     for chunk in stream:
+#         if chunk["message"]["content"]:
+#             yield f"data: {chunk['message']['content']}\n\n"
 
 
 # @app.post("/chat/stream")
@@ -157,9 +162,13 @@ async def chat_websocket(websocket: WebSocket):
 
             # Stream response back to client
             stream = chat(
-                model="hive",
-                messages=[{"role": "user", "content": data}],
+                model="deepseek-r1",
+                messages=[
+                    {"role": "system", "content": llm_str},
+                    {"role": "user", "content": data},
+                ],
                 stream=True,
+                think=False,
             )
 
             for chunk in stream:
