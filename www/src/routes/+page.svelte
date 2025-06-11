@@ -32,6 +32,19 @@
         Marks,
     } from "../lib/types";
 
+    let chatContainer: HTMLElement;
+
+    function scrollChatToBottom() {
+        if (chatContainer) {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    }
+
+    $effect(() => {
+        if (messages.length > 0) {
+            setTimeout(() => scrollChatToBottom(), 0);
+        }
+    });
     // Convert messages to use $state for reactivity
     let messages = $state<ChatEntry[]>([
         {
@@ -827,11 +840,16 @@ You are about to play Parabellum, a simulated command and control scenario. You 
     >
         <!-- chat history - will grow/shrink based on available space -->
         <div
-            class="chat-history"
-            onclick={focusInput}
-            onkeydown={(e) => e.key === "Enter" && focusInput()}
-            role="log"
-            aria-label="Chat messages"
+            bind:this={chatContainer}
+            class="chat-log"
+            style="
+		height: 80vh;
+		overflow-y: auto;
+		border: 1px solid #444;
+		padding: 8px;
+		background: #1a1a1a;
+		margin-bottom: 10px;
+	"
         >
             {#each messages as message}
                 {#if message.user === "system"}
