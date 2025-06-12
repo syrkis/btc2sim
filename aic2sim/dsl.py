@@ -40,7 +40,7 @@ ws          = ~r"\s*"
 
 
 # %% Functions
-def bts_fn(bt_strs):
+def bts_fn(bt_strs) -> Behavior:
     return tree.map(lambda *bts: jnp.stack(bts), *tuple(map(lambda x: txt2bts(x.strip()), bt_strs.strip().split("\n"))))  # type: ignore
 
 

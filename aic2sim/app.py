@@ -57,8 +57,8 @@ sleep_time = 1 / fps
 
 # Config
 loc = dict(place="Palazzo della Civiltà Italiana, Rome, Italy", size=64)
-red = dict(infantry=2, armor=0, airplane=0)
-blue = dict(infantry=2, armor=0, airplane=0)
+red = dict(infantry=6, armor=6, airplane=6)
+blue = dict(infantry=6, armor=6, airplane=6)
 cfg = DictConfig(dict(steps=100, knn=4, blue=blue, red=red) | loc)
 
 

@@ -845,9 +845,9 @@ You are about to play Parabellum, a simulated command and control scenario. You 
             style="
 		height: 80vh;
 		overflow-y: auto;
-		border: 1px solid #444;
+		<!-- border: 1px solid #444; -->
 		padding: 8px;
-		background: #1a1a1a;
+		<!-- background: #1a1a1a; -->
 		margin-bottom: 10px;
 	"
         >

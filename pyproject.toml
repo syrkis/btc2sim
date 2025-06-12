@@ -1,6 +1,6 @@
 [project]
 name = "aic2sim"
-version = "0.0.28"
+version = "0.0.29"
 description = ""
 authors = [{ name = "Noah Syrkis", email = "noah@syrkis.com" }]
 requires-python = ">=3.11,<3.12"
